@@ -12,7 +12,7 @@ namespace arithmetic
 
 value::value()
 {
-	data = 0;
+	data = unstable;
 }
 
 value::value(int data)
@@ -27,23 +27,23 @@ value::~value()
 
 value operator~(value v)
 {
-	if (v.data != value::invalid)
+	if (v.data >= value::valid)
 		v.data = ~v.data;
 	return v;
 }
 
 value operator-(value v)
 {
-	if (v.data != value::invalid)
+	if (v.data >= value::valid)
 		v.data = -v.data;
 	return v;
 }
 
 value operator!(value v)
 {
-	if (v.data != value::invalid)
+	if (v.data >= value::valid)
 		v.data = value::invalid;
-	else
+	else if (v.data == value::invalid)
 		v.data = 0;
 	return v;
 }
@@ -51,117 +51,181 @@ value operator!(value v)
 value operator|(value v0, value v1)
 {
 	value result;
-	if (v0.data != value::invalid && v1.data != value::invalid)
-		result.data = v0.data | v1.data;
-	else
+
+	if (v0.data == value::unstable || v1.data == value::unstable)
+		result.data = value::unstable;
+	else if (v0.data == value::invalid || v1.data == value::invalid)
 		result.data = value::invalid;
+	else if (v0.data == value::unknown || v1.data == value::unknown)
+		result.data = value::unknown;
+	else
+		result.data = v0.data | v1.data;
+
 	return result;
 }
 
 value operator&(value v0, value v1)
 {
 	value result;
-	if (v0.data != value::invalid && v1.data != value::invalid)
-		result.data = v0.data & v1.data;
-	else
+	if (v0.data == value::unstable || v1.data == value::unstable)
+		result.data = value::unstable;
+	else if (v0.data == value::invalid || v1.data == value::invalid)
 		result.data = value::invalid;
+	else if (v0.data == value::unknown || v1.data == value::unknown)
+		result.data = value::unknown;
+	else
+		result.data = v0.data & v1.data;
+
 	return result;
 }
 
 value operator^(value v0, value v1)
 {
 	value result;
-	if (v0.data != value::invalid && v1.data != value::invalid)
-		result.data = v0.data ^ v1.data;
-	else
+	if (v0.data == value::unstable || v1.data == value::unstable)
+		result.data = value::unstable;
+	else if (v0.data == value::invalid || v1.data == value::invalid)
 		result.data = value::invalid;
+	else if (v0.data == value::unknown || v1.data == value::unknown)
+		result.data = value::unknown;
+	else
+		result.data = v0.data ^ v1.data;
+
 	return result;
 }
 
 value operator<<(value v0, value v1)
 {
 	value result;
-	if (v0.data != value::invalid && v1.data != value::invalid)
-		result.data = (v0.data << v1.data);
-	else
+	if (v0.data == value::unstable || v1.data == value::unstable)
+		result.data = value::unstable;
+	else if (v0.data == value::invalid || v1.data == value::invalid)
 		result.data = value::invalid;
+	else if (v0.data == value::unknown || v1.data == value::unknown)
+		result.data = value::unknown;
+	else
+		result.data = (v0.data << v1.data);
+
 	return result;
 }
 
 value operator>>(value v0, value v1)
 {
 	value result;
-	if (v0.data != value::invalid && v1.data != value::invalid)
-		result.data = (v0.data >> v1.data);
-	else
+	if (v0.data == value::unstable || v1.data == value::unstable)
+		result.data = value::unstable;
+	else if (v0.data == value::invalid || v1.data == value::invalid)
 		result.data = value::invalid;
+	else if (v0.data == value::unknown || v1.data == value::unknown)
+		result.data = value::unknown;
+	else
+		result.data = (v0.data >> v1.data);
+
 	return result;
 }
 
 value operator+(value v0, value v1)
 {
 	value result;
-	if (v0.data != value::invalid && v1.data != value::invalid)
-		result.data = (v0.data + v1.data);
-	else
+	if (v0.data == value::unstable || v1.data == value::unstable)
+		result.data = value::unstable;
+	else if (v0.data == value::invalid || v1.data == value::invalid)
 		result.data = value::invalid;
+	else if (v0.data == value::unknown || v1.data == value::unknown)
+		result.data = value::unknown;
+	else
+		result.data = (v0.data + v1.data);
+
 	return result;
 }
 
 value operator-(value v0, value v1)
 {
 	value result;
-	if (v0.data != value::invalid && v1.data != value::invalid)
-		result.data = (v0.data - v1.data);
-	else
+	if (v0.data == value::unstable || v1.data == value::unstable)
+		result.data = value::unstable;
+	else if (v0.data == value::invalid || v1.data == value::invalid)
 		result.data = value::invalid;
+	else if (v0.data == value::unknown || v1.data == value::unknown)
+		result.data = value::unknown;
+	else
+		result.data = (v0.data - v1.data);
+
 	return result;
 }
 
 value operator*(value v0, value v1)
 {
 	value result;
-	if (v0.data != value::invalid && v1.data != value::invalid)
-		result.data = (v0.data * v1.data);
-	else
+	if (v0.data == value::unstable || v1.data == value::unstable)
+		result.data = value::unstable;
+	else if (v0.data == value::invalid || v1.data == value::invalid)
 		result.data = value::invalid;
+	else if (v0.data == value::unknown || v1.data == value::unknown)
+		result.data = value::unknown;
+	else
+		result.data = (v0.data * v1.data);
+
 	return result;
 }
 
 value operator/(value v0, value v1)
 {
 	value result;
-	if (v0.data != value::invalid && v1.data != value::invalid)
-		result.data = (v0.data / v1.data);
-	else
+	if (v0.data == value::unstable || v1.data == value::unstable)
+		result.data = value::unstable;
+	else if (v0.data == value::invalid || v1.data == value::invalid)
 		result.data = value::invalid;
+	else if (v0.data == value::unknown || v1.data == value::unknown)
+		result.data = value::unknown;
+	else
+		result.data = (v0.data / v1.data);
+
 	return result;
 }
 
 value operator%(value v0, value v1)
 {
 	value result;
-	if (v0.data != value::invalid && v1.data != value::invalid)
-		result.data = (v0.data % v1.data);
-	else
+	if (v0.data == value::unstable || v1.data == value::unstable)
+		result.data = value::unstable;
+	else if (v0.data == value::invalid || v1.data == value::invalid)
 		result.data = value::invalid;
+	else if (v0.data == value::unknown || v1.data == value::unknown)
+		result.data = value::unknown;
+	else
+		result.data = (v0.data % v1.data);
+
 	return result;
 }
 
 value operator==(value v0, value v1)
 {
 	value result;
-	if (v0.data != value::invalid && v1.data != value::invalid && v0.data == v1.data)
+	if (v0.data == value::unstable || v1.data == value::unstable)
+		result.data = value::unstable;
+	else if (v0.data == value::invalid || v1.data == value::invalid)
+		result.data = value::invalid;
+	else if (v0.data == value::unknown || v1.data == value::unknown)
+		result.data = value::unknown;
+	else if (v0.data == v1.data)
 		result.data = 0;
 	else
 		result.data = value::invalid;
+
 	return result;
 }
 
 value operator!=(value v0, value v1)
 {
 	value result;
-	if (v0.data != value::invalid && v1.data != value::invalid && v0.data != v1.data)
+	if (v0.data == value::unstable || v1.data == value::unstable)
+		result.data = value::unstable;
+	else if (v0.data == value::invalid || v1.data == value::invalid)
+		result.data = value::invalid;
+	else if (v0.data == value::unknown || v1.data == value::unknown)
+		result.data = value::unknown;
+	else if (v0.data != v1.data)
 		result.data = 0;
 	else
 		result.data = value::invalid;
@@ -171,7 +235,13 @@ value operator!=(value v0, value v1)
 value operator<(value v0, value v1)
 {
 	value result;
-	if (v0.data != value::invalid && v1.data != value::invalid && v0.data < v1.data)
+	if (v0.data == value::unstable || v1.data == value::unstable)
+		result.data = value::unstable;
+	else if (v0.data == value::invalid || v1.data == value::invalid)
+		result.data = value::invalid;
+	else if (v0.data == value::unknown || v1.data == value::unknown)
+		result.data = value::unknown;
+	else if (v0.data < v1.data)
 		result.data = 0;
 	else
 		result.data = value::invalid;
@@ -181,7 +251,13 @@ value operator<(value v0, value v1)
 value operator>(value v0, value v1)
 {
 	value result;
-	if (v0.data != value::invalid && v1.data != value::invalid && v0.data > v1.data)
+	if (v0.data == value::unstable || v1.data == value::unstable)
+		result.data = value::unstable;
+	else if (v0.data == value::invalid || v1.data == value::invalid)
+		result.data = value::invalid;
+	else if (v0.data == value::unknown || v1.data == value::unknown)
+		result.data = value::unknown;
+	else if (v0.data > v1.data)
 		result.data = 0;
 	else
 		result.data = value::invalid;
@@ -191,7 +267,13 @@ value operator>(value v0, value v1)
 value operator<=(value v0, value v1)
 {
 	value result;
-	if (v0.data != value::invalid && v1.data != value::invalid && v0.data <= v1.data)
+	if (v0.data == value::unstable || v1.data == value::unstable)
+		result.data = value::unstable;
+	else if (v0.data == value::invalid || v1.data == value::invalid)
+		result.data = value::invalid;
+	else if (v0.data == value::unknown || v1.data == value::unknown)
+		result.data = value::unknown;
+	else if (v0.data <= v1.data)
 		result.data = 0;
 	else
 		result.data = value::invalid;
@@ -201,7 +283,13 @@ value operator<=(value v0, value v1)
 value operator>=(value v0, value v1)
 {
 	value result;
-	if (v0.data != value::invalid && v1.data != value::invalid && v0.data >= v1.data)
+	if (v0.data == value::unstable || v1.data == value::unstable)
+		result.data = value::unstable;
+	else if (v0.data == value::invalid || v1.data == value::invalid)
+		result.data = value::invalid;
+	else if (v0.data == value::unknown || v1.data == value::unknown)
+		result.data = value::unknown;
+	else if (v0.data >= v1.data)
 		result.data = 0;
 	else
 		result.data = value::invalid;
@@ -211,18 +299,26 @@ value operator>=(value v0, value v1)
 value operator&&(value v0, value v1)
 {
 	value result;
-	if (v0.data != value::invalid && v1.data != value::invalid)
-		result.data = 0;
-	else
+	if (v0.data == value::unstable || v1.data == value::unstable)
+		result.data = value::unstable;
+	else if (v0.data == value::invalid || v1.data == value::invalid)
 		result.data = value::invalid;
+	else if (v0.data == value::unknown || v1.data == value::unknown)
+		result.data = value::unknown;
+	else
+		result.data = 0;
 	return result;
 }
 
 value operator||(value v0, value v1)
 {
 	value result;
-	if (v0.data != value::invalid || v1.data != value::invalid)
+	if (v0.data == value::unstable || v1.data == value::unstable)
+		result.data = value::unstable;
+	else if (v0.data >= value::valid || v1.data >= value::valid)
 		result.data = 0;
+	else if (v0.data == value::unknown || v1.data == value::unknown)
+		result.data = value::unknown;
 	else
 		result.data = value::invalid;
 	return result;
@@ -240,6 +336,21 @@ operand::operand(int index, int type)
 	this->type = type;
 }
 
+operand::operand(value v)
+{
+	if (v.data == value::invalid)
+		type = invalid;
+	else if (v.data == value::unstable)
+		type = unstable;
+	else if (v.data == value::unknown)
+		type = unknown;
+	else if (v.data >= value::valid)
+	{
+		index = v.data;
+		type = constant;
+	}
+}
+
 operand::~operand()
 {
 
@@ -247,14 +358,24 @@ operand::~operand()
 
 value operand::get(vector<value> values, vector<value> expressions) const
 {
-	if (type == constant)
-		return value(index);
-	else if (type == variable && index < (int)values.size())
-		return values[index];
-	else if (type == expression && index < (int)expressions.size())
-		return expressions[index];
-	else
-		return value(value::invalid);
+	switch (type)
+	{
+	case invalid:		return value(value::invalid);
+	case unstable:		return value(value::unstable);
+	case unknown:		return value(value::unknown);
+	case constant:		return value(index);
+	case expression:
+		if (index >= 0 && index < (int)expressions.size())
+			return expressions[index];
+		else
+			return value(value::invalid);
+	case variable:
+		if (index >= 0 && index < (int)values.size())
+			return values[index];
+		else
+			return value(value::invalid);
+	default:			return value(value::unstable);
+	}
 }
 
 operation::operation()

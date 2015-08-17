@@ -21,7 +21,10 @@ struct value
 
 	int data;
 
-	const static int invalid = 0x80000000;
+	const static int invalid  = 0x80000000;
+	const static int unstable = 0x80000001;
+	const static int unknown  = 0x80000002;
+	const static int valid	  = 0x80000003;
 };
 
 value operator~(value v);
@@ -50,7 +53,8 @@ value operator||(value v0, value v1);
 struct operand
 {
 	operand();
-	operand(int index, int type = constant);
+	operand(int index, int type);
+	operand(value v);
 	~operand();
 
 	int index;
@@ -59,9 +63,11 @@ struct operand
 	enum
 	{
 		invalid = 0,
-		constant = 1,
-		expression = 2,
-		variable = 3
+		unstable = 1,
+		unknown = 2,
+		constant = 3,
+		expression = 4,
+		variable = 5
 	};
 
 	value get(vector<value> values, vector<value> expressions) const;
@@ -194,6 +200,8 @@ expression operator/(operand e0, operand e1);
 expression operator%(operand e0, operand e1);
 expression operator&&(operand e0, operand e1);
 expression operator||(operand e0, operand e1);
+
+
 
 }
 

@@ -5,21 +5,136 @@
 using namespace arithmetic;
 using namespace std;
 
-TEST(expression, test_name)
+TEST(expression, operand_bitwise_or)
 {
 	operand x(0, operand::variable);
 	operand y(1, operand::variable);
-	operand z(2, operand::variable);
 	
-	expression e = x+y*z;
+	expression e = x|y;
 
 	vector<value> state;
-	state.push_back(value(3));
-	state.push_back(value(4));
-	state.push_back(value(5));
+	int xval = rand()%100;
+	int yval = rand()%100;
+
+	state.push_back(value(xval));
+	state.push_back(value(yval));
 
 	value result = e.evaluate(state);
 
-	EXPECT_EQ(result.data, 23);
+	EXPECT_EQ(result.data, xval | yval);
+}
+
+TEST(expression, operand_bitwise_and)
+{
+	operand x(0, operand::variable);
+	operand y(1, operand::variable);
+	
+	expression e = x&y;
+
+	vector<value> state;
+	int xval = rand()%100;
+	int yval = rand()%100;
+
+	state.push_back(value(xval));
+	state.push_back(value(yval));
+
+	value result = e.evaluate(state);
+
+	EXPECT_EQ(result.data, xval & yval);
+}
+
+TEST(expression, operand_bitwise_xor)
+{
+	operand x(0, operand::variable);
+	operand y(1, operand::variable);
+	
+	expression e = x^y;
+
+	vector<value> state;
+	int xval = rand()%100;
+	int yval = rand()%100;
+
+	state.push_back(value(xval));
+	state.push_back(value(yval));
+
+	value result = e.evaluate(state);
+
+	EXPECT_EQ(result.data, xval ^ yval);
+}
+
+TEST(expression, operand_equal_to)
+{
+	operand x(0, operand::variable);
+	operand y(1, operand::variable);
+	
+	expression e = x==y;
+
+	vector<value> state;
+	int xval = rand()%100;
+	int yval = rand()%100;
+
+	state.push_back(value(xval));
+	state.push_back(value(yval));
+
+	value result = e.evaluate(state);
+
+	EXPECT_EQ(result.data, xval == yval);
+}
+
+TEST(expression, operand_not_equal_to)
+{
+	operand x(0, operand::variable);
+	operand y(1, operand::variable);
+	
+	expression e = x!=y;
+
+	vector<value> state;
+	int xval = rand()%100;
+	int yval = rand()%100;
+
+	state.push_back(value(xval));
+	state.push_back(value(yval));
+
+	value result = e.evaluate(state);
+
+	EXPECT_EQ(result.data, xval != yval);
+}
+
+TEST(expression, operand_less_than)
+{
+	operand x(0, operand::variable);
+	operand y(1, operand::variable);
+	
+	expression e = x<y;
+
+	vector<value> state;
+	int xval = rand()%100;
+	int yval = rand()%100;
+
+	state.push_back(value(xval));
+	state.push_back(value(yval));
+
+	value result = e.evaluate(state);
+
+	EXPECT_EQ(result.data, xval < yval);
+}
+
+TEST(expression, operand_greater_than)
+{
+	operand x(0, operand::variable);
+	operand y(1, operand::variable);
+	
+	expression e = x>y;
+
+	vector<value> state;
+	int xval = rand()%100;
+	int yval = rand()%100;
+
+	state.push_back(value(xval));
+	state.push_back(value(yval));
+
+	value result = e.evaluate(state);
+
+	EXPECT_EQ(result.data, xval > yval);
 }
 

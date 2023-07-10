@@ -201,8 +201,6 @@ expression operator%(operand e0, operand e1);
 expression operator&&(operand e0, operand e1);
 expression operator||(operand e0, operand e1);
 
-
-
 }
 
 #endif

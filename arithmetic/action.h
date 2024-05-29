@@ -5,10 +5,9 @@
  *      Author: nbingham
  */
 
-#include "expression.h"
+#pragma once
 
-#ifndef arithmetic_action_h
-#define arithmetic_action_h
+#include "expression.h"
 
 namespace arithmetic
 {
@@ -68,4 +67,3 @@ struct cover
 
 }
 
-#endif

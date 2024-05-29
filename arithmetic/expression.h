@@ -5,10 +5,9 @@
  *      Author: nbingham
  */
 
-#include <common/standard.h>
+#pragma once
 
-#ifndef chp_expression_h
-#define chp_expression_h
+#include <common/standard.h>
 
 namespace arithmetic
 {
@@ -202,5 +201,3 @@ expression operator&&(operand e0, operand e1);
 expression operator||(operand e0, operand e1);
 
 }
-
-#endif

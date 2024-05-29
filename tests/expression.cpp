@@ -202,3 +202,26 @@ TEST(expression, operand_greater_than)
 	EXPECT_EQ(result.data, invalid);
 }
 
+TEST(expression, compound)
+{
+	int invalid = value::invalid;
+	int unstable = value::unstable;
+
+	operand a(0, operand::variable);
+	operand b(1, operand::variable);
+	operand c(2, operand::variable);
+	operand d(3, operand::variable);
+	operand f(4, operand::variable);
+	
+	expression e = (a+b)*c-d%f;
+
+	vector<value> state;
+	state.push_back(value(5));
+	state.push_back(value(4));
+	state.push_back(value(3));
+	state.push_back(value(6));
+	state.push_back(value(3));
+	value result = e.evaluate(state);
+	EXPECT_EQ(result.data, 27);
+}
+

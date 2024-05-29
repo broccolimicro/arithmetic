@@ -791,7 +791,7 @@ expression operator==(expression e0, expression e1)
 expression operator!=(expression e0, expression e1)
 {
 	expression result;
-	result.set("!=", e0, e1);
+	result.set("~=", e0, e1);
 	return result;
 }
 
@@ -917,7 +917,7 @@ expression operator==(expression e0, operand e1)
 expression operator!=(expression e0, operand e1)
 {
 	expression result;
-	result.set("!=", e0, e1);
+	result.set("~=", e0, e1);
 	return result;
 }
 
@@ -1043,7 +1043,7 @@ expression operator==(operand e0, expression e1)
 expression operator!=(operand e0, expression e1)
 {
 	expression result;
-	result.set("!=", e0, e1);
+	result.set("~=", e0, e1);
 	return result;
 }
 
@@ -1169,7 +1169,7 @@ expression operator==(operand e0, operand e1)
 expression operator!=(operand e0, operand e1)
 {
 	expression result;
-	result.set("!=", e0, e1);
+	result.set("~=", e0, e1);
 	return result;
 }
 

@@ -9,45 +9,10 @@
 
 #include <common/standard.h>
 
+#include "state.h"
+
 namespace arithmetic
 {
-
-struct value
-{
-	value();
-	value(int data);
-	~value();
-
-	int data;
-
-	const static int invalid  = 0x80000000;
-	const static int unstable = 0x80000001;
-	const static int unknown  = 0x80000002;
-	const static int valid	  = 0x80000003;
-};
-
-value operator~(value v);
-value operator-(value v);
-value operator!(value v);
-value operator|(value v0, value v1);
-value operator&(value v0, value v1);
-value operator^(value v0, value v1);
-value operator<<(value v0, value v1);
-value operator>>(value v0, value v1);
-value operator+(value v0, value v1);
-value operator-(value v0, value v1);
-value operator*(value v0, value v1);
-value operator/(value v0, value v1);
-value operator%(value v0, value v1);
-
-value operator==(value v0, value v1);
-value operator!=(value v0, value v1);
-value operator<(value v0, value v1);
-value operator>(value v0, value v1);
-value operator<=(value v0, value v1);
-value operator>=(value v0, value v1);
-value operator&&(value v0, value v1);
-value operator||(value v0, value v1);
 
 struct operand
 {
@@ -71,6 +36,8 @@ struct operand
 
 	value get(vector<value> values, vector<value> expressions) const;
 };
+
+ostream &operator<<(ostream &os, operand o);
 
 struct operation
 {
@@ -105,6 +72,15 @@ struct expression
 	expression(string func, vector<expression> args);
 	~expression();
 
+	// The expression consists entirely of a tree of operations stored in an
+	// array. Operations are stored in the array in order of precedence. So if
+	// the expression is (a+b)*3 + x*y, then they'll be stored in the following order:
+	// 0. a+b
+	// 1. operations[0]*3
+	// 2. x*y
+	// 3. operations[1]+operations[2]
+	// Therefore the final operation stored is the operation that produces the
+	// final value for the expression.
 	vector<operation> operations;
 
 	void set(operand arg0);
@@ -119,7 +95,11 @@ struct expression
 	bool is_constant() const;
 
 	expression &operator=(operand e);
+
+	string to_string(int index = -1);
 };
+
+ostream &operator<<(ostream &os, expression e);
 
 expression operator~(expression e);
 expression operator-(expression e);

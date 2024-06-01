@@ -37,32 +37,38 @@ struct action
 value local_assign(const vector<value> &s, action a, bool stable);
 value remote_assign(const vector<value> &s, action a, bool stable);
 
-struct cube
+struct parallel
 {
-	cube();
-	cube(expression expr);
-	cube(int variable, expression expr);
-	cube(int channel, int variable, expression expr);
-	cube(int channel, expression expr, int variable);
-	~cube();
+	parallel();
+	parallel(expression expr);
+	parallel(int variable, expression expr);
+	parallel(int channel, int variable, expression expr);
+	parallel(int channel, expression expr, int variable);
+	~parallel();
 
 	vector<action> actions;
 
-	cube remote(vector<vector<int> > groups);
+	parallel remote(vector<vector<int> > groups);
+
+	action &operator[](int index);
+	const action &operator[](int index) const;
 };
 
-value local_assign(const vector<value> &s, cube c, bool stable);
-value remote_assign(const vector<value> &s, cube c, bool stable);
+value local_assign(const vector<value> &s, parallel c, bool stable);
+value remote_assign(const vector<value> &s, parallel c, bool stable);
 
-struct cover
+struct choice
 {
-	cover();
-	cover(cube c);
-	~cover();
+	choice();
+	choice(parallel c);
+	~choice();
 
-	vector<cube> cubes;
+	vector<parallel> terms;
 
-	cover remote(vector<vector<int> > groups);
+	choice remote(vector<vector<int> > groups);
+
+	parallel &operator[](int index);
+	const parallel &operator[](int index) const;
 };
 
 }

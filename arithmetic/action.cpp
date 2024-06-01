@@ -82,39 +82,39 @@ value remote_assign(const vector<value> &s, action a, bool stable)
 	return value(value::unstable);
 }
 
-cube::cube()
+parallel::parallel()
 {
 
 }
 
-cube::cube(expression expr)
+parallel::parallel(expression expr)
 {
 	actions.push_back(action(expr));
 }
 
-cube::cube(int variable, expression expr)
+parallel::parallel(int variable, expression expr)
 {
 	actions.push_back(action(variable, expr));
 }
 
-cube::cube(int channel, int variable, expression expr)
+parallel::parallel(int channel, int variable, expression expr)
 {
 	actions.push_back(action(channel, variable, expr));
 }
 
-cube::cube(int channel, expression expr, int variable)
+parallel::parallel(int channel, expression expr, int variable)
 {
 	actions.push_back(action(channel, expr, variable));
 }
 
-cube::~cube()
+parallel::~parallel()
 {
 
 }
 
-cube cube::remote(vector<vector<int> > groups)
+parallel parallel::remote(vector<vector<int> > groups)
 {
-	cube result = *this;
+	parallel result = *this;
 	for (int i = (int)result.actions.size()-1; i >= 0; i--)
 	{
 		if (result.actions[i].variable >= 0)
@@ -137,7 +137,15 @@ cube cube::remote(vector<vector<int> > groups)
 	return result;
 }
 
-void local_assign(vector<value> &s, cube c, bool stable)
+action &parallel::operator[](int index) {
+	return actions[index];
+}
+
+const action &parallel::operator[](int index) const {
+	return actions[index];
+}
+
+void local_assign(vector<value> &s, parallel c, bool stable)
 {
 	map<int, value> sent;
 	map<int, value> recv;
@@ -204,7 +212,7 @@ void local_assign(vector<value> &s, cube c, bool stable)
 		s[i->first] = i->second;
 }
 
-void remote_assign(vector<value> &s, cube c, bool stable)
+void remote_assign(vector<value> &s, parallel c, bool stable)
 {
 	map<int, value> sent;
 	map<int, value> recv;
@@ -271,27 +279,35 @@ void remote_assign(vector<value> &s, cube c, bool stable)
 		s[i->first] = i->second;
 }
 
-cover::cover()
+choice::choice()
 {
 
 }
 
-cover::cover(cube c)
+choice::choice(parallel c)
 {
-	cubes.push_back(c);
+	terms.push_back(c);
 }
 
-cover::~cover()
+choice::~choice()
 {
 
 }
 
-cover cover::remote(vector<vector<int> > groups)
+choice choice::remote(vector<vector<int> > groups)
 {
-	cover result;
-	for (int i = 0; i < (int)cubes.size(); i++)
-		result.cubes.push_back(cubes[i].remote(groups));
+	choice result;
+	for (int i = 0; i < (int)terms.size(); i++)
+		result.terms.push_back(terms[i].remote(groups));
 	return result;
+}
+
+parallel &choice::operator[](int index) {
+	return terms[index];
+}
+
+const parallel &choice::operator[](int index) const {
+	return terms[index];
 }
 
 }

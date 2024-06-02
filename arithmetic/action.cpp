@@ -54,7 +54,7 @@ action::~action()
 
 }
 
-value local_assign(const vector<value> &s, action a, bool stable)
+value local_assign(const state &s, action a, bool stable)
 {
 	if (a.behavior == action::assign && a.variable >= 0)
 	{
@@ -67,7 +67,7 @@ value local_assign(const vector<value> &s, action a, bool stable)
 	return value(value::unstable);
 }
 
-value remote_assign(const vector<value> &s, action a, bool stable)
+value remote_assign(const state &s, action a, bool stable)
 {
 	if (a.behavior == action::assign && a.variable >= 0)
 	{
@@ -145,7 +145,7 @@ const action &parallel::operator[](int index) const {
 	return actions[index];
 }
 
-void local_assign(vector<value> &s, parallel c, bool stable)
+void local_assign(state &s, parallel c, bool stable)
 {
 	map<int, value> sent;
 	map<int, value> recv;
@@ -179,7 +179,7 @@ void local_assign(vector<value> &s, parallel c, bool stable)
 			c.actions[i].behavior = action::assign;
 			map<int, value>::iterator loc = recv.find(c.actions[i].channel);
 			if (loc == recv.end())
-				c.actions[i].expr = operand(value(value::invalid));
+				c.actions[i].expr = operand(value(value::neutral));
 			else
 				c.actions[i].expr = operand(loc->second);
 		}
@@ -188,7 +188,7 @@ void local_assign(vector<value> &s, parallel c, bool stable)
 			c.actions[i].behavior = action::assign;
 			map<int, value>::iterator loc = sent.find(c.actions[i].channel);
 			if (loc == sent.end())
-				c.actions[i].expr = operand(value(value::invalid));
+				c.actions[i].expr = operand(value(value::neutral));
 			else
 				c.actions[i].expr = operand(loc->second);
 		}
@@ -212,7 +212,7 @@ void local_assign(vector<value> &s, parallel c, bool stable)
 		s[i->first] = i->second;
 }
 
-void remote_assign(vector<value> &s, parallel c, bool stable)
+void remote_assign(state &s, parallel c, bool stable)
 {
 	map<int, value> sent;
 	map<int, value> recv;
@@ -246,7 +246,7 @@ void remote_assign(vector<value> &s, parallel c, bool stable)
 			c.actions[i].behavior = action::assign;
 			map<int, value>::iterator loc = recv.find(c.actions[i].channel);
 			if (loc == recv.end())
-				c.actions[i].expr = operand(value(value::invalid));
+				c.actions[i].expr = operand(value(value::neutral));
 			else
 				c.actions[i].expr = operand(loc->second);
 		}
@@ -255,7 +255,7 @@ void remote_assign(vector<value> &s, parallel c, bool stable)
 			c.actions[i].behavior = action::assign;
 			map<int, value>::iterator loc = sent.find(c.actions[i].channel);
 			if (loc == sent.end())
-				c.actions[i].expr = operand(value(value::invalid));
+				c.actions[i].expr = operand(value(value::neutral));
 			else
 				c.actions[i].expr = operand(loc->second);
 		}

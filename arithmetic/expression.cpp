@@ -15,7 +15,7 @@ namespace arithmetic
 operand::operand()
 {
 	index = 0;
-	type = invalid;
+	type = neutral;
 }
 
 operand::operand(int index, int type)
@@ -26,8 +26,8 @@ operand::operand(int index, int type)
 
 operand::operand(value v)
 {
-	if (v.data == value::invalid)
-		type = invalid;
+	if (v.data == value::neutral)
+		type = neutral;
 	else if (v.data == value::unstable)
 		type = unstable;
 	else if (v.data == value::unknown)
@@ -45,7 +45,7 @@ operand::~operand()
 
 ostream &operator<<(ostream &os, operand o)
 {
-	if (o.type == operand::invalid) {
+	if (o.type == operand::neutral) {
 		os << "N";
 	} else if (o.type == operand::unstable) {
 		os << "X";
@@ -61,11 +61,11 @@ ostream &operator<<(ostream &os, operand o)
 	return os;
 }
 
-value operand::get(vector<value> values, vector<value> expressions) const
+value operand::get(state values, vector<value> expressions) const
 {
 	switch (type)
 	{
-	case invalid:		return value(value::invalid);
+	case neutral:		return value(value::neutral);
 	case unstable:		return value(value::unstable);
 	case unknown:		return value(value::unknown);
 	case constant:		return value(index);
@@ -73,12 +73,12 @@ value operand::get(vector<value> values, vector<value> expressions) const
 		if (index >= 0 && index < (int)expressions.size())
 			return expressions[index];
 		else
-			return value(value::invalid);
+			return value(value::neutral);
 	case variable:
 		if (index >= 0 && index < (int)values.size())
 			return values[index];
 		else
-			return value(value::invalid);
+			return value(value::neutral);
 	default:			return value(value::unstable);
 	}
 }
@@ -223,7 +223,7 @@ string operation::get() const
 	}
 }
 
-value operation::evaluate(vector<value> values, vector<value> expressions) const
+value operation::evaluate(state values, vector<value> expressions) const
 {
 	vector<value> args;
 	args.reserve(operands.size());
@@ -443,7 +443,7 @@ void expression::set(string func, vector<expression> args)
 	operations.push_back(operation(func, operands));
 }
 
-value expression::evaluate(vector<value> values) const
+value expression::evaluate(state values) const
 {
 	vector<value> expressions;
 
@@ -460,7 +460,7 @@ bool expression::is_constant() const
 {
 	for (int i = 0; i < (int)operations.size(); i++)
 		for (int j = 0; j < (int)operations[i].operands.size(); j++)
-			if (operations[i].operands[j].type != operand::constant && operations[i].operands[j].type != operand::expression && operations[i].operands[j].type != operand::invalid)
+			if (operations[i].operands[j].type != operand::constant && operations[i].operands[j].type != operand::expression && operations[i].operands[j].type != operand::neutral)
 				return false;
 
 	return true;

@@ -26,7 +26,7 @@ struct operand
 
 	enum
 	{
-		invalid = 0,
+		neutral = 0,
 		unstable = 1,
 		unknown = 2,
 		constant = 3,
@@ -34,7 +34,7 @@ struct operand
 		variable = 5
 	};
 
-	value get(vector<value> values, vector<value> expressions) const;
+	value get(state values, vector<value> expressions) const;
 };
 
 ostream &operator<<(ostream &os, operand o);
@@ -56,7 +56,7 @@ struct operation
 	void set(string func, operand arg0, operand arg1, operand arg2);
 	void set(string func, vector<operand> args);
 	string get() const;
-	value evaluate(vector<value> values, vector<value> expressions) const;
+	value evaluate(state values, vector<value> expressions) const;
 };
 
 struct expression
@@ -91,7 +91,7 @@ struct expression
 	void set(string func, expression arg0, operand arg1);
 	void set(string func, operand arg0, expression arg1);
 	void set(string func, vector<expression> args);
-	value evaluate(vector<value> values) const;
+	value evaluate(state values) const;
 	bool is_constant() const;
 
 	expression &operator=(operand e);

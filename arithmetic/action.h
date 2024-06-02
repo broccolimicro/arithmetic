@@ -34,8 +34,8 @@ struct action
 	};
 };
 
-value local_assign(const vector<value> &s, action a, bool stable);
-value remote_assign(const vector<value> &s, action a, bool stable);
+value local_assign(const state &s, action a, bool stable);
+value remote_assign(const state &s, action a, bool stable);
 
 struct parallel
 {
@@ -54,8 +54,8 @@ struct parallel
 	const action &operator[](int index) const;
 };
 
-value local_assign(const vector<value> &s, parallel c, bool stable);
-value remote_assign(const vector<value> &s, parallel c, bool stable);
+value local_assign(const state &s, parallel c, bool stable);
+value remote_assign(const state &s, parallel c, bool stable);
 
 struct choice
 {

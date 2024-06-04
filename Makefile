@@ -7,15 +7,17 @@ GTEST        := ../../googletest
 GTEST_I      := -I$(GTEST)/googletest/include -I.
 GTEST_L      := -L$(GTEST)/build/lib -L.
 
-CXXFLAGS	    = -O2 -g -Wall -fmessage-length=0 $(DEPEND:%=-I../%)
+CXXFLAGS	    = -O2 -g -Wall -fmessage-length=0 $(DEPEND:%=-I../%) -I.
 LDFLAGS		    =  
 
 SOURCES	     := $(shell find $(SRCDIR) -name '*.cpp')
-OBJECTS	     := $(SOURCES:%.cpp=%.o)
+OBJECTS	     := $(SOURCES:%.cpp=build/%.o)
+DEPS         := $(shell find build/$(SRCDIR) -name '*.d' 2>/dev/null)
 TARGET		    = lib$(NAME).a
 
 TESTS        := $(shell find $(TESTDIR) -name '*.cpp')
-TEST_OBJECTS := $(TESTS:%.cpp=%.o) $(TESTDIR)/gtest_main.o
+TEST_OBJECTS := $(TESTS:%.cpp=build/%.o) build/$(TESTDIR)/gtest_main.o
+TEST_DEPS    := $(shell find build/$(TESTDIR) -name '*.d' 2>/dev/null)
 TEST_TARGET   = test
 
 all: lib
@@ -27,19 +29,24 @@ tests: lib $(TEST_TARGET)
 $(TARGET): $(OBJECTS)
 	ar rvs $(TARGET) $(OBJECTS)
 
-%.o: $(SRCDIR)/%.cpp 
+build/$(SRCDIR)/%.o: $(SRCDIR)/%.cpp 
+	@mkdir -p $(dir $@)
+	@$(CXX) $(CXXFLAGS) $(LDFLAGS) -MM -MF $(patsubst %.o,%.d,$@) -MT $@ -c $<
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -c -o $@ $<
 
 $(TEST_TARGET): $(TEST_OBJECTS)
 	$(CXX) $(CXXFLAGS) $(GTEST_L) $^ -pthread -l$(NAME) -lgtest -o $(TEST_TARGET)
 
-$(TESTDIR)/%.o: $(TESTDIR)/%.cpp
-	$(CXX) $(CXXFLAGS) $(GTEST_I) -MM -MF $(patsubst %.o,%.d,$@) -MT $@ -c $<
+build/$(TESTDIR)/%.o: $(TESTDIR)/%.cpp
+	@mkdir -p $(dir $@)
+	@$(CXX) $(CXXFLAGS) $(GTEST_I) -MM -MF $(patsubst %.o,%.d,$@) -MT $@ -c $<
 	$(CXX) $(CXXFLAGS) $(GTEST_I) $< -c -o $@
 
-$(TESTDIR)/gtest_main.o: $(GTEST)/googletest/src/gtest_main.cc
+build/$(TESTDIR)/gtest_main.o: $(GTEST)/googletest/src/gtest_main.cc
+	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(GTEST_I) $< -c -o $@
-	
+
+include $(DEPS) $(TEST_DEPS)
+
 clean:
-	rm -f $(OBJECTS) $(TARGET)
-	rm -f $(TEST_OBJECTS) $(TEST_TARGET)
+	rm -rf build $(TARGET) $(TEST_TARGET)

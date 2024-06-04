@@ -406,6 +406,14 @@ void state::trunk(int size) {
 	values.resize(size);
 }
 
+void state::clear() {
+	values.clear();
+}
+
+void state::push_back(value v) {
+	values.push_back(v);
+}
+
 value state::get(int uid) const {
 	return values[uid];
 }

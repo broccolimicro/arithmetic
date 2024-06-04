@@ -90,6 +90,8 @@ struct state
 	void extendN(int num);
 	void extendU(int num);
 	void trunk(int size);
+	void clear();
+	void push_back(value v);
 
 	value get(int uid) const;
 	void set(int uid, value v);

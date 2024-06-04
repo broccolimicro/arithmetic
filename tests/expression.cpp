@@ -12,14 +12,14 @@ TEST(expression, operand_bitwise_or)
 	
 	expression e = x|y;
 
-	vector<value> state;
+	state s;
 	int xval = rand()%100;
 	int yval = rand()%100;
 
-	state.push_back(value(xval));
-	state.push_back(value(yval));
+	s.push_back(value(xval));
+	s.push_back(value(yval));
 
-	value result = e.evaluate(state);
+	value result = e.evaluate(s);
 
 	EXPECT_EQ(result.data, xval | yval);
 }
@@ -31,14 +31,14 @@ TEST(expression, operand_bitwise_and)
 	
 	expression e = x&y;
 
-	vector<value> state;
+	state s;
 	int xval = rand()%100;
 	int yval = rand()%100;
 
-	state.push_back(value(xval));
-	state.push_back(value(yval));
+	s.push_back(value(xval));
+	s.push_back(value(yval));
 
-	value result = e.evaluate(state);
+	value result = e.evaluate(s);
 
 	EXPECT_EQ(result.data, xval & yval);
 }
@@ -50,21 +50,21 @@ TEST(expression, operand_bitwise_xor)
 	
 	expression e = x^y;
 
-	vector<value> state;
+	state s;
 	int xval = rand()%100;
 	int yval = rand()%100;
 
-	state.push_back(value(xval));
-	state.push_back(value(yval));
+	s.push_back(value(xval));
+	s.push_back(value(yval));
 
-	value result = e.evaluate(state);
+	value result = e.evaluate(s);
 
 	EXPECT_EQ(result.data, xval ^ yval);
 }
 
 TEST(expression, operand_equal_to)
 {
-	int invalid = value::invalid;
+	int neutral = value::neutral;
 	int unstable = value::unstable;
 
 	operand x(0, operand::variable);
@@ -72,34 +72,34 @@ TEST(expression, operand_equal_to)
 	
 	expression e = x==y;
 
-	vector<value> state;
-	state.push_back(value(5));
-	state.push_back(value(4));
-	value result = e.evaluate(state);
-	EXPECT_EQ(result.data, invalid);
+	state s;
+	s.push_back(value(5));
+	s.push_back(value(4));
+	value result = e.evaluate(s);
+	EXPECT_EQ(result.data, neutral);
 
-	state.clear();	
-	state.push_back(value(5));
-	state.push_back(value(5));
-	result = e.evaluate(state);
+	s.clear();	
+	s.push_back(value(5));
+	s.push_back(value(5));
+	result = e.evaluate(s);
 	EXPECT_EQ(result.data, 0);
 
-	state.clear();
-	state.push_back(value(value::unstable));
-	state.push_back(value(4));
-	result = e.evaluate(state);
+	s.clear();
+	s.push_back(value(value::unstable));
+	s.push_back(value(4));
+	result = e.evaluate(s);
 	EXPECT_EQ(result.data, unstable);
 
-	state.clear();
-	state.push_back(value(value::invalid));
-	state.push_back(value(4));
-	result = e.evaluate(state);
-	EXPECT_EQ(result.data, invalid);
+	s.clear();
+	s.push_back(value(value::neutral));
+	s.push_back(value(4));
+	result = e.evaluate(s);
+	EXPECT_EQ(result.data, neutral);
 }
 
 TEST(expression, operand_not_equal_to)
 {
-	int invalid = value::invalid;
+	int neutral = value::neutral;
 	int unstable = value::unstable;
 
 	operand x(0, operand::variable);
@@ -107,34 +107,34 @@ TEST(expression, operand_not_equal_to)
 	
 	expression e = x!=y;
 
-	vector<value> state;
-	state.push_back(value(5));
-	state.push_back(value(4));
-	value result = e.evaluate(state);
+	state s;
+	s.push_back(value(5));
+	s.push_back(value(4));
+	value result = e.evaluate(s);
 	EXPECT_EQ(result.data, 0);
 
-	state.clear();	
-	state.push_back(value(5));
-	state.push_back(value(5));
-	result = e.evaluate(state);
-	EXPECT_EQ(result.data, invalid);
+	s.clear();	
+	s.push_back(value(5));
+	s.push_back(value(5));
+	result = e.evaluate(s);
+	EXPECT_EQ(result.data, neutral);
 
-	state.clear();
-	state.push_back(value(value::unstable));
-	state.push_back(value(4));
-	result = e.evaluate(state);
+	s.clear();
+	s.push_back(value(value::unstable));
+	s.push_back(value(4));
+	result = e.evaluate(s);
 	EXPECT_EQ(result.data, unstable);
 
-	state.clear();
-	state.push_back(value(value::invalid));
-	state.push_back(value(4));
-	result = e.evaluate(state);
-	EXPECT_EQ(result.data, invalid);
+	s.clear();
+	s.push_back(value(value::neutral));
+	s.push_back(value(4));
+	result = e.evaluate(s);
+	EXPECT_EQ(result.data, neutral);
 }
 
 TEST(expression, operand_less_than)
 {
-	int invalid = value::invalid;
+	int neutral = value::neutral;
 	int unstable = value::unstable;
 
 	operand x(0, operand::variable);
@@ -142,34 +142,34 @@ TEST(expression, operand_less_than)
 	
 	expression e = x<y;
 
-	vector<value> state;
-	state.push_back(value(5));
-	state.push_back(value(4));
-	value result = e.evaluate(state);
-	EXPECT_EQ(result.data, invalid);
+	state s;
+	s.push_back(value(5));
+	s.push_back(value(4));
+	value result = e.evaluate(s);
+	EXPECT_EQ(result.data, neutral);
 
-	state.clear();	
-	state.push_back(value(4));
-	state.push_back(value(5));
-	result = e.evaluate(state);
+	s.clear();	
+	s.push_back(value(4));
+	s.push_back(value(5));
+	result = e.evaluate(s);
 	EXPECT_EQ(result.data, 0);
 
-	state.clear();
-	state.push_back(value(value::unstable));
-	state.push_back(value(4));
-	result = e.evaluate(state);
+	s.clear();
+	s.push_back(value(value::unstable));
+	s.push_back(value(4));
+	result = e.evaluate(s);
 	EXPECT_EQ(result.data, unstable);
 
-	state.clear();
-	state.push_back(value(value::invalid));
-	state.push_back(value(4));
-	result = e.evaluate(state);
-	EXPECT_EQ(result.data, invalid);
+	s.clear();
+	s.push_back(value(value::neutral));
+	s.push_back(value(4));
+	result = e.evaluate(s);
+	EXPECT_EQ(result.data, neutral);
 }
 
 TEST(expression, operand_greater_than)
 {
-	int invalid = value::invalid;
+	int neutral = value::neutral;
 	int unstable = value::unstable;
 
 	operand x(0, operand::variable);
@@ -177,36 +177,33 @@ TEST(expression, operand_greater_than)
 	
 	expression e = x>y;
 
-	vector<value> state;
-	state.push_back(value(5));
-	state.push_back(value(4));
-	value result = e.evaluate(state);
+	state s;
+	s.push_back(value(5));
+	s.push_back(value(4));
+	value result = e.evaluate(s);
 	EXPECT_EQ(result.data, 0);
 
-	state.clear();	
-	state.push_back(value(4));
-	state.push_back(value(5));
-	result = e.evaluate(state);
-	EXPECT_EQ(result.data, invalid);
+	s.clear();	
+	s.push_back(value(4));
+	s.push_back(value(5));
+	result = e.evaluate(s);
+	EXPECT_EQ(result.data, neutral);
 
-	state.clear();
-	state.push_back(value(value::unstable));
-	state.push_back(value(4));
-	result = e.evaluate(state);
+	s.clear();
+	s.push_back(value(value::unstable));
+	s.push_back(value(4));
+	result = e.evaluate(s);
 	EXPECT_EQ(result.data, unstable);
 
-	state.clear();
-	state.push_back(value(value::invalid));
-	state.push_back(value(4));
-	result = e.evaluate(state);
-	EXPECT_EQ(result.data, invalid);
+	s.clear();
+	s.push_back(value(value::neutral));
+	s.push_back(value(4));
+	result = e.evaluate(s);
+	EXPECT_EQ(result.data, neutral);
 }
 
 TEST(expression, compound)
 {
-	int invalid = value::invalid;
-	int unstable = value::unstable;
-
 	operand a(0, operand::variable);
 	operand b(1, operand::variable);
 	operand c(2, operand::variable);
@@ -215,13 +212,13 @@ TEST(expression, compound)
 	
 	expression e = (a+b)*c-d%f;
 
-	vector<value> state;
-	state.push_back(value(5));
-	state.push_back(value(4));
-	state.push_back(value(3));
-	state.push_back(value(6));
-	state.push_back(value(3));
-	value result = e.evaluate(state);
+	state s;
+	s.push_back(value(5));
+	s.push_back(value(4));
+	s.push_back(value(3));
+	s.push_back(value(6));
+	s.push_back(value(3));
+	value result = e.evaluate(s);
 	EXPECT_EQ(result.data, 27);
 }
 

@@ -383,6 +383,10 @@ value union_of(value v0, value v1) {
 state::state() {
 }
 
+state::state(int uid, value v) {
+	set(uid, v);
+}
+
 state::~state() {
 }
 
@@ -415,10 +419,17 @@ void state::push_back(value v) {
 }
 
 value state::get(int uid) const {
-	return values[uid];
+	if (uid < (int)values.size()) {
+		return values[uid];
+	} else {
+		return value(value::unknown);
+	}
 }
 
 void state::set(int uid, value v) {
+	if (uid >= (int)values.size()) {
+		values.resize(uid+1, value(value::unknown));
+	}
 	values[uid] = v;
 }
 
@@ -437,17 +448,48 @@ bool state::is_subset_of(const state &s) const {
 	return true;
 }
 
+state &state::operator&=(state s) {
+	values.reserve(max(values.size(), s.values.size()));
+	
+	int m0 = (int)min(values.size(), s.values.size());
+	for (int i = 0; i < m0; i++) {
+		values[i] = intersect(values[i], s.values[i]);
+	}
+	for (int i = m0; i < (int)s.values.size(); i++) {
+		values.push_back(s.values[i]);
+	}
+
+	return *this;
+}
+
+state &state::operator|=(state s) {
+	if (s.values.size() < values.size()) {
+		values.resize(s.values.size());
+	}	
+	for (int i = 0; i < (int)values.size(); i++) {
+		values[i] = union_of(values[i], s.values[i]);
+	}
+	return *this;
+}
+
 state &state::operator=(state s) {
 	values = s.values;
 	return *this;
 }
 
 value &state::operator[](int uid) {
+	if (uid >= (int)values.size()) {
+		values.resize(uid+1, value(value::unknown));
+	}
 	return values[uid];
 }
 
 value state::operator[](int uid) const {
-	return values[uid];
+	if (uid < (int)values.size()) {
+		return values[uid];
+	} else {
+		return value(value::unknown);
+	}
 }
 
 ostream &operator<<(ostream &os, const state &s) {

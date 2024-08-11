@@ -79,6 +79,7 @@ value union_of(value v0, value v1);
 struct state
 {
 	state();
+	state(int uid, value v);
 	~state();
 
 	// Each value at index i represents the current value of the
@@ -98,6 +99,8 @@ struct state
 
 	bool is_subset_of(const state &s) const;
 
+	state &operator&=(state s);
+	state &operator|=(state s);
 	state &operator=(state s);
 
 	value &operator[](int uid);

@@ -59,6 +59,10 @@ ostream &operator<<(ostream &os, value v)
 	return os;
 }
 
+value::operator bool() const {
+	return data >= value::valid;
+}
+
 value operator~(value v)
 {
 	if (v.data >= value::valid)
@@ -433,6 +437,13 @@ void state::set(int uid, value v) {
 	values[uid] = v;
 }
 
+void state::sv_intersect(int uid, value v) {
+	if (uid >= (int)values.size()) {
+		values.resize(uid+1, value(value::unknown));
+	}
+	values[uid] = intersect(values[uid], v);
+}
+
 bool state::is_subset_of(const state &s) const {
 	int m0 = (int)min(values.size(), s.values.size());
 	for (int i = 0; i < m0; i++) {
@@ -490,6 +501,81 @@ value state::operator[](int uid) const {
 	} else {
 		return value(value::unknown);
 	}
+}
+
+state state::remote(vector<vector<int> > groups)
+{
+	state result = *this;
+	for (int i = 0; i < (int)result.values.size(); i++) {
+		value v = result.values[i];
+		if (v.data == value::unknown) {
+			continue;
+		}
+
+		for (auto j = groups.begin(); j != groups.end(); j++) {
+			if (find(j->begin(), j->end(), i) == j->end()) {
+				continue;
+			}
+
+			for (auto k = j->begin(); k != j->end(); k++) {
+				if (*k != i) {
+					result.sv_intersect(*k, v);
+				}
+			}
+		}
+	}
+
+	return result;
+}
+
+bool state::is_tautology() const {
+	for (auto v = values.begin(); v != values.end(); v++) {
+		if (v->data != value::unknown) {
+			return false;
+		}
+	}
+	return true;
+}
+
+state state::mask() const {
+	state result;
+	result.values.reserve(values.size());
+	for (auto v = values.begin(); v != values.end(); v++) {
+		if (v->data == value::unknown) {
+			result.values.push_back(value::unstable);
+		} else {
+			result.values.push_back(value::unknown);
+		}
+	}
+	return result;
+}
+
+state state::mask(const state &m) const {
+	state result;
+	result.values.reserve(values.size());
+	int m0 = min(values.size(), m.values.size());
+	for (int i = 0; i < m0; i++) {
+		if (m.values[i].data == value::unknown) {
+			result.values.push_back(value::unknown);
+		} else {
+			result.values.push_back(values[i]);
+		}
+	}
+	result.values.insert(result.values.end(), values.begin()+m0, values.end());
+	return result;
+}
+
+state state::combine_mask(const state &m) const {
+	state result;
+	int m0 = min(values.size(), m.values.size());
+	result.values.reserve(m0);
+	for (int i = 0; i < m0; i++) {
+		result.values.push_back(
+			m.values[i].data == value::unknown or
+			values[i].data == value::unknown ? 
+				value::unknown : value::unstable);
+	}
+	return result;
 }
 
 ostream &operator<<(ostream &os, const state &s) {
@@ -677,5 +763,93 @@ state operator|(state s0, state s1) {
 	return result;
 }
 
+state local_assign(state s0, state s1, bool stable)
+{
+	for (int i = 0; i < (int)s0.values.size() and i < (int)s1.values.size(); i++) {
+		if (s1.values[i].data != value::unknown) {
+			s0.values[i].data = s1.values[i].data;
+		}
+	}
+	return s0;
+}
+
+state remote_assign(state s0, state s1, bool stable)
+{
+	for (int i = 0; i < (int)s0.values.size() and i < (int)s1.values.size(); i++) {
+		if (s1.values[i].data != value::unknown and s0.values[i].data != s1.values[i].data) {
+			s0.values[i].data = stable ? value::unknown : value::unstable;
+		}
+	}
+	return s0;
+}
+
+bool vacuous_assign(const state &s0, const state &s1, bool stable) {
+	for (int i = 0; i < (int)s0.values.size() and i < (int)s1.values.size(); i++) {
+		if (s1.values[i].data != value::unknown and s0.values[i].data != s1.values[i].data and (not stable or s0.values[i].data != value::unstable)) {
+			return false;
+		}
+	}
+	return true;
+}
+
+bool are_interfering(const state &s0, const state &s1) {
+	int m0 = min(s0.values.size(), s1.values.size());
+	for (int i = 0; i < m0; i++) {
+		if (s0.values[i].data != value::unknown and s1.values[i].data != value::unknown and s0.values[i].data != s1.values[i].data) {
+			return true;
+		}
+	}
+	return false;
+}
+
+state interfere(state s0, const state &s1) {
+	int m0 = min(s0.values.size(), s1.values.size());
+	for (int i = 0; i < m0; i++) {
+		if (s0.values[i].data != value::unknown and s1.values[i].data != value::unknown and s0.values[i].data != s1.values[i].data) {
+			s0.values[i].data = value::unstable;
+		}
+	}
+	return s0;
+}
+
+region::region() {
+}
+
+region::~region() {
+}
+
+region region::remote(vector<vector<int> > groups) {
+	region result;
+	for (auto s = states.begin(); s != states.end(); s++) {
+		result.states.push_back(s->remote(groups));
+	}
+	return result;
+}
+
+bool region::is_tautology() const {
+	for (auto s = states.begin(); s != states.end(); s++) {
+		if (s->is_tautology()) {
+			return true;
+		}
+	}
+	return false;
+}
+
+state &region::operator[](int idx) {
+	return states[idx];
+}
+
+state region::operator[](int idx) const {
+	return states[idx];
+}
+
+bool vacuous_assign(const state &s0, const region &r1, bool stable) {
+	for (auto s1 = r1.states.begin(); s1 != r1.states.end(); s1++) {
+		if (vacuous_assign(s0, *s1, stable)) {
+			return true;
+		}
+	}
+	return false;
+}
 
 }

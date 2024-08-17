@@ -83,6 +83,14 @@ value operand::get(state values, vector<value> expressions) const
 	}
 }
 
+void operand::set(state &values, vector<value> &expressions, value v) const {
+	if (type == expression and index >= 0 and index < (int)expressions.size()) {
+		expressions[index] = v;
+	} else if (type == variable and index >= 0 and index < (int)values.size()) {
+		values[index] = v;
+	}
+}
+
 operation::operation()
 {
 	func = -1;
@@ -280,9 +288,103 @@ value operation::evaluate(state values, vector<value> expressions) const
 	}
 }
 
+void operation::propagate(state &result, const state &global, vector<value> &expressions, const vector<value> gexpressions, value v) const
+{
+	if (v.data == value::valid) {
+		if (func >= 0 and func <= 2) {
+			// ~a, a, -a
+			operands[0].set(result, expressions, operands[0].get(global, gexpressions));
+		} else if (func == 3) {
+			// !a
+			operands[0].set(result, expressions, value(value::neutral));
+		} else if (func >= 4 and func <= 20) {
+			// a|b, a&b, a^b, a<<b, a>>b
+			// a+b, a-b, a*b, a/b, a%b
+			// a==b, a!=b, a<b, a>b, a<=b, a>=b
+			// a&&b
+			operands[0].set(result, expressions, operands[0].get(global, gexpressions));
+			operands[1].set(result, expressions, operands[1].get(global, gexpressions));
+		} else if (func == 21) {
+			// a||b
+			value v0 = operands[0].get(global, gexpressions);
+			if (v0.data >= value::valid) {
+				operands[0].set(result, expressions, v0);
+			} else {
+				operands[0].set(result, expressions, value(value::unknown));
+			}
+			value v1 = operands[1].get(global, expressions);
+			if (v1.data >= value::valid) {
+				operands[0].set(result, expressions, v1);
+			} else {
+				operands[0].set(result, expressions, value(value::unknown));
+			}
+		} else {
+			// a
+			operands[0].set(result, expressions, operands[0].get(global, gexpressions));
+		}
+	} else if (v.data == value::neutral) {
+		if (func >= 0 and func <= 2) {
+			// ~a, a, -a
+			operands[0].set(result, expressions, value(value::neutral));
+		} else if (func == 3) {
+			// !a
+			operands[0].set(result, expressions, operands[0].get(global, gexpressions));
+		} else if (func >= 4 and func <= 20) {
+			// a|b, a&b, a^b, a<<b, a>>b
+			// a+b, a-b, a*b, a/b, a%b
+			// a==b, a!=b, a<b, a>b, a<=b, a>=b
+			// a&&b
+			value v0 = operands[0].get(global, gexpressions);
+			if (v0.data == value::neutral) {
+				operands[0].set(result, expressions, v0);
+			} else {
+				operands[0].set(result, expressions, value(value::unknown));
+			}
+			value v1 = operands[1].get(global, expressions);
+			if (v1.data == value::neutral) {
+				operands[0].set(result, expressions, v1);
+			} else {
+				operands[0].set(result, expressions, value(value::unknown));
+			}
+		} else if (func == 21) {
+			// a||b
+			operands[0].set(result, expressions, value(value::neutral));
+			operands[1].set(result, expressions, value(value::neutral));
+		} else {
+			// a
+			operands[0].set(result, expressions, value(value::neutral));
+		}
+	} else {
+		if (func >= 0 and func <= 3) {
+			// ~a, a, -a, !a
+			operands[0].set(result, expressions, value(value::unknown));
+		} else if (func >= 4 and func <= 21) {
+			// a|b, a&b, a^b, a<<b, a>>b
+			// a+b, a-b, a*b, a/b, a%b
+			// a==b, a!=b, a<b, a>b, a<=b, a>=b
+			// a&&b, a||b
+			operands[0].set(result, expressions, value(value::unknown));
+			operands[1].set(result, expressions, value(value::unknown));
+		} else {
+			// a
+			operands[0].set(result, expressions, value(value::unknown));
+		}
+	} 
+}
+
 expression::expression()
 {
+	set(operand(value(value::neutral)));
+}
 
+expression::expression(bool v)
+{
+	set(operand(value(v ? 0 : value::neutral)));
+}
+
+expression::expression(value v)
+{
+	set(operand(v));
 }
 
 expression::expression(operand arg0)
@@ -995,6 +1097,59 @@ expression operator||(operand e0, operand e1)
 	expression result;
 	result.set("||", e0, e1);
 	return result;
+}
+
+int passes_guard(const state &encoding, const state &global, const expression &guard, state *total) {
+	vector<value> expressions;
+	vector<value> gexpressions;
+
+	for (int i = 0; i < (int)guard.operations.size(); i++) {
+		value g = guard.operations[i].evaluate(global, expressions);
+		value l = guard.operations[i].evaluate(encoding, expressions);
+
+		if (l.data == value::unstable or g.data == value::unstable
+			or (g.data == value::neutral and l.data >= value::valid)
+			or (g.data >= value::valid and l.data == value::neutral)
+			or (g.data >= value::valid and l.data == value::valid and g.data != l.data)) {
+			l.data = value::unstable;
+		}
+
+		expressions.push_back(l);
+		gexpressions.push_back(g);
+	}
+
+	// If the final value in the expression stack is valid, then we've passed the
+	// guard, and we can back propagate information back to individual variables.
+	// If it is neutral, then we have not yet passed the guard and therefore
+	// cannot propagate information back.
+
+	// If the guard passes, then we have waited for every transition on the
+	// variable. Therefore, we know not only that the input signals are valid or
+	// neutral, but we also know their value. This valid is copied over from the
+	// global state.
+
+	// This validity/neutrality information propagates differently through
+	// different operations.
+	if (total != nullptr and expressions.back().data >= value::valid) {
+		for (int i = (int)guard.operations.size()-1; i >= 0; i--) {
+			guard.operations[i].propagate(*total, global, expressions, gexpressions, expressions[i]);
+		}
+	}
+
+	if (expressions.empty()) {
+		return 1;
+	} else if (expressions.back().data == value::neutral) {
+		return -1;
+	} else if (expressions.back().data == value::unstable) {
+		return 0;
+	}
+	
+	return 1;
+}
+
+expression weakest_guard(const expression &guard, const expression &exclude) {
+	// TODO(edward.bingham) implement
+	return guard;
 }
 
 }

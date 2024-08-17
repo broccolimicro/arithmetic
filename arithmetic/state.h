@@ -35,6 +35,8 @@ struct value
 	int data;
 
 	bool is_subset_of(value v) const;
+
+	operator bool() const;
 };
 
 ostream &operator<<(ostream &os, value v);
@@ -96,6 +98,7 @@ struct state
 
 	value get(int uid) const;
 	void set(int uid, value v);
+	void sv_intersect(int uid, value v);
 
 	bool is_subset_of(const state &s) const;
 
@@ -105,6 +108,14 @@ struct state
 
 	value &operator[](int uid);
 	value operator[](int uid) const;
+
+	state remote(vector<vector<int> > groups);
+
+	bool is_tautology() const;
+
+	state mask() const;
+	state mask(const state &m) const;
+	state combine_mask(const state &m) const;
 };
 
 ostream &operator<<(ostream &os, const state &s);
@@ -119,5 +130,28 @@ bool operator>=(state s0, state s1);
 // Set operators intersect and union
 state operator&(state s0, state s1);
 state operator|(state s0, state s1);
+
+state local_assign(state s0, state s1, bool stable);
+state remote_assign(state s0, state s1, bool stable);
+bool vacuous_assign(const state &encoding, const state &assignment, bool stable);
+
+bool are_interfering(const state &s0, const state &s1);
+state interfere(state s0, const state &s1);
+
+struct region {
+	region();
+	~region();
+
+	vector<state> states;
+
+	region remote(vector<vector<int> > groups);
+	
+	bool is_tautology() const;
+
+	state &operator[](int idx);
+	state operator[](int idx) const;
+};
+
+bool vacuous_assign(const state &encoding, const region &assignment, bool stable);
 
 }

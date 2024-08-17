@@ -34,9 +34,6 @@ struct action
 	};
 };
 
-value local_assign(const state &s, action a, bool stable);
-value remote_assign(const state &s, action a, bool stable);
-
 struct parallel
 {
 	parallel();
@@ -48,14 +45,13 @@ struct parallel
 
 	vector<action> actions;
 
-	parallel remote(vector<vector<int> > groups);
-
 	action &operator[](int index);
 	const action &operator[](int index) const;
-};
 
-value local_assign(const state &s, parallel c, bool stable);
-value remote_assign(const state &s, parallel c, bool stable);
+	bool is_tautology() const;
+
+	state evaluate(const state &curr);
+};
 
 struct choice
 {
@@ -65,10 +61,12 @@ struct choice
 
 	vector<parallel> terms;
 
-	choice remote(vector<vector<int> > groups);
-
 	parallel &operator[](int index);
 	const parallel &operator[](int index) const;
+
+	bool is_tautology() const;
+
+	region evaluate(const state &curr);
 };
 
 }

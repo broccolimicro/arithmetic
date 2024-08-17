@@ -35,6 +35,7 @@ struct operand
 	};
 
 	value get(state values, vector<value> expressions) const;
+	void set(state &values, vector<value> &expressions, value v) const;
 };
 
 ostream &operator<<(ostream &os, operand o);
@@ -57,11 +58,14 @@ struct operation
 	void set(string func, vector<operand> args);
 	string get() const;
 	value evaluate(state values, vector<value> expressions) const;
+	void propagate(state &result, const state &global, vector<value> &expressions, const vector<value> gexpressions, value v) const;
 };
 
 struct expression
 {
 	expression();
+	expression(bool v);
+	expression(value v);
 	expression(operand arg0);
 	expression(string func, operand arg0);
 	expression(string func, expression arg0);
@@ -179,5 +183,8 @@ expression operator/(operand e0, operand e1);
 expression operator%(operand e0, operand e1);
 expression operator&&(operand e0, operand e1);
 expression operator||(operand e0, operand e1);
+
+int passes_guard(const state &encoding, const state &global, const expression &guard, state *total);
+expression weakest_guard(const expression &guard, const expression &exclude);
 
 }

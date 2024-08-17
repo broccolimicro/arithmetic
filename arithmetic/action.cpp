@@ -54,34 +54,6 @@ action::~action()
 
 }
 
-value local_assign(const state &s, action a, bool stable)
-{
-	if (a.behavior == action::assign && a.variable >= 0)
-	{
-		value v = a.expr.evaluate(s);
-
-		if (stable || v.data == s[a.variable].data)
-			return v;
-	}
-
-	return value(value::unstable);
-}
-
-value remote_assign(const state &s, action a, bool stable)
-{
-	if (a.behavior == action::assign && a.variable >= 0)
-	{
-		value v = a.expr.evaluate(s);
-
-		if (v.data == s[a.variable].data)
-			return v;
-		else if (stable)
-			return value(value::unknown);
-	}
-
-	return value(value::unstable);
-}
-
 parallel::parallel()
 {
 
@@ -112,31 +84,6 @@ parallel::~parallel()
 
 }
 
-parallel parallel::remote(vector<vector<int> > groups)
-{
-	parallel result = *this;
-	for (int i = (int)result.actions.size()-1; i >= 0; i--)
-	{
-		if (result.actions[i].variable >= 0)
-		{
-			for (int j = 0; j < (int)groups.size(); j++)
-			{
-				if (find(groups[j].begin(), groups[j].end(), result.actions[i].variable) != groups[j].end())
-				{
-					for (int k = 0; k < (int)groups[j].size(); k++)
-						if (groups[j][k] != result.actions[i].variable)
-						{
-							result.actions.push_back(result.actions[i]);
-							result.actions.back().variable = groups[j][k];
-						}
-				}
-			}
-		}
-	}
-
-	return result;
-}
-
 action &parallel::operator[](int index) {
 	return actions[index];
 }
@@ -145,138 +92,94 @@ const action &parallel::operator[](int index) const {
 	return actions[index];
 }
 
-void local_assign(state &s, parallel c, bool stable)
-{
-	map<int, value> sent;
-	map<int, value> recv;
-	// Determine the value for the data being sent in either the request or the acknowledge
-	for (int i = 0; i < (int)c.actions.size(); i++)
-	{
-		if (c.actions[i].behavior == action::send)
-		{
-			value v = c.actions[i].expr.evaluate(s);
-			map<int, value>::iterator loc = sent.find(c.actions[i].channel);
-			if (loc == sent.end())
-				sent.insert(pair<int, value>(c.actions[i].channel, v));
-			else if (loc->second.data != v.data)
-				loc->second.data = value::unstable;
-		}
-		else if (c.actions[i].behavior == action::receive)
-		{
-			value v = c.actions[i].expr.evaluate(s);
-			map<int, value>::iterator loc = recv.find(c.actions[i].channel);
-			if (loc == recv.end())
-				recv.insert(pair<int, value>(c.actions[i].channel, v));
-			else if (loc->second.data != v.data)
-				loc->second.data = value::unstable;
-		}
+bool parallel::is_tautology() const {
+	if (actions.empty()) {
+		return true;
 	}
 
-	for (int i = 0; i < (int)c.actions.size(); i++)
-	{
-		if (c.actions[i].behavior == action::send && c.actions[i].variable >= 0)
-		{
-			c.actions[i].behavior = action::assign;
-			map<int, value>::iterator loc = recv.find(c.actions[i].channel);
-			if (loc == recv.end())
-				c.actions[i].expr = operand(value(value::neutral));
-			else
-				c.actions[i].expr = operand(loc->second);
-		}
-		else if (c.actions[i].behavior == action::receive && c.actions[i].variable >= 0)
-		{
-			c.actions[i].behavior = action::assign;
-			map<int, value>::iterator loc = sent.find(c.actions[i].channel);
-			if (loc == sent.end())
-				c.actions[i].expr = operand(value(value::neutral));
-			else
-				c.actions[i].expr = operand(loc->second);
+	for (int i = 0; i < (int)actions.size(); i++) {
+		if (actions[i].behavior == action::send
+			or actions[i].behavior == action::receive
+			or (actions[i].behavior == action::assign
+				and (not actions[i].expr.is_constant()
+				or actions[i].expr.evaluate(state()).data != value::unknown))) {
+			return false;
 		}
 	}
-
-	map<int, value> assigned;
-	for (int i = 0; i < (int)c.actions.size(); i++)
-	{
-		if (c.actions[i].behavior == action::assign && c.actions[i].variable >= 0)
-		{
-			value v = local_assign(s, c.actions[i], stable);
-			map<int, value>::iterator loc = assigned.find(c.actions[i].variable);
-			if (loc == assigned.end())
-				assigned.insert(pair<int, value>(c.actions[i].variable, v));
-			else if (loc->second.data != v.data)
-				loc->second.data = value::unstable;
-		}
-	}
-
-	for (map<int, value>::iterator i = assigned.begin(); i != assigned.end(); i++)
-		s[i->first] = i->second;
+	return true;
 }
 
-void remote_assign(state &s, parallel c, bool stable)
+/*void parallel::get_mask(vector<int> &cov) const {
+	for (auto act = actions.begin(); act != actions.end(); act++) {
+		if (act->behavior == action::assign or act->behavior == action::receive) {
+			cov.push_back(act->variable);
+		}
+		if (act->behavior == action::send or act->behavior == action::receive) {
+			cov.push_back(act->channel);
+		}
+	}
+	sort(cov.begin(), cov.end());
+	cov.erase(unique(cov.begin(), cov.end()), cov.end());
+}
+
+parallel parallel::mask(vector<int> cov) const {
+	parallel p0 = *this;
+	for (int i = (int)p0.actions.size()-1; i >= 0; i--) {
+		bool remove = false;
+		if (p0.actions[i].behavior == action::assign or p0.actions[i].behavior == action::receive) {
+			remove = find(cov.begin(), cov.end(), p0.actions[i].variable) != cov.end();
+		}
+		if (p0.actions[i].behavior == action::send or p0.actions[i].behavior == action::receive) {
+			remove = find(cov.begin(), cov.end(), p0.actions[i].channel) != cov.end();
+		}
+		if (remove) {
+			p0.actions.erase(p0.actions.begin()+i);
+		}
+	}
+	return p0;
+}*/
+
+state parallel::evaluate(const state &curr)
 {
-	map<int, value> sent;
-	map<int, value> recv;
+	map<int, value> sent; // data sent along the requests
+	map<int, value> recv; // data received along the enables
 	// Determine the value for the data being sent in either the request or the acknowledge
-	for (int i = 0; i < (int)c.actions.size(); i++)
-	{
-		if (c.actions[i].behavior == action::send)
-		{
-			value v = c.actions[i].expr.evaluate(s);
-			map<int, value>::iterator loc = sent.find(c.actions[i].channel);
-			if (loc == sent.end())
-				sent.insert(pair<int, value>(c.actions[i].channel, v));
-			else if (loc->second.data != v.data)
-				loc->second.data = value::unstable;
-		}
-		else if (c.actions[i].behavior == action::receive)
-		{
-			value v = c.actions[i].expr.evaluate(s);
-			map<int, value>::iterator loc = recv.find(c.actions[i].channel);
-			if (loc == recv.end())
-				recv.insert(pair<int, value>(c.actions[i].channel, v));
-			else if (loc->second.data != v.data)
-				loc->second.data = value::unstable;
+	for (int i = 0; i < (int)actions.size(); i++) {
+		if (actions[i].behavior == action::send) {
+			auto loc = sent.insert(pair<int, value>(actions[i].channel, actions[i].expr.evaluate(curr)));
+			if (not loc.second) {
+				loc.first->second.data = value::unstable;
+			}
+		} else if (actions[i].behavior == action::receive) {
+			auto loc = recv.insert(pair<int, value>(actions[i].channel, actions[i].expr.evaluate(curr)));
+			if (not loc.second) {
+				loc.first->second.data = value::unstable;
+			}
 		}
 	}
 
-	for (int i = 0; i < (int)c.actions.size(); i++)
-	{
-		if (c.actions[i].behavior == action::send && c.actions[i].variable >= 0)
-		{
-			c.actions[i].behavior = action::assign;
-			map<int, value>::iterator loc = recv.find(c.actions[i].channel);
-			if (loc == recv.end())
-				c.actions[i].expr = operand(value(value::neutral));
-			else
-				c.actions[i].expr = operand(loc->second);
+	state result;
+	for (int i = 0; i < (int)actions.size(); i++) {
+		if (actions[i].variable < 0) {
+			continue;
 		}
-		else if (c.actions[i].behavior == action::receive && c.actions[i].variable >= 0)
-		{
-			c.actions[i].behavior = action::assign;
-			map<int, value>::iterator loc = sent.find(c.actions[i].channel);
-			if (loc == sent.end())
-				c.actions[i].expr = operand(value(value::neutral));
-			else
-				c.actions[i].expr = operand(loc->second);
+
+		if (actions[i].behavior == action::send) {
+			map<int, value>::iterator loc = recv.find(actions[i].channel);
+			if (loc != recv.end()) {
+				result.sv_intersect(actions[i].variable, loc->second);
+			}
+		} else if (actions[i].behavior == action::receive) {
+			map<int, value>::iterator loc = sent.find(actions[i].channel);
+			if (loc != sent.end()) {
+				result.sv_intersect(actions[i].variable, loc->second);
+			}
+		} else if (actions[i].behavior == action::assign) {
+			result.sv_intersect(actions[i].variable, actions[i].expr.evaluate(curr));
 		}
 	}
 
-	map<int, value> assigned;
-	for (int i = 0; i < (int)c.actions.size(); i++)
-	{
-		if (c.actions[i].behavior == action::assign && c.actions[i].variable >= 0)
-		{
-			value v = remote_assign(s, c.actions[i], stable);
-			map<int, value>::iterator loc = assigned.find(c.actions[i].variable);
-			if (loc == assigned.end())
-				assigned.insert(pair<int, value>(c.actions[i].variable, v));
-			else if (loc->second.data != v.data)
-				loc->second.data = value::unstable;
-		}
-	}
-
-	for (map<int, value>::iterator i = assigned.begin(); i != assigned.end(); i++)
-		s[i->first] = i->second;
+	return result;
 }
 
 choice::choice()
@@ -294,20 +197,34 @@ choice::~choice()
 
 }
 
-choice choice::remote(vector<vector<int> > groups)
-{
-	choice result;
-	for (int i = 0; i < (int)terms.size(); i++)
-		result.terms.push_back(terms[i].remote(groups));
-	return result;
-}
-
 parallel &choice::operator[](int index) {
 	return terms[index];
 }
 
 const parallel &choice::operator[](int index) const {
 	return terms[index];
+}
+
+bool choice::is_tautology() const {
+	if (terms.empty()) {
+		return false;
+	}
+
+	for (auto term = terms.begin(); term != terms.end(); term++) {
+		if (term->is_tautology()) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+region choice::evaluate(const state &curr) {
+	region result;
+	for (auto term = terms.begin(); term != terms.end(); term++) {
+		result.states.push_back(term->evaluate(curr));
+	}
+	return result;
 }
 
 }

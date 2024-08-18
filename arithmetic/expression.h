@@ -29,9 +29,10 @@ struct operand
 		neutral = 0,
 		unstable = 1,
 		unknown = 2,
-		constant = 3,
-		expression = 4,
-		variable = 5
+		valid = 3,
+		constant = 4,
+		expression = 5,
+		variable = 6
 	};
 
 	value get(state values, vector<value> expressions) const;
@@ -39,6 +40,8 @@ struct operand
 };
 
 ostream &operator<<(ostream &os, operand o);
+
+bool are_same(operand o0, operand o1);
 
 struct operation
 {
@@ -87,6 +90,9 @@ struct expression
 	// final value for the expression.
 	vector<operation> operations;
 
+	int find(operation arg);
+	int push(operation arg);
+
 	void set(operand arg0);
 	void set(string func, operand arg0);
 	void set(string func, expression arg0);
@@ -95,8 +101,15 @@ struct expression
 	void set(string func, expression arg0, operand arg1);
 	void set(string func, operand arg0, expression arg1);
 	void set(string func, vector<expression> args);
+	void push(string func);
+	void push(string func, operand arg0);
+	void push(string func, expression arg0);
 	value evaluate(state values) const;
+	bool is_null() const;
 	bool is_constant() const;
+	bool is_valid() const;
+	bool is_neutral() const;
+	bool is_wire() const;
 
 	expression &operator=(operand e);
 
@@ -107,6 +120,7 @@ ostream &operator<<(ostream &os, expression e);
 
 expression operator~(expression e);
 expression operator-(expression e);
+expression is_valid(expression e);
 expression operator!(expression e);
 expression operator|(expression e0, expression e1);
 expression operator&(expression e0, expression e1);

@@ -54,6 +54,23 @@ action::~action()
 
 }
 
+bool action::is_infeasible() const {
+	return expr.is_null();
+}
+
+bool action::is_vacuous() const {
+	return behavior != action::send
+		and behavior != action::receive
+		and variable < 0
+		and expr.is_constant();
+}
+
+bool action::is_passive() const {
+	return behavior != action::send
+		and behavior != action::receive
+		and variable < 0;
+}
+
 parallel::parallel()
 {
 
@@ -92,17 +109,39 @@ const action &parallel::operator[](int index) const {
 	return actions[index];
 }
 
-bool parallel::is_tautology() const {
+bool parallel::is_infeasible() const {
+	if (actions.empty()) {
+		return false;
+	}
+
+	for (auto i = actions.begin(); i != actions.end(); i++) {
+		if (i->is_infeasible()) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool parallel::is_vacuous() const {
 	if (actions.empty()) {
 		return true;
 	}
 
-	for (int i = 0; i < (int)actions.size(); i++) {
-		if (actions[i].behavior == action::send
-			or actions[i].behavior == action::receive
-			or (actions[i].behavior == action::assign
-				and (not actions[i].expr.is_constant()
-				or actions[i].expr.evaluate(state()).data != value::unknown))) {
+	for (auto i = actions.begin(); i != actions.end(); i++) {
+		if (not i->is_vacuous()) {
+			return false;
+		}
+	}
+	return true;
+}
+
+bool parallel::is_passive() const {
+	if (actions.empty()) {
+		return true;
+	}
+
+	for (auto i = actions.begin(); i != actions.end(); i++) {
+		if (not i->is_passive()) {
 			return false;
 		}
 	}
@@ -182,6 +221,16 @@ state parallel::evaluate(const state &curr)
 	return result;
 }
 
+expression parallel::guard() {
+	expression result(true);
+	for (auto a = actions.begin(); a != actions.end(); a++) {
+		if (not a->expr.is_constant()) {
+			result = result & a->expr;
+		}
+	}
+	return result;
+}
+
 choice::choice()
 {
 
@@ -205,13 +254,27 @@ const parallel &choice::operator[](int index) const {
 	return terms[index];
 }
 
-bool choice::is_tautology() const {
+bool choice::is_infeasible() const {
+	if (terms.empty()) {
+		return true;
+	}
+
+	for (auto i = terms.begin(); i != terms.end(); i++) {
+		if (not i->is_infeasible()) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool choice::is_vacuous() const {
 	if (terms.empty()) {
 		return false;
 	}
 
-	for (auto term = terms.begin(); term != terms.end(); term++) {
-		if (term->is_tautology()) {
+	for (auto i = terms.begin(); i != terms.end(); i++) {
+		if (i->is_vacuous()) {
 			return true;
 		}
 	}
@@ -219,10 +282,36 @@ bool choice::is_tautology() const {
 	return false;
 }
 
+bool choice::is_passive() const {
+	if (terms.empty()) {
+		return false;
+	}
+
+	for (auto i = terms.begin(); i != terms.end(); i++) {
+		if (not i->is_passive()) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
 region choice::evaluate(const state &curr) {
 	region result;
 	for (auto term = terms.begin(); term != terms.end(); term++) {
 		result.states.push_back(term->evaluate(curr));
+	}
+	return result;
+}
+
+expression choice::guard() {
+	if (terms.empty()) {
+		return expression(true);
+	}
+
+	expression result(false);
+	for (auto t = terms.begin(); t != terms.end(); t++) {
+		result = result | t->guard();
 	}
 	return result;
 }

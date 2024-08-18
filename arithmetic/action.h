@@ -32,6 +32,10 @@ struct action
 		send = 1,
 		receive = 2
 	};
+
+	bool is_infeasible() const;
+	bool is_vacuous() const;
+	bool is_passive() const;
 };
 
 struct parallel
@@ -48,9 +52,12 @@ struct parallel
 	action &operator[](int index);
 	const action &operator[](int index) const;
 
-	bool is_tautology() const;
+	bool is_infeasible() const;
+	bool is_vacuous() const;
+	bool is_passive() const;
 
 	state evaluate(const state &curr);
+	expression guard();
 };
 
 struct choice
@@ -64,9 +71,12 @@ struct choice
 	parallel &operator[](int index);
 	const parallel &operator[](int index) const;
 
-	bool is_tautology() const;
+	bool is_infeasible() const;
+	bool is_vacuous() const;
+	bool is_passive() const;
 
 	region evaluate(const state &curr);
+	expression guard();
 };
 
 }

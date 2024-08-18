@@ -48,7 +48,9 @@ bool value::is_subset_of(value v) const {
 ostream &operator<<(ostream &os, value v)
 {
 	if (v.data == value::neutral) {
-		os << "N";
+		os << "gnd";
+	} else if (v.data == value::valid) {
+		os << "vdd";
 	} else if (v.data == value::unstable) {
 		os << "X";
 	} else if (v.data == value::unknown) {
@@ -66,27 +68,34 @@ value::operator bool() const {
 value operator~(value v)
 {
 	if (v.data >= value::valid)
-		v.data = ~v.data;
+		v.data = value::neutral;
+	else if (v.data == value::neutral)
+		v.data = value::valid;
 	return v;
 }
 
 value operator-(value v)
 {
-	if (v.data >= value::valid)
+	if (v.data > value::valid)
 		v.data = -v.data;
+	return v;
+}
+
+value is_valid(value v) {
+	if (v.data >= value::valid) {
+		v.data = value::valid;
+	}
 	return v;
 }
 
 value operator!(value v)
 {
-	if (v.data >= value::valid)
-		v.data = value::neutral;
-	else if (v.data == value::neutral)
-		v.data = 0;
+	if (v.data > value::valid)
+		v.data = ~v.data;
 	return v;
 }
 
-value operator|(value v0, value v1)
+value operator||(value v0, value v1)
 {
 	value result;
 
@@ -96,13 +105,15 @@ value operator|(value v0, value v1)
 		result.data = value::neutral;
 	else if (v0.data == value::unknown or v1.data == value::unknown)
 		result.data = value::unknown;
+	else if (v0.data == value::valid or v1.data == value::valid)
+		result.data = value::unstable; // illegal operator for datatype
 	else
 		result.data = v0.data | v1.data;
 
 	return result;
 }
 
-value operator&(value v0, value v1)
+value operator&&(value v0, value v1)
 {
 	value result;
 	if (v0.data == value::unstable or v1.data == value::unstable)
@@ -111,6 +122,8 @@ value operator&(value v0, value v1)
 		result.data = value::neutral;
 	else if (v0.data == value::unknown or v1.data == value::unknown)
 		result.data = value::unknown;
+	else if (v0.data == value::valid or v1.data == value::valid)
+		result.data = value::unstable; // illegal operator for datatype
 	else
 		result.data = v0.data & v1.data;
 
@@ -126,6 +139,8 @@ value operator^(value v0, value v1)
 		result.data = value::neutral;
 	else if (v0.data == value::unknown or v1.data == value::unknown)
 		result.data = value::unknown;
+	else if (v0.data == value::valid or v1.data == value::valid)
+		result.data = value::unstable; // illegal operator for datatype
 	else
 		result.data = v0.data ^ v1.data;
 
@@ -141,6 +156,8 @@ value operator<<(value v0, value v1)
 		result.data = value::neutral;
 	else if (v0.data == value::unknown or v1.data == value::unknown)
 		result.data = value::unknown;
+	else if (v0.data == value::valid or v1.data == value::valid)
+		result.data = value::unstable; // illegal operator for datatype
 	else
 		result.data = (v0.data << v1.data);
 
@@ -156,6 +173,8 @@ value operator>>(value v0, value v1)
 		result.data = value::neutral;
 	else if (v0.data == value::unknown or v1.data == value::unknown)
 		result.data = value::unknown;
+	else if (v0.data == value::valid or v1.data == value::valid)
+		result.data = value::unstable; // illegal operator for datatype
 	else
 		result.data = (v0.data >> v1.data);
 
@@ -171,6 +190,8 @@ value operator+(value v0, value v1)
 		result.data = value::neutral;
 	else if (v0.data == value::unknown or v1.data == value::unknown)
 		result.data = value::unknown;
+	else if (v0.data == value::valid or v1.data == value::valid)
+		result.data = value::unstable; // illegal operator for datatype
 	else
 		result.data = (v0.data + v1.data);
 
@@ -186,6 +207,8 @@ value operator-(value v0, value v1)
 		result.data = value::neutral;
 	else if (v0.data == value::unknown or v1.data == value::unknown)
 		result.data = value::unknown;
+	else if (v0.data == value::valid or v1.data == value::valid)
+		result.data = value::unstable; // illegal operator for datatype
 	else
 		result.data = (v0.data - v1.data);
 
@@ -201,6 +224,8 @@ value operator*(value v0, value v1)
 		result.data = value::neutral;
 	else if (v0.data == value::unknown or v1.data == value::unknown)
 		result.data = value::unknown;
+	else if (v0.data == value::valid or v1.data == value::valid)
+		result.data = value::unstable; // illegal operator for datatype
 	else
 		result.data = (v0.data * v1.data);
 
@@ -216,6 +241,8 @@ value operator/(value v0, value v1)
 		result.data = value::neutral;
 	else if (v0.data == value::unknown or v1.data == value::unknown)
 		result.data = value::unknown;
+	else if (v0.data == value::valid or v1.data == value::valid)
+		result.data = value::unstable; // illegal operator for datatype
 	else
 		result.data = (v0.data / v1.data);
 
@@ -231,6 +258,8 @@ value operator%(value v0, value v1)
 		result.data = value::neutral;
 	else if (v0.data == value::unknown or v1.data == value::unknown)
 		result.data = value::unknown;
+	else if (v0.data == value::valid or v1.data == value::valid)
+		result.data = value::unstable; // illegal operator for datatype
 	else
 		result.data = (v0.data % v1.data);
 
@@ -247,7 +276,7 @@ value operator==(value v0, value v1)
 	else if (v0.data == value::unknown or v1.data == value::unknown)
 		result.data = value::unknown;
 	else if (v0.data == v1.data)
-		result.data = 0;
+		result.data = value::valid;
 	else
 		result.data = value::neutral;
 
@@ -264,7 +293,7 @@ value operator!=(value v0, value v1)
 	else if (v0.data == value::unknown or v1.data == value::unknown)
 		result.data = value::unknown;
 	else if (v0.data != v1.data)
-		result.data = 0;
+		result.data = value::valid;
 	else
 		result.data = value::neutral;
 	return result;
@@ -280,7 +309,7 @@ value operator<(value v0, value v1)
 	else if (v0.data == value::unknown or v1.data == value::unknown)
 		result.data = value::unknown;
 	else if (v0.data < v1.data)
-		result.data = 0;
+		result.data = value::valid;
 	else
 		result.data = value::neutral;
 	return result;
@@ -296,7 +325,7 @@ value operator>(value v0, value v1)
 	else if (v0.data == value::unknown or v1.data == value::unknown)
 		result.data = value::unknown;
 	else if (v0.data > v1.data)
-		result.data = 0;
+		result.data = value::valid;
 	else
 		result.data = value::neutral;
 	return result;
@@ -312,7 +341,7 @@ value operator<=(value v0, value v1)
 	else if (v0.data == value::unknown or v1.data == value::unknown)
 		result.data = value::unknown;
 	else if (v0.data <= v1.data)
-		result.data = 0;
+		result.data = value::valid;
 	else
 		result.data = value::neutral;
 	return result;
@@ -328,13 +357,13 @@ value operator>=(value v0, value v1)
 	else if (v0.data == value::unknown or v1.data == value::unknown)
 		result.data = value::unknown;
 	else if (v0.data >= v1.data)
-		result.data = 0;
+		result.data = value::valid;
 	else
 		result.data = value::neutral;
 	return result;
 }
 
-value operator&&(value v0, value v1)
+value operator&(value v0, value v1)
 {
 	value result;
 	if (v0.data == value::unstable or v1.data == value::unstable)
@@ -344,17 +373,17 @@ value operator&&(value v0, value v1)
 	else if (v0.data == value::unknown or v1.data == value::unknown)
 		result.data = value::unknown;
 	else
-		result.data = 0;
+		result.data = value::valid;
 	return result;
 }
 
-value operator||(value v0, value v1)
+value operator|(value v0, value v1)
 {
 	value result;
 	if (v0.data == value::unstable or v1.data == value::unstable)
 		result.data = value::unstable;
 	else if (v0.data >= value::valid or v1.data >= value::valid)
-		result.data = 0;
+		result.data = value::valid;
 	else if (v0.data == value::unknown or v1.data == value::unknown)
 		result.data = value::unknown;
 	else
@@ -765,9 +794,13 @@ state operator|(state s0, state s1) {
 
 state local_assign(state s0, state s1, bool stable)
 {
+	if (s0.values.size() < s1.values.size()) {
+		s0.values.resize(s1.values.size(), value(value::unknown));
+	}
+
 	for (int i = 0; i < (int)s0.values.size() and i < (int)s1.values.size(); i++) {
 		if (s1.values[i].data != value::unknown) {
-			s0.values[i].data = s1.values[i].data;
+			s0.values[i].data = stable ? s1.values[i].data : value::unstable;
 		}
 	}
 	return s0;
@@ -775,6 +808,10 @@ state local_assign(state s0, state s1, bool stable)
 
 state remote_assign(state s0, state s1, bool stable)
 {
+	if (s0.values.size() < s1.values.size()) {
+		s0.values.resize(s1.values.size(), value(value::unknown));
+	}
+
 	for (int i = 0; i < (int)s0.values.size() and i < (int)s1.values.size(); i++) {
 		if (s1.values[i].data != value::unknown and s0.values[i].data != s1.values[i].data) {
 			s0.values[i].data = stable ? value::unknown : value::unstable;

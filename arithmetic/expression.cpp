@@ -251,6 +251,9 @@ value operation::evaluate(state values, vector<value> expressions) const
 	for (int i = 0; i < (int)operands.size(); i++)
 		args.push_back(operands[i].get(values, expressions));
 
+	// TODO(edward.bingham) create a single evaluation function for values that
+	// is then called to implement the operators defined in the source.
+
 	int i = 0;
 	switch (func)
 	{
@@ -506,6 +509,64 @@ ostream &operator<<(ostream &os, expression e)
 	return os;
 }
 
+void minimize(expression &F) {
+	// TODO(edward.bingham) implement expression simplification using term replacement
+	// 1. find a way to represent replacement rules
+	//   a. regular expressions-like thing from the root of an expression or from
+	//   the leaves? What are L-Systems? What about just expression->expression?
+	//   Rete's algorithm?
+	// 2. create a library of replacement rules
+	//   a. A replacement rule could be unidirectional or bidirectional.
+	// 3. follow all unidirectional replacement rules that match
+	// 4. search all bidirectional replacement rules that match
+	// 5. repeat 3 and 4
+	// 6. ensure the expression is left in a normal form
+	//   a. push all constants to the right
+	//   b. prefer addition of negative over subtraction
+	//   c. prefer multiplication of inverse over division
+	//   d. merge all constants and all same-term literals
+
+	// Rewrite rules
+	// a & a = (bool)a
+	// a | a = (bool)a
+	// a+a = 2a
+	// ~~a = (bool)a
+	// --a = a
+	// a - b = a + (-b)
+	// a / b = a * (1/b)
+	// (bool)(a + b) = (bool)a & (bool)b
+	// (bool)(bool)a = (bool)a
+	// (bool)~a = ~a
+	// ~(bool)a = ~a
+	// (bool)a & b = a & b
+	// a & (b & c) = a & b & c
+	// a & (b | c) = a & b | a & c
+	// a * (b + c) = a * b + a * c
+	// a < b = a - b < 0
+
+	// How do I represent a rewrite rule?
+	// pair of expressions
+	// How do I match?
+	// A literal in the key is a literal, constant, or sub expression in the
+	// matched expression. Token propagation of matched subexpressions.
+	// How do I manage the list of rewrite rules?
+	// Load them into a static variable on program initialization.
+	// Is this an efficient representation of the rewrite rules?
+	// Rete's algorithm doesn't handle search, it's continuous evaluation.
+	// Regular expressions? All of the rewrite rules can be represented in a
+	// single expression structure where the rewrite operator can be represented
+	// by the operation("->", key, rewrite).
+}
+
+void expression::init_rewrite() {
+	/*
+	push("->", push("&", -1, -1), push("(bool)", -1))
+	push("->", push("|", -1, -1), push("(bool)", -1))
+	push("->", push("+", -1, -1), push("*", 2, -1))
+	push("->", push("+", -1, push("*", -2, -1)), push("*", push("+", 1, -2), -1))
+	*/
+}
+
 int expression::find(operation arg) {
 	for (int i = 0; i < (int)operations.size(); i++) {
 		if (operations[i].func == arg.func
@@ -711,6 +772,7 @@ bool expression::is_constant() const
 
 bool expression::is_valid() const
 {
+	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
 	for (auto i = operations.begin(); i != operations.end(); i++) {
 		for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
 			if (j->type == operand::variable
@@ -1369,7 +1431,9 @@ int passes_guard(const state &encoding, const state &global, const expression &g
 }
 
 expression weakest_guard(const expression &guard, const expression &exclude) {
-	// TODO(edward.bingham) implement
+	// TODO(edward.bingham) Remove terms from the guard until guard overlaps exclude (using cylidrical algebraic decomposition)
+	// 1. put the guard in conjunctive normal form using the boolean operations & | ~
+	// 2. for each term in the conjunctive normal form, pick a comparison and eliminate it, then check overlap. 
 	return guard;
 }
 

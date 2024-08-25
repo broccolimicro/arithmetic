@@ -79,6 +79,9 @@ struct expression
 	expression(string func, vector<expression> args);
 	~expression();
 
+	static expression rewrite;
+	static vector<int> rewrite_top;
+
 	// The expression consists entirely of a tree of operations stored in an
 	// array. Operations are stored in the array in order of precedence. So if
 	// the expression is (a+b)*3 + x*y, then they'll be stored in the following order:
@@ -89,6 +92,8 @@ struct expression
 	// Therefore the final operation stored is the operation that produces the
 	// final value for the expression.
 	vector<operation> operations;
+
+	static void init_rewrite();
 
 	int find(operation arg);
 	int push(operation arg);
@@ -117,6 +122,8 @@ struct expression
 };
 
 ostream &operator<<(ostream &os, expression e);
+
+void minimize(expression &F);
 
 expression operator~(expression e);
 expression operator-(expression e);

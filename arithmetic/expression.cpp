@@ -212,18 +212,20 @@ void operation::set(string func, vector<operand> args)
 		set(func, args[0], args[1], args[2]);
 }
 
-string operation::get() const
-{
+string operation::get() const {
+	// DESIGN(edward.bingham) bitwise and boolean operations have been switched
+	// to be consistent with HSE and boolean logic expressions
+
 	switch (func)
 	{
-	case 0: return "!";
+	case 0: return "!";  // bitwise not
 	case 1: return "+";
 	case 2: return "-";
-	case 3: return "(bool)";
-	case 4: return "~";
-	case 5: return "||";
-	case 6: return "&&";
-	case 7: return "^";
+	case 3: return "(bool)"; // boolean check
+	case 4: return "~";  // boolean not
+	case 5: return "||"; // bitwise or
+	case 6: return "&&"; // bitwise and
+	case 7: return "^";  // bitwise xor
 	case 8: return "==";
 	case 9: return "!=";
 	case 10: return "<";
@@ -238,8 +240,8 @@ string operation::get() const
 	case 19: return "/";
 	case 20: return "%";
 	case 21: return "?";
-	case 22: return "&";
-	case 23: return "|";
+	case 22: return "&"; // boolean or
+	case 23: return "|"; // boolean and
 	default: return "";
 	}
 }
@@ -248,8 +250,9 @@ value operation::evaluate(state values, vector<value> expressions) const
 {
 	vector<value> args;
 	args.reserve(operands.size());
-	for (int i = 0; i < (int)operands.size(); i++)
+	for (int i = 0; i < (int)operands.size(); i++) {
 		args.push_back(operands[i].get(values, expressions));
+	}
 
 	// TODO(edward.bingham) create a single evaluation function for values that
 	// is then called to implement the operators defined in the source.
@@ -269,17 +272,17 @@ value operation::evaluate(state values, vector<value> expressions) const
 		return ~args[0];
 	case 5: //cout << args[0] << "|" << args[1] << " = " << (args[0] |  args[1]) << endl;
 		for (i = 1; i < (int)args.size(); i++) {
-			return args[0] = args[0] || args[i];
+			args[0] = args[0] || args[i];
 		}
 		return args[0];
 	case 6: //cout << args[0] << "&" << args[1] << " = " << (args[0] &  args[1]) << endl;
 		for (i = 1; i < (int)args.size(); i++) {
-			return args[0] = args[0] && args[i];
+			args[0] = args[0] && args[i];
 		}
 		return args[0];
 	case 7: //cout << args[0] << "^" << args[1] << " = " << (args[0] ^  args[1]) << endl;
 		for (i = 1; i < (int)args.size(); i++) {
-			return args[0] = args[0] ^ args[i];
+			args[0] = args[0] ^ args[i];
 		}
 		return args[0];
 	case 8: //cout << args[0] << "==" << args[1] << " = " << (args[0] ==  args[1]) << endl;
@@ -300,17 +303,17 @@ value operation::evaluate(state values, vector<value> expressions) const
 		return (args[0] >> args[1]);
 	case 16: //cout << args[0] << "+" << args[1] << " = " << (args[0] +  args[1]) << endl;
 		for (i = 1; i < (int)args.size(); i++) {
-			return args[0] = args[0] + args[i];
+			args[0] = args[0] + args[i];
 		}
 		return args[0];
 	case 17: //cout << args[0] << "-" << args[1] << " = " << (args[0] -  args[1]) << endl;
 		for (i = 1; i < (int)args.size(); i++) {
-			return args[0] = args[0] - args[i];
+			args[0] = args[0] - args[i];
 		}
 		return args[0];
 	case 18: //cout << args[0] << "*" << args[1] << " = " << (args[0] *  args[1]) << endl;
 		for (i = 1; i < (int)args.size(); i++) {
-			return args[0] = args[0] * args[i];
+			args[0] = args[0] * args[i];
 		}
 		return args[0];
 	case 19: //cout << args[0] << "/" << args[1] << " = " << (args[0] /  args[1]) << endl;
@@ -321,12 +324,12 @@ value operation::evaluate(state values, vector<value> expressions) const
 		return args[0];
 	case 22: //cout << args[0] << "&&" << args[1] << " = " << (args[0] &&  args[1]) << endl;
 		for (i = 1; i < (int)args.size(); i++) {
-			return args[0] = args[0] & args[i];
+			args[0] = args[0] & args[i];
 		}
 		return args[0];
 	case 23: //cout << args[0] << "||" << args[1] << " = " << (args[0] ||  args[1]) << endl;
 		for (i = 1; i < (int)args.size(); i++) {
-			return args[0] = args[0] | args[i];
+			args[0] = args[0] | args[i];
 		}
 		return args[0];
 	default: return  args[0];
@@ -732,8 +735,9 @@ value expression::evaluate(state values) const
 {
 	vector<value> expressions;
 
-	for (int i = 0; i < (int)operations.size(); i++)
+	for (int i = 0; i < (int)operations.size(); i++) {
 		expressions.push_back(operations[i].evaluate(values, expressions));
+	}
 
 	if (expressions.size() > 0)
 		return expressions.back();

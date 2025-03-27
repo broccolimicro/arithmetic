@@ -60,6 +60,8 @@ struct parallel
 	expression guard();
 };
 
+ostream &operator<<(ostream &os, const parallel &p);
+
 struct choice
 {
 	choice();
@@ -78,6 +80,8 @@ struct choice
 	region evaluate(const state &curr);
 	expression guard();
 };
+
+ostream &operator<<(ostream &os, const choice &c);
 
 }
 

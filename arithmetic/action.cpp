@@ -71,6 +71,19 @@ bool action::is_passive() const {
 		and variable < 0;
 }
 
+ostream &operator<<(ostream &os, const action &a) {
+	if (a.behavior == action::assign) {
+		os << "v" << a.variable << "=" << a.expr;
+	} else if (a.behavior == action::send) {
+		os << "c" << a.channel << "!" << a.expr;
+	} else if (a.behavior == action::receive) {
+		os << "c" << a.channel << "?v" << a.variable;
+	} else {
+		os << "skip";
+	}
+	return os;
+}
+
 parallel::parallel()
 {
 
@@ -231,6 +244,16 @@ expression parallel::guard() {
 	return result;
 }
 
+ostream &operator<<(ostream &os, const parallel &p) {
+	for (int i = 0; i < (int)p.actions.size(); i++) {
+		if (i != 0) {
+			os << ",";
+		}
+		os << p.actions[i];
+	}
+	return os;
+}
+
 choice::choice()
 {
 
@@ -314,6 +337,16 @@ expression choice::guard() {
 		result = result | t->guard();
 	}
 	return result;
+}
+
+ostream &operator<<(ostream &os, const choice &c) {
+	for (int i = 0; i < (int)c.terms.size(); i++) {
+		if (i != 0) {
+			os << ":";
+		}
+		os << c.terms[i];
+	}
+	return os;
 }
 
 }

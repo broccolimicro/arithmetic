@@ -1,10 +1,3 @@
-/*
- * action.h
- *
- *  Created on: Jul 21, 2015
- *      Author: nbingham
- */
-
 #pragma once
 
 #include "expression.h"
@@ -36,6 +29,8 @@ struct action
 	bool is_infeasible() const;
 	bool is_vacuous() const;
 	bool is_passive() const;
+
+	void apply(vector<int> uid_map);
 };
 
 struct parallel
@@ -58,6 +53,8 @@ struct parallel
 
 	state evaluate(const state &curr);
 	expression guard();
+
+	void apply(vector<int> uid_map);
 };
 
 ostream &operator<<(ostream &os, const parallel &p);
@@ -79,6 +76,8 @@ struct choice
 
 	region evaluate(const state &curr);
 	expression guard();
+
+	void apply(vector<int> uid_map);
 };
 
 ostream &operator<<(ostream &os, const choice &c);

@@ -1,10 +1,3 @@
-/*
- * expression.h
- *
- *  Created on: Jun 25, 2015
- *      Author: nbingham
- */
-
 #pragma once
 
 #include <common/standard.h>
@@ -37,6 +30,7 @@ struct operand
 
 	value get(state values, vector<value> expressions) const;
 	void set(state &values, vector<value> &expressions, value v) const;
+	void apply(vector<int> uid_map);
 };
 
 ostream &operator<<(ostream &os, operand o);
@@ -62,6 +56,7 @@ struct operation
 	string get() const;
 	value evaluate(state values, vector<value> expressions) const;
 	void propagate(state &result, const state &global, vector<value> &expressions, const vector<value> gexpressions, value v) const;
+	void apply(vector<int> uid_map);
 };
 
 struct expression
@@ -115,6 +110,8 @@ struct expression
 	bool is_valid() const;
 	bool is_neutral() const;
 	bool is_wire() const;
+
+	void apply(vector<int> uid_map);
 
 	expression &operator=(operand e);
 

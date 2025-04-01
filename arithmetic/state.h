@@ -1,10 +1,3 @@
-/*
- * expression.h
- *
- *  Created on: Jun 25, 2015
- *      Author: nbingham
- */
-
 #pragma once
 
 #include <common/standard.h>
@@ -123,6 +116,8 @@ struct state
 	state mask() const;
 	state mask(const state &m) const;
 	state combine_mask(const state &m) const;
+
+	void apply(vector<int> uid_map);
 };
 
 ostream &operator<<(ostream &os, const state &s);
@@ -157,6 +152,8 @@ struct region {
 
 	state &operator[](int idx);
 	state operator[](int idx) const;
+
+	void apply(vector<int> uid_map);
 };
 
 bool vacuous_assign(const state &encoding, const region &assignment, bool stable);

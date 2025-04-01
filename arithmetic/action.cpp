@@ -1,10 +1,3 @@
-/*
- * action.cpp
- *
- *  Created on: Jul 21, 2015
- *      Author: nbingham
- */
-
 #include "action.h"
 
 namespace arithmetic
@@ -69,6 +62,26 @@ bool action::is_passive() const {
 	return behavior != action::send
 		and behavior != action::receive
 		and variable < 0;
+}
+
+void action::apply(vector<int> uid_map) {
+	if (uid_map.empty()) {
+		return;
+	}
+
+	if (variable >= 0 and variable < (int)uid_map.size()) {
+		variable = uid_map[variable];
+	} else {
+		variable = -1;
+	}
+
+	if (channel >= 0 and channel < (int)uid_map.size()) {
+		channel = uid_map[channel];
+	} else {
+		channel = -1;
+	}
+
+	expr.apply(uid_map);
 }
 
 ostream &operator<<(ostream &os, const action &a) {
@@ -244,6 +257,16 @@ expression parallel::guard() {
 	return result;
 }
 
+void parallel::apply(vector<int> uid_map) {
+	if (uid_map.empty()) {
+		return;
+	}
+
+	for (int i = 0; i < (int)actions.size(); i++) {
+		actions[i].apply(uid_map);
+	}
+}
+
 ostream &operator<<(ostream &os, const parallel &p) {
 	for (int i = 0; i < (int)p.actions.size(); i++) {
 		if (i != 0) {
@@ -337,6 +360,16 @@ expression choice::guard() {
 		result = result | t->guard();
 	}
 	return result;
+}
+
+void choice::apply(vector<int> uid_map) {
+	if (uid_map.empty()) {
+		return;
+	}
+
+	for (int i = 0; i < (int)terms.size(); i++) {
+		terms[i].apply(uid_map);
+	}
 }
 
 ostream &operator<<(ostream &os, const choice &c) {

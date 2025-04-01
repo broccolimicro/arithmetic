@@ -1,10 +1,3 @@
-/*
- * expression.cpp
- *
- *  Created on: Jul 1, 2015
- *      Author: nbingham
- */
-
 #include "expression.h"
 
 #include <sstream>
@@ -607,6 +600,23 @@ state state::combine_mask(const state &m) const {
 	return result;
 }
 
+void state::apply(vector<int> uid_map) {
+	if (uid_map.empty()) {
+		return;
+	}
+
+	state result;
+	for (int i = 0; i < (int)values.size() and i < (int)uid_map.size(); i++) {
+		if (uid_map[i] >= 0) {
+			if (uid_map[i] >= (int)result.values.size()) {
+				result.values.resize(uid_map[i]+1, value());
+			}
+			result.values[uid_map[i]] = values[i];
+		}
+	}
+	values = result.values;
+}
+
 ostream &operator<<(ostream &os, const state &s) {
 	os << "{";
 	for (int i = 0; i < (int)s.values.size(); i++) {
@@ -878,6 +888,16 @@ state &region::operator[](int idx) {
 
 state region::operator[](int idx) const {
 	return states[idx];
+}
+
+void region::apply(vector<int> uid_map) {
+	if (uid_map.empty()) {
+		return;
+	}
+
+	for (int i = 0; i < (int)states.size(); i++) {
+		states[i].apply(uid_map);
+	}
 }
 
 bool vacuous_assign(const state &s0, const region &r1, bool stable) {

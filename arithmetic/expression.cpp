@@ -1,10 +1,3 @@
-/*
- * expression.cpp
- *
- *  Created on: Jul 1, 2015
- *      Author: nbingham
- */
-
 #include "expression.h"
 
 #include <sstream>
@@ -98,6 +91,20 @@ void operand::set(state &values, vector<value> &expressions, value v) const {
 		expressions[index] = v;
 	} else if (type == variable and index >= 0) {
 		values.set(index, v);
+	}
+}
+
+void operand::apply(vector<int> uid_map) {
+	if (uid_map.empty()) {
+		return;
+	}
+
+	if (type == variable) {
+		if (index < (int)uid_map.size()) {
+			index = uid_map[index];
+		} else {
+			index = -1;
+		}
 	}
 }
 
@@ -423,6 +430,16 @@ void operation::propagate(state &result, const state &global, vector<value> &exp
 			operands[0].set(result, expressions, value(value::unknown));
 		}
 	} 
+}
+
+void operation::apply(vector<int> uid_map) {
+	if (uid_map.empty()) {
+		return;
+	}
+
+	for (int i = 0; i < (int)operands.size(); i++) {
+		operands[i].apply(uid_map);
+	}
 }
 
 expression::expression()
@@ -818,6 +835,16 @@ bool expression::is_wire() const
 		}
 	}
 	return false;
+}
+
+void expression::apply(vector<int> uid_map) {
+	if (uid_map.empty()) {
+		return;
+	}
+
+	for (int i = 0; i < (int)operations.size(); i++) {
+		operations[i].apply(uid_map);
+	}
 }
 
 expression &expression::operator=(operand e)

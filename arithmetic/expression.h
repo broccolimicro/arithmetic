@@ -4,106 +4,124 @@
 
 #include "state.h"
 
-namespace arithmetic
-{
+namespace arithmetic {
 
-struct operand
-{
-	operand();
-	operand(int index, int type);
-	operand(value v);
-	~operand();
+struct Operand {
+	Operand(value v = value());
+	Operand(bool bval);
+	Operand(int64_t ival);
+	Operand(int ival);
+	Operand(double rval);
+	~Operand();
 
-	int index;
-	int type;
-
-	enum
-	{
-		neutral = 0,
-		unstable = 1,
-		unknown = 2,
-		valid = 3,
-		constant = 4,
-		expression = 5,
-		variable = 6
+	// Used by "type"
+	enum {
+		CONST  = 0,
+		VAR    = 1,
+		EXPR   = 2,
 	};
 
-	value get(state values, vector<value> expressions) const;
+	int type;
+
+	// used for CONST
+	value cnst;
+
+	// used for VAR and EXPR
+	size_t index;
+
+	bool isConst() const;
+	bool isExpr() const;
+	bool isVar() const;
+
+	value get(state values=state(), vector<value> expressions=vector<value>()) const;
 	void set(state &values, vector<value> &expressions, value v) const;
+
+	// Constants
+	static Operand X();
+	static Operand U();
+	static Operand boolOf(bool bval);
+	static Operand intOf(int64_t ival);
+	static Operand realOf(double rval);
+	static Operand arrOf(vector<value> arr);
+	static Operand structOf(vector<value> arr);
+
+	static Operand exprOf(size_t index);
+	void offsetExpr(int off);
+
+	static Operand varOf(size_t index);
 	void apply(vector<int> uid_map);
+	void apply(vector<Operand> uid_map);
 };
 
-ostream &operator<<(ostream &os, operand o);
+ostream &operator<<(ostream &os, Operand o);
 
-bool are_same(operand o0, operand o1);
+bool areSame(Operand o0, Operand o1);
 
-struct operation
+struct Operation
 {
-	operation();
-	operation(string func, operand arg0);
-	operation(string func, operand arg0, operand arg1);
-	operation(string func, operand arg0, operand arg1, operand arg2);
-	operation(string func, vector<operand> args);
-	~operation();
+	Operation();
+	Operation(string func, vector<Operand> args);
+	~Operation();
 
-	vector<operand> operands;
 	int func;
+	vector<Operand> operands;
 
-	void set(string func, operand arg0);
-	void set(string func, operand arg0, operand arg1);
-	void set(string func, operand arg0, operand arg1, operand arg2);
-	void set(string func, vector<operand> args);
+	static string funcString(int func);
+	static int funcIndex(string func, int args=2);
+
+	void set(string func, vector<Operand> args);
 	string get() const;
+	bool is_commutative() const;
+
+	static value evaluate(int func, vector<value> args);
 	value evaluate(state values, vector<value> expressions) const;
 	void propagate(state &result, const state &global, vector<value> &expressions, const vector<value> gexpressions, value v) const;
 	void apply(vector<int> uid_map);
+	void apply(vector<Operand> uid_map);
+	void offsetExpr(int off);
 };
 
-struct expression
-{
-	expression();
-	expression(bool v);
-	expression(value v);
-	expression(operand arg0);
-	expression(string func, operand arg0);
-	expression(string func, expression arg0);
-	expression(string func, operand arg0, operand arg1);
-	expression(string func, expression arg0, expression arg1);
-	expression(string func, expression arg0, operand arg1);
-	expression(string func, operand arg0, expression arg1);
-	expression(string func, vector<expression> args);
-	~expression();
+bool areSame(Operation o0, Operation o1);
 
-	static expression rewrite;
-	static vector<int> rewrite_top;
+ostream &operator<<(ostream &os, Operation o);
 
-	// The expression consists entirely of a tree of operations stored in an
-	// array. Operations are stored in the array in order of precedence. So if
-	// the expression is (a+b)*3 + x*y, then they'll be stored in the following order:
+struct Expression {
+	Expression();
+	Expression(Operand arg0);
+	Expression(string func, Operand arg0);
+	Expression(string func, Expression arg0);
+	Expression(string func, Operand arg0, Operand arg1);
+	Expression(string func, Expression arg0, Operand arg1);
+	Expression(string func, Operand arg0, Expression arg1);
+	Expression(string func, Expression arg0, Expression arg1);
+	Expression(string func, vector<Expression> args);
+	~Expression();
+
+	// The Expression consists entirely of a tree of operations stored in an
+	// array. operations are stored in the array in order of precedence. So if
+	// the Expression is (a+b)*3 + x*y, then they'll be stored in the following order:
 	// 0. a+b
 	// 1. operations[0]*3
 	// 2. x*y
 	// 3. operations[1]+operations[2]
-	// Therefore the final operation stored is the operation that produces the
-	// final value for the expression.
-	vector<operation> operations;
+	// Therefore the final Operation stored is the Operation that produces the
+	// final value for the Expression.
+	vector<Operation> operations;
 
-	static void init_rewrite();
+	int find(Operation arg);
+	int push(Operation arg);
 
-	int find(operation arg);
-	int push(operation arg);
-
-	void set(operand arg0);
-	void set(string func, operand arg0);
-	void set(string func, expression arg0);
-	void set(string func, operand arg0, operand arg1);
-	void set(string func, expression arg0, expression arg1);
-	void set(string func, expression arg0, operand arg1);
-	void set(string func, operand arg0, expression arg1);
-	void set(string func, vector<expression> args);
+	void set(Operand arg0);
+	void set(string func, Operand arg0);
+	void set(string func, Expression arg0);
+	void set(string func, Operand arg0, Operand arg1);
+	void set(string func, Expression arg0, Expression arg1);
+	void set(string func, Expression arg0, Operand arg1);
+	void set(string func, Operand arg0, Expression arg1);
+	void set(string func, vector<Expression> args);
 	void push(string func);
-	void push(string func, operand arg0);
-	void push(string func, expression arg0);
+	void push(string func, Operand arg0);
+	void push(string func, Expression arg0);
 	value evaluate(state values) const;
 	bool is_null() const;
 	bool is_constant() const;
@@ -112,97 +130,106 @@ struct expression
 	bool is_wire() const;
 
 	void apply(vector<int> uid_map);
+	void apply(vector<Expression> uid_map);
 
-	expression &operator=(operand e);
+	// operating on the Expression
+	void erase(size_t index);
+	Expression &erase_dangling();
+	void replace(Operand o0, Operand o1);
+	Expression &propagate_constants();
+	vector<pair<Operand, Operand> > match(Operand lhs, const Expression &rule, Operand rhs, map<int, Operand> *mapping=nullptr);
+	Expression &minimize(Expression rewrite = Expression());
+
+	Expression &operator=(Operand e);
 
 	string to_string(int index = -1);
 };
 
-ostream &operator<<(ostream &os, expression e);
+ostream &operator<<(ostream &os, Expression e);
 
-void minimize(expression &F);
+Expression operator~(Expression e);
+Expression operator-(Expression e);
+Expression is_valid(Expression e);
+Expression operator!(Expression e);
+Expression operator|(Expression e0, Expression e1);
+Expression operator&(Expression e0, Expression e1);
+Expression operator^(Expression e0, Expression e1);
+Expression operator==(Expression e0, Expression e1);
+Expression operator!=(Expression e0, Expression e1);
+Expression operator<(Expression e0, Expression e1);
+Expression operator>(Expression e0, Expression e1);
+Expression operator<=(Expression e0, Expression e1);
+Expression operator>=(Expression e0, Expression e1);
+Expression operator<<(Expression e0, Expression e1);
+Expression operator>>(Expression e0, Expression e1);
+Expression operator+(Expression e0, Expression e1);
+Expression operator-(Expression e0, Expression e1);
+Expression operator*(Expression e0, Expression e1);
+Expression operator/(Expression e0, Expression e1);
+Expression operator%(Expression e0, Expression e1);
+Expression operator&&(Expression e0, Expression e1);
+Expression operator||(Expression e0, Expression e1);
 
-expression operator~(expression e);
-expression operator-(expression e);
-expression is_valid(expression e);
-expression operator!(expression e);
-expression operator|(expression e0, expression e1);
-expression operator&(expression e0, expression e1);
-expression operator^(expression e0, expression e1);
-expression operator==(expression e0, expression e1);
-expression operator!=(expression e0, expression e1);
-expression operator<(expression e0, expression e1);
-expression operator>(expression e0, expression e1);
-expression operator<=(expression e0, expression e1);
-expression operator>=(expression e0, expression e1);
-expression operator<<(expression e0, expression e1);
-expression operator>>(expression e0, expression e1);
-expression operator+(expression e0, expression e1);
-expression operator-(expression e0, expression e1);
-expression operator*(expression e0, expression e1);
-expression operator/(expression e0, expression e1);
-expression operator%(expression e0, expression e1);
-expression operator&&(expression e0, expression e1);
-expression operator||(expression e0, expression e1);
+Expression operator|(Expression e0, Operand e1);
+Expression operator&(Expression e0, Operand e1);
+Expression operator^(Expression e0, Operand e1);
+Expression operator==(Expression e0, Operand e1);
+Expression operator!=(Expression e0, Operand e1);
+Expression operator<(Expression e0, Operand e1);
+Expression operator>(Expression e0, Operand e1);
+Expression operator<=(Expression e0, Operand e1);
+Expression operator>=(Expression e0, Operand e1);
+Expression operator<<(Expression e0, Operand e1);
+Expression operator>>(Expression e0, Operand e1);
+Expression operator+(Expression e0, Operand e1);
+Expression operator-(Expression e0, Operand e1);
+Expression operator*(Expression e0, Operand e1);
+Expression operator/(Expression e0, Operand e1);
+Expression operator%(Expression e0, Operand e1);
+Expression operator&&(Expression e0, Operand e1);
+Expression operator||(Expression e0, Operand e1);
 
-expression operator|(expression e0, operand e1);
-expression operator&(expression e0, operand e1);
-expression operator^(expression e0, operand e1);
-expression operator==(expression e0, operand e1);
-expression operator!=(expression e0, operand e1);
-expression operator<(expression e0, operand e1);
-expression operator>(expression e0, operand e1);
-expression operator<=(expression e0, operand e1);
-expression operator>=(expression e0, operand e1);
-expression operator<<(expression e0, operand e1);
-expression operator>>(expression e0, operand e1);
-expression operator+(expression e0, operand e1);
-expression operator-(expression e0, operand e1);
-expression operator*(expression e0, operand e1);
-expression operator/(expression e0, operand e1);
-expression operator%(expression e0, operand e1);
-expression operator&&(expression e0, operand e1);
-expression operator||(expression e0, operand e1);
+Expression operator|(Operand e0, Expression e1);
+Expression operator&(Operand e0, Expression e1);
+Expression operator^(Operand e0, Expression e1);
+Expression operator==(Operand e0, Expression e1);
+Expression operator!=(Operand e0, Expression e1);
+Expression operator<(Operand e0, Expression e1);
+Expression operator>(Operand e0, Expression e1);
+Expression operator<=(Operand e0, Expression e1);
+Expression operator>=(Operand e0, Expression e1);
+Expression operator<<(Operand e0, Expression e1);
+Expression operator>>(Operand e0, Expression e1);
+Expression operator+(Operand e0, Expression e1);
+Expression operator-(Operand e0, Expression e1);
+Expression operator*(Operand e0, Expression e1);
+Expression operator/(Operand e0, Expression e1);
+Expression operator%(Operand e0, Expression e1);
+Expression operator&&(Operand e0, Expression e1);
+Expression operator||(Operand e0, Expression e1);
 
-expression operator|(operand e0, expression e1);
-expression operator&(operand e0, expression e1);
-expression operator^(operand e0, expression e1);
-expression operator==(operand e0, expression e1);
-expression operator!=(operand e0, expression e1);
-expression operator<(operand e0, expression e1);
-expression operator>(operand e0, expression e1);
-expression operator<=(operand e0, expression e1);
-expression operator>=(operand e0, expression e1);
-expression operator<<(operand e0, expression e1);
-expression operator>>(operand e0, expression e1);
-expression operator+(operand e0, expression e1);
-expression operator-(operand e0, expression e1);
-expression operator*(operand e0, expression e1);
-expression operator/(operand e0, expression e1);
-expression operator%(operand e0, expression e1);
-expression operator&&(operand e0, expression e1);
-expression operator||(operand e0, expression e1);
+Expression operator|(Operand e0, Operand e1);
+Expression operator&(Operand e0, Operand e1);
+Expression operator^(Operand e0, Operand e1);
+Expression operator==(Operand e0, Operand e1);
+Expression operator!=(Operand e0, Operand e1);
+Expression operator<(Operand e0, Operand e1);
+Expression operator>(Operand e0, Operand e1);
+Expression operator<=(Operand e0, Operand e1);
+Expression operator>=(Operand e0, Operand e1);
+Expression operator<<(Operand e0, Operand e1);
+Expression operator>>(Operand e0, Operand e1);
+Expression operator+(Operand e0, Operand e1);
+Expression operator-(Operand e0, Operand e1);
+Expression operator*(Operand e0, Operand e1);
+Expression operator/(Operand e0, Operand e1);
+Expression operator%(Operand e0, Operand e1);
+Expression operator&&(Operand e0, Operand e1);
+Expression operator||(Operand e0, Operand e1);
 
-expression operator|(operand e0, operand e1);
-expression operator&(operand e0, operand e1);
-expression operator^(operand e0, operand e1);
-expression operator==(operand e0, operand e1);
-expression operator!=(operand e0, operand e1);
-expression operator<(operand e0, operand e1);
-expression operator>(operand e0, operand e1);
-expression operator<=(operand e0, operand e1);
-expression operator>=(operand e0, operand e1);
-expression operator<<(operand e0, operand e1);
-expression operator>>(operand e0, operand e1);
-expression operator+(operand e0, operand e1);
-expression operator-(operand e0, operand e1);
-expression operator*(operand e0, operand e1);
-expression operator/(operand e0, operand e1);
-expression operator%(operand e0, operand e1);
-expression operator&&(operand e0, operand e1);
-expression operator||(operand e0, operand e1);
+Expression array(vector<Expression> e);
 
-int passes_guard(const state &encoding, const state &global, const expression &guard, state *total);
-expression weakest_guard(const expression &guard, const expression &exclude);
+int passes_guard(const state &encoding, const state &global, const Expression &guard, state *total);
+Expression weakest_guard(const Expression &guard, const Expression &exclude);
 
 }

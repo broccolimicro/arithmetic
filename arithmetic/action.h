@@ -8,22 +8,22 @@ namespace arithmetic
 struct action
 {
 	action();
-	action(expression expr);
-	action(int variable, expression expr);
-	action(int channel, int variable, expression expr);
-	action(int channel, expression expr, int variable);
+	action(Expression expr);
+	action(int variable, Expression expr);
+	action(int channel, int variable, Expression expr);
+	action(int channel, Expression expr, int variable);
 	~action();
 
 	int variable;
 	int channel;
-	expression expr;
+	Expression expr;
 	int behavior;
 
 	enum
 	{
-		assign = 0,
-		send = 1,
-		receive = 2
+		ASSIGN  = 0,
+		SEND    = 1,
+		RECEIVE = 2
 	};
 
 	bool is_infeasible() const;
@@ -36,10 +36,10 @@ struct action
 struct parallel
 {
 	parallel();
-	parallel(expression expr);
-	parallel(int variable, expression expr);
-	parallel(int channel, int variable, expression expr);
-	parallel(int channel, expression expr, int variable);
+	parallel(Expression expr);
+	parallel(int variable, Expression expr);
+	parallel(int channel, int variable, Expression expr);
+	parallel(int channel, Expression expr, int variable);
 	~parallel();
 
 	vector<action> actions;
@@ -52,7 +52,7 @@ struct parallel
 	bool is_passive() const;
 
 	state evaluate(const state &curr);
-	expression guard();
+	Expression guard();
 
 	void apply(vector<int> uid_map);
 };
@@ -75,7 +75,7 @@ struct choice
 	bool is_passive() const;
 
 	region evaluate(const state &curr);
-	expression guard();
+	Expression guard();
 
 	void apply(vector<int> uid_map);
 };

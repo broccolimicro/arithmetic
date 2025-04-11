@@ -164,6 +164,8 @@ ostream &operator<<(ostream &os, Operand o) {
 		os << "v" << o.index;
 	} else if (o.isExpr()) {
 		os << "e" << o.index;
+	} else {
+		os << "error(" << o.type << ")";
 	}
 	return os;
 }
@@ -174,12 +176,12 @@ bool areSame(Operand o0, Operand o1) {
 		or (o0.isExpr() and o1.isExpr() and o0.index == o1.index));
 }
 
-bool canMap(Operand o0, Operand o1, const Expression &e0, const Expression &e1, bool init, map<int, Operand> *mapping) {
+bool canMap(Operand o0, Operand o1, const Expression &e0, const Expression &e1, bool init, map<size_t, Operand> *vars) {
 	if (o1.isConst()) {
 		return o0.isConst() and areSame(o0.cnst, o1.cnst);
 	} else if (o1.isVar()) {
-		if (mapping != nullptr) {
-			auto ins = mapping->insert(pair<int, Operand>(o1.index, o0));
+		if (vars != nullptr) {
+			auto ins = vars->insert({o1.index, o0});
 			return ins.second or areSame(o0, ins.first->second);
 		}
 		return true;
@@ -581,6 +583,7 @@ bool areSame(Operation o0, Operation o1) {
 }
 
 ostream &operator<<(ostream &os, Operation o) {
+	os << "f(" << o.func << "): ";
 	if (o.operands.size() == 1u) {
 		os << o.get();
 	}
@@ -689,7 +692,12 @@ void Expression::set(string func, Operand arg0) {
 
 void Expression::set(string func, Expression arg0) {
 	operations = arg0.operations;
-	push(Operation(func, {Operand::exprOf(operations.size()-1)}));
+	Operand op0 = Operand::exprOf(operations.size()-1);
+	while (op0.isExpr() and (operations.back().func == 1 or operations.back().func < 0)) {
+		op0 = operations.back().operands[0];
+		operations.pop_back();
+	}
+	push(Operation(func, {op0}));
 }
 
 void Expression::set(string func, Operand arg0, Operand arg1) {
@@ -700,6 +708,10 @@ void Expression::set(string func, Operand arg0, Operand arg1) {
 void Expression::set(string func, Expression arg0, Expression arg1) {
 	operations = arg0.operations;
 	Operand op0 = Operand::exprOf(operations.size()-1);
+	while (op0.isExpr() and (operations.back().func == 1 or operations.back().func < 0)) {
+		op0 = operations.back().operands[0];
+		operations.pop_back();
+	}
 
 	vector<int> offset;
 	for (auto j = arg1.operations.begin(); j != arg1.operations.end(); j++) {
@@ -713,6 +725,10 @@ void Expression::set(string func, Expression arg0, Expression arg1) {
 	}
 
 	Operand op1 = Operand::exprOf(offset.back());
+	while (op1.isExpr() and (operations.back().func == 1 or operations.back().func < 0)) {
+		op1 = operations.back().operands[0];
+		operations.pop_back();
+	}
 
 	push(Operation(func, {op0, op1}));
 }
@@ -721,8 +737,10 @@ void Expression::set(string func, Expression arg0, Operand arg1)
 {
 	operations = arg0.operations;
 	Operand op0 = Operand::exprOf(operations.size()-1);
-
-
+	while (op0.isExpr() and (operations.back().func == 1 or operations.back().func < 0)) {
+		op0 = operations.back().operands[0];
+		operations.pop_back();
+	}
 	push(Operation(func, {op0, arg1}));
 }
 
@@ -730,7 +748,10 @@ void Expression::set(string func, Operand arg0, Expression arg1)
 {
 	operations = arg1.operations;
 	Operand op1 = Operand::exprOf(operations.size()-1);
-
+	while (op1.isExpr() and (operations.back().func == 1 or operations.back().func < 0)) {
+		op1 = operations.back().operands[0];
+		operations.pop_back();
+	}
 	push(Operation(func, {arg0, op1}));
 }
 
@@ -751,6 +772,10 @@ void Expression::set(string func, vector<Expression> args)
 			offset.push_back(push(*j));
 		}
 		operands.push_back(Operand::exprOf(offset.back()));
+		while (operands.back().isExpr() and (operations.back().func == 1 or operations.back().func < 0)) {
+			operands.back() = operations.back().operands[0];
+			operations.pop_back();
+		}
 	}
 
 	push(Operation(func, operands));
@@ -768,6 +793,10 @@ void Expression::push(string func, Operand arg0) {
 
 void Expression::push(string func, Expression arg0) {
 	Operand op0 = Operand::exprOf(operations.size()-1);
+	while (op0.isExpr() and (operations.back().func == 1 or operations.back().func < 0)) {
+		op0 = operations.back().operands[0];
+		operations.pop_back();
+	}
 
 	vector<int> offset;
 	for (auto j = arg0.operations.begin(); j != arg0.operations.end(); j++) {
@@ -781,6 +810,10 @@ void Expression::push(string func, Expression arg0) {
 	}
 
 	Operand op1 = Operand::exprOf(offset.back());
+	while (op1.isExpr() and (operations.back().func == 1 or operations.back().func < 0)) {
+		op1 = operations.back().operands[0];
+		operations.pop_back();
+	}
 	push(Operation(func, {op0, op1}));
 }
 
@@ -914,8 +947,9 @@ void Expression::apply(vector<Expression> uid_map) {
 }
 
 void Expression::insert(size_t index, size_t num) {
-	operations.resize(operations.size()+num);
-	std::move(operations.begin()+index, operations.end(), operations.begin()+index+num);
+	size_t sz = operations.size();
+	operations.resize(sz+num);
+	std::move(operations.begin()+index, operations.begin()+sz, operations.begin()+index+num);
 	for (auto i = operations.begin()+index+num; i != operations.end(); i++) {
 		for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
 			if (j->isExpr() and j->index >= index) {
@@ -941,6 +975,34 @@ void Expression::erase(size_t index) {
 	operations.erase(operations.begin()+index);
 }
 
+void Expression::erase(vector<size_t> index, bool doSort) {
+	if (doSort) {
+		sort(index.begin(), index.end());
+	}
+
+	int j = (int)operations.size()-1;
+	for (auto i = index.rbegin(); i != index.rend(); i++) {
+		for (; j > (int)*i; j--) {
+			for (int k = (int)operations[j].operands.size()-1; k >= 0; k--) {
+				if (operations[j].operands[k].isExpr()) {
+					if (std::find(index.begin(), index.end(), operations[j].operands[k].index) != index.end()) {
+						operations[j].operands.erase(operations[j].operands.begin() + k);
+					} else {
+						for (auto l = i; l != index.rend(); l++) {
+							if (operations[j].operands[k].index > *l) {
+								operations[j].operands[k].index--;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		operations.erase(operations.begin()+*i);
+		j--;
+	}
+}
+
 Expression &Expression::erase_dangling() {
 	std::set<int> references;
 	vector<int> toErase;
@@ -962,10 +1024,6 @@ Expression &Expression::erase_dangling() {
 		erase(*i);
 	}
 	return *this;
-}
-
-void Expression::replace(Operand o0, Operand o1) {
-	
 }
 
 Expression &Expression::propagate_constants() {
@@ -1086,7 +1144,10 @@ struct CombinationIterator {
 	}
 };
 
-vector<Expression::Token> Expression::match(const Expression &rules) {
+vector<Expression::Match> Expression::search(const Expression &rules, size_t count) {
+	using Leaf = pair<Operand, Operand>;
+	vector<pair<vector<Leaf>, Match> > stack;
+
 	// TODO(edward.bingham) I need a way to canonicalize expressions and hash
 	// them so that I can do the state search algorithm.
 	if (rules.operations.empty() or rules.operations.back().func != 24) {
@@ -1100,8 +1161,7 @@ vector<Expression::Token> Expression::match(const Expression &rules) {
 		}
 	}
 
-	vector<Token> tokens;
-	// initialize the initial tokens
+	// initialize the initial matches
 	for (int i = 0; i < (int)operations.size(); i++) {
 		// search through the "rules" rules and add all of the matching starts
 		for (auto j = rulesBegin; j != rulesEnd; j++) {
@@ -1113,28 +1173,30 @@ vector<Expression::Token> Expression::match(const Expression &rules) {
 				continue;
 			}
 			auto lhs = rule->operands.begin();
-			Token newToken;
-			if (canMap(Operand::exprOf(i), *lhs, *this, rules, true, &newToken.mapping)) {
-				newToken.rule = *j;
-				newToken.leaves.push_back({Operand::exprOf(i), *lhs});
-				tokens.push_back(newToken);
+			auto rhs = std::next(lhs);
+			Match match;
+			vector<Leaf> leaves;
+			if (canMap(Operand::exprOf(i), *lhs, *this, rules, true, &match.vars)) {
+				match.replace = *rhs;
+				leaves.push_back({Operand::exprOf(i), *lhs});
+				stack.push_back({leaves, match});
 			}
 		}
 	}
-	return tokens;
-}
 
-vector<Expression::Token> Expression::search(const Expression &rules, vector<Expression::Token> tokens) {
 	// Find expression matches with depth-first search
-	vector<Token> matches;
-	while (not tokens.empty()) {
-		Token curr = tokens.back();
-		tokens.pop_back();
+	vector<Match> result;
+	while (not stack.empty()) {
+		vector<Leaf> leaves = stack.back().first;
+		Match curr = stack.back().second;
+		stack.pop_back();
 
-		Operand from = curr.leaves.back().first;
-		Operand to = curr.leaves.back().second;
-		curr.branches.push_back(curr.leaves.back().first);
-		curr.leaves.pop_back();
+		Operand from = leaves.back().first;
+		Operand to = leaves.back().second;
+		if (from.isExpr() and to.isExpr()) {
+			curr.expr.push_back(from.index);
+		}
+		leaves.pop_back();
 
 		if (to.isExpr()) {
 			auto fOp = operations.begin() + from.index;
@@ -1143,45 +1205,154 @@ vector<Expression::Token> Expression::search(const Expression &rules, vector<Exp
 			bool commute = tOp->is_commutative();
 			CombinationIterator it((int)fOp->operands.size(), (int)tOp->operands.size());
 			do {
-				Token next = curr;
+				Match nextMatch = curr;
+				vector<Leaf> nextLeaves = leaves;
 				bool found = true;
 				for (auto i = it.begin(); i != it.end() and found; i++) {
-					next.leaves.push_back({fOp->operands[*i], tOp->operands[i-it.begin()]});
-					found = canMap(fOp->operands[*i], tOp->operands[i-it.begin()], *this, rules, false, &next.mapping);
+					nextLeaves.push_back({fOp->operands[*i], tOp->operands[i-it.begin()]});
+					found = canMap(fOp->operands[*i], tOp->operands[i-it.begin()], *this, rules, false, &nextMatch.vars);
 				}
 
 				if (found) {
-					tokens.push_back(next);
+					stack.push_back({nextLeaves, nextMatch});
 				}
 			} while (commute ? it.nextPerm() : it.nextShift());
-		} else if (curr.leaves.empty()) {
-			matches.push_back(curr);
+		} else if (leaves.empty()) {
+			sort(curr.expr.begin(), curr.expr.end());
+			result.push_back(curr);
+			if (count != 0 and result.size() >= count) {
+				return result;
+			}
 		} else {
-			tokens.push_back(curr);
+			stack.push_back({leaves, curr});
 		}
 	}
-	return matches;
+	return result;
+}
+
+size_t Expression::count(Operand start) const {
+	if (not start.isExpr()) {
+		return 1u;
+	}
+	size_t result = 0u;
+	vector<size_t> stack(1, start.index);
+	while (not stack.empty()) {
+		size_t curr = stack.back();
+		stack.pop_back();
+
+		++result;
+		for (auto op = operations[curr].operands.begin(); op != operations[curr].operands.end(); op++) {
+			if (op->isExpr()) {
+				stack.push_back(op->index);
+			}
+		}
+	}
+	return result;
+}
+
+void Expression::replace(Operand from, Operand to) {
+	for (int i = operations.size()-1; i >= 0; i--) {
+		for (int j = (int)operations[i].operands.size()-1; j >= 0; j--) {
+			if (areSame(operations[i].operands[j], from)) {
+				operations[i].operands[j] = to;
+			}
+		}
+	}
+}
+
+void Expression::replace(const Expression &rules, Match match) {
+	if (not match.replace.isExpr()) {
+		replace(Operand::exprOf(match.expr.back()), match.replace);
+		match.expr.pop_back();
+	} else {
+		size_t top = operations.size();
+		if (not match.expr.empty()) {
+			top = match.expr.back();
+		}
+
+		size_t num = rules.count(match.replace);
+		if (num > match.expr.size()) {
+			insert(top, num);
+			for (size_t i = top+1; i < top+num+1; i++) {
+				match.expr.push_back(i);
+			}
+			top = match.expr.back();
+		}
+
+		vector<size_t> stack(1, match.replace.index);
+		map<size_t, size_t> exprMap;
+		while (not stack.empty()) {
+			size_t curr = stack.back();
+			stack.pop_back();
+
+			auto pos = exprMap.insert({curr, match.expr.back()});
+			if (pos.second) {
+				match.expr.pop_back();
+			}
+			size_t slot = pos.first->second;
+
+			operations[slot].func = rules.operations[curr].func;
+			operations[slot].operands.clear();
+			for (auto op = rules.operations[curr].operands.begin(); op != rules.operations[curr].operands.end(); op++) {
+				if (op->isExpr()) {
+					auto o = exprMap.insert({op->index, match.expr.back()});
+					if (o.second) {
+						match.expr.pop_back();
+					}
+					operations[slot].operands.push_back(Operand::exprOf(o.first->second));
+					stack.push_back(op->index);
+				} else if (op->isVar()) {
+					auto v = match.vars.find(op->index);
+					if (v != match.vars.end()) {
+						operations[slot].operands.push_back(v->second);
+					} else {
+						printf("variable not mapped\n");
+					}
+				} else {
+					operations[slot].operands.push_back(*op);
+				}
+			}
+		}
+	}
+
+	if (not match.expr.empty()) {
+		erase(match.expr);
+	}
+}
+
+
+void Expression::replace(const Expression &rules, vector<Expression::Match> tokens) {
+	//for (auto token = tokens.begin(); token != tokens.end(); token++) {
+	if (not tokens.empty()) {
+		replace(rules, tokens.back());
+	}
+		// update indices after insert
+	//	for (auto i = std::next(token); i != tokens.end(); i++) {
+	//	}
+	//}
 }
 
 Expression &Expression::minimize() {
 	static const Expression rules = basic_rewrite();
 	
-	vector<Token> tokens = match(rules);
-	tokens = search(rules, tokens);
-	
+	vector<Match> tokens = search(rules);
+
 	cout << "This: " << *this << endl;
 
 	for (auto m = tokens.begin(); m != tokens.end(); m++) {
-		cout << "Rule: " << m->rule << endl;
-		cout << "Leaves: " << ::to_string(m->leaves) << endl;
-		cout << "Branches: " << ::to_string(m->branches) << endl;
-		cout << "Mapping: " << ::to_string(m->mapping) << endl << endl;
+		cout << "Rule: " << m->replace << endl;
+		cout << "Branches: " << ::to_string(m->expr) << endl;
+		cout << "Mapping: " << ::to_string(m->vars) << endl << endl;
 	}
 	
 	cout << "Rules: " << rules << endl;
+	
+	replace(rules, tokens);
+
+	cout << "This: " << *this << endl;
+
 
 	// TODO(edward.bingham)
-	// Break out the matching functionality into it's own function
 	// Add support for bidirectional rules
 	// Implement the replacement procedure, create the new expression, replace the operation at the top level of the old expression, then delete the other unused pieces of the old expression.
 	// Implement the cost function, assign a "complexity" metric to certain operators, and then accumulate the cost of all of the operators in the expression
@@ -1218,7 +1389,7 @@ Expression &Expression::minimize() {
 	// pair of expressions
 	// How do I match?
 	// A literal in the key is a literal, constant, or sub Expression in the
-	// matched Expression. Token propagation of matched subexpressions.
+	// matched Expression. Match propagation of matched subexpressions.
 	// How do I manage the list of rewrite rules?
 	// Load them into a static variable on program initialization.
 	// Is this an efficient representation of the rewrite rules?
@@ -1270,23 +1441,23 @@ Expression operator-(Expression e)
 
 Expression is_valid(Expression e)
 {
-	if (e.is_valid()) {
+	/*if (e.is_valid()) {
 		return Operand(true);
 	} else if (e.is_neutral()) {
 		return Operand(false);
 	} else if (e.is_wire()) {
 		return e;
-	}
+	}*/
 	return Expression("(bool)", e);
 }
 
 Expression operator~(Expression e)
 {
-	if (e.is_valid()) {
+	/*if (e.is_valid()) {
 		return Operand(false);
 	} else if (e.is_neutral()) {
 		return Operand(true);
-	}
+	}*/
 	return Expression("~", e);
 }
 
@@ -1404,7 +1575,7 @@ Expression operator%(Expression e0, Expression e1)
 
 Expression operator&(Expression e0, Expression e1)
 {
-	if (e0.is_null() or e1.is_null()) {
+	/*if (e0.is_null() or e1.is_null()) {
 		return Expression(value::X());
 	} else if (e0.is_neutral() or e1.is_neutral()) {
 		return Operand(false);
@@ -1412,13 +1583,13 @@ Expression operator&(Expression e0, Expression e1)
 		return is_valid(e1);
 	} else if (e1.is_valid()) {
 		return is_valid(e0);
-	}
+	}*/
 	return Expression("&", e0, e1);
 }
 
 Expression operator|(Expression e0, Expression e1)
 {
-	if (e0.is_null() or e1.is_null()) {
+	/*if (e0.is_null() or e1.is_null()) {
 		return Expression(value::X());
 	} if (e0.is_valid() or e1.is_valid()) {
 		return Operand(true);
@@ -1426,7 +1597,7 @@ Expression operator|(Expression e0, Expression e1)
 		return is_valid(e1);
 	} else if (e1.is_neutral()) {
 		return is_valid(e0);
-	}
+	}*/
 	return Expression("|", e0, e1);
 }
 

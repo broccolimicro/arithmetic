@@ -21,7 +21,7 @@ Expression basic_rewrite() {
 	// I need to distinguish between canonicalization rules and simplification rules?
 
 	Expression rules = arithmetic::array(vector<Expression>({
-		(~~a) == (is_valid(a)),
+		(~(~a)) == (is_valid(a)),
 		(is_valid(~a)) == (~a),
 		(~is_valid(a)) == (~a),
 		(is_valid(is_valid(a))) == (is_valid(a)),

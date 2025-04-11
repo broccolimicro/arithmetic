@@ -135,23 +135,28 @@ struct Expression {
 	// operating on the Expression
 	void insert(size_t index, size_t num);
 	void erase(size_t index);
+	void erase(vector<size_t> index, bool doSort=false);
 	Expression &erase_dangling();
-	void replace(Operand o0, Operand o1);
 	Expression &propagate_constants();
-	vector<pair<Operand, Operand> > match(Operand lhs, const Expression &rule, Operand rhs, map<int, Operand> *mapping=nullptr);
 
-	struct Token {
-		Operand rule;
-		// (index of this.operations[], index of rule.operations[])
-		vector<pair<Operand, Operand> > leaves;
-		vector<Operand> branches;
+	struct Match {
+		// what to replace this match with from the rules
+		Operand replace;
+		// index into operations
+		vector<size_t> expr;
 
 		// map variable index to Operand in this
-		map<int, Operand> mapping;
+		map<size_t, Operand> vars;
+
+		void insert(size_t index, size_t num);
+		void erase(vector<size_t> index);
 	};
 
-	vector<Token> match(const Expression &rules);
-	vector<Token> search(const Expression &rules, vector<Token> tokens);
+	vector<Match> search(const Expression &rules, size_t count=0);
+	void replace(Operand o0, Operand o1);
+	void replace(const Expression &rules, Match token);
+	size_t count(Operand start) const;
+	void replace(const Expression &rules, vector<Match> tokens);
 	Expression &minimize();
 
 	Expression &operator=(Operand e);
@@ -159,7 +164,7 @@ struct Expression {
 	string to_string();
 };
 
-bool canMap(Operand search, Operand rule, const Expression &e0, const Expression &e1, bool init, map<int, Operand> *mapping=nullptr);
+bool canMap(Operand search, Operand rule, const Expression &e0, const Expression &e1, bool init, map<size_t, Operand> *vars=nullptr);
 
 ostream &operator<<(ostream &os, Expression e);
 

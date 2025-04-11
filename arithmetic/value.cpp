@@ -223,7 +223,9 @@ ostream &operator<<(ostream &os, value v) {
 		} else if (v.bval == value::VALID) {
 			os << "vdd";
 		} else if (v.bval == value::UNKNOWN) {
-			os << "-";
+			os << "U";
+		} else {
+			os << "berror(" << v.bval << ")";
 		}
 	} else if (v.type == value::INT) {
 		os << v.ival;
@@ -247,6 +249,8 @@ ostream &operator<<(ostream &os, value v) {
 			os << *i;
 		}
 		os << "}";
+	} else {
+		os << "cerror(" << v.type << ")";
 	}
 	return os;
 }

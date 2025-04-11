@@ -268,7 +268,7 @@ TEST(Expression, Simplify)
 	Operand b = Operand::varOf(1);
 	Operand c = Operand::varOf(2);
 	
-	Expression e = (a+b)*c-c*a;
+	Expression e = a*c+b*c-c*a;
 	e.minimize();
 }
 

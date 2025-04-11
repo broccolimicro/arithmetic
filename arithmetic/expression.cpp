@@ -1334,23 +1334,28 @@ void Expression::replace(const Expression &rules, vector<Expression::Match> toke
 
 Expression &Expression::minimize() {
 	static const Expression rules = basic_rewrite();
-	
-	vector<Match> tokens = search(rules);
 
+	cout << "Rules: " << rules << endl;
+	
 	cout << "This: " << *this << endl;
 
+	vector<Match> tokens = search(rules, 1u);
 	for (auto m = tokens.begin(); m != tokens.end(); m++) {
 		cout << "Rule: " << m->replace << endl;
 		cout << "Branches: " << ::to_string(m->expr) << endl;
 		cout << "Mapping: " << ::to_string(m->vars) << endl << endl;
 	}
-	
-	cout << "Rules: " << rules << endl;
-	
-	replace(rules, tokens);
-
-	cout << "This: " << *this << endl;
-
+	while (not tokens.empty()) {
+		replace(rules, tokens);
+		cout << "This: " << *this << endl;
+		
+		tokens = search(rules, 1u);
+		for (auto m = tokens.begin(); m != tokens.end(); m++) {
+			cout << "Rule: " << m->replace << endl;
+			cout << "Branches: " << ::to_string(m->expr) << endl;
+			cout << "Mapping: " << ::to_string(m->vars) << endl << endl;
+		}
+	}
 
 	// TODO(edward.bingham)
 	// Add support for bidirectional rules

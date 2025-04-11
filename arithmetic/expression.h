@@ -142,8 +142,10 @@ struct Expression {
 
 	Expression &operator=(Operand e);
 
-	string to_string(int index = -1);
+	string to_string();
 };
+
+bool canMap(Operand search, Operand rule, const Expression &e0, const Expression &e1, bool init, map<int, Operand> *mapping=nullptr);
 
 ostream &operator<<(ostream &os, Expression e);
 

@@ -174,6 +174,29 @@ bool areSame(Operand o0, Operand o1) {
 		or (o0.isExpr() and o1.isExpr() and o0.index == o1.index));
 }
 
+bool canMap(Operand o0, Operand o1, const Expression &e0, const Expression &e1, bool init, map<int, Operand> *mapping) {
+	if (o1.isConst()) {
+		return o0.isConst() and areSame(o0.cnst, o1.cnst);
+	} else if (o1.isVar()) {
+		if (mapping != nullptr) {
+			auto ins = mapping->insert(pair<int, Operand>(o1.index, o0));
+			return ins.second or areSame(o0, ins.first->second);
+		}
+		return true;
+	} else if (o1.isExpr()) {
+		if (not o0.isExpr()) {
+			return false;
+		}
+		auto op0 = e0.operations.begin() + o0.index;
+		auto op1 = e1.operations.begin() + o1.index;
+		return (op0->func == op1->func
+			and (op0->operands.size() == op1->operands.size()
+				or ((op1->is_commutative() or init)
+					and op0->operands.size() > op1->operands.size())));
+	}
+	return false;
+}
+
 Operation::Operation() {
 	func = -1;
 }
@@ -217,8 +240,8 @@ string Operation::funcString(int func) {
 	case 21: return "?"; // channel receive? or should we make this the ternary operator (?:)?
 	case 22: return "&"; // boolean or
 	case 23: return "|"; // boolean and
-	case 24: return "[,]"; // array
-	case 25: return "[]"; // index
+	case 24: return ","; // array
+	case 25: return "."; // index
 	default: return "";
 	}
 }
@@ -277,10 +300,10 @@ int Operation::funcIndex(string func, int args) {
 		return 23;
 
 	// concat arrays
-	else if (func == "[,]")
+	else if (func == ",")
 		return 24;
 	// index
-	else if (func == "[]")
+	else if (func == ".")
 		return 25;
 
 	return -1;
@@ -558,6 +581,10 @@ bool areSame(Operation o0, Operation o1) {
 }
 
 ostream &operator<<(ostream &os, Operation o) {
+	if (o.operands.size() == 1u) {
+		os << o.get();
+	}
+
 	for (auto v = o.operands.begin(); v != o.operands.end(); v++) {
 		if (v != o.operands.begin()) {
 			os << o.get();
@@ -985,81 +1012,178 @@ Expression &Expression::propagate_constants() {
 	return *this;
 }
 
+struct CombinationIterator {
+	std::vector<int> indices;
+	int n, k;
 
+	CombinationIterator(int n, int k) : n(n), k(k) {
+		indices.resize(k);
+		for (int i = 0; i < k; ++i) {
+			indices[i] = i;
+		}
+	}
+
+	~CombinationIterator() {
+	}
+
+	std::vector<int>::iterator begin() {
+		return indices.begin();
+	}
+
+	std::vector<int>::iterator end() {
+		return indices.end();
+	}
+
+	bool nextShift() {
+		if (indices[0] >= n-k) {
+			return false;
+		}
+		
+		for (auto i = indices.begin(); i != indices.end(); i++) {
+			(*i)++;
+		}
+		return true;
+	}
+
+	bool nextComb() {
+		if (indices[0] >= n-k) {
+			return false;
+		}
+
+		// Find the rightmost index that can be incremented
+		for (int i = k - 1; i >= 0; --i) {
+			if (indices[i] < n - k + i) {
+				++indices[i];
+				for (int j = i + 1; j < k; ++j) {
+					indices[j] = indices[j - 1] + 1;
+				}
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	bool nextPerm() {
+		if (std::next_permutation(indices.begin(), indices.end())) {
+			return true;
+		}
+
+		std::sort(indices.begin(), indices.end());
+		return nextComb();
+	}
+};
 
 Expression &Expression::minimize(Expression rewrite) {
 	// TODO(edward.bingham) I need a way to canonicalize expressions and hash
 	// them so that I can do the state search algorithm.
-	/*if (rewrite.operations.empty()) {
+	if (rewrite.operations.empty()) {
 		rewrite = basic_rewrite();
 	}
 
-	struct token {
-		int rule;
+	if (rewrite.operations.empty() or rewrite.operations.back().func != 24) {
+		printf("error: no rewrite rules found\n");
+	}
+	auto rulesBegin = rewrite.operations.back().operands.begin();
+	auto rulesEnd = rewrite.operations.back().operands.end();
+	for (auto i = rulesBegin; i != rulesEnd; i++) {
+		if (not i->isExpr() or rewrite.operations[i->index].func != 8) {
+			printf("error: invalid format for rewrite rule\n");
+		}
+	}
+
+	struct Token {
+		Operand rule;
 		// (index of this.operations[], index of rule.operations[])
 		vector<pair<Operand, Operand> > leaves;
-		vector<pair<Operand, Operand> > branches;
+		vector<Operand> branches;
 
 		// map variable index to Operand in this
 		map<int, Operand> mapping;
 	};
 
-	vector<token> tokens;
-	for (int i = (int)operations.size()-1; i >= 0; i--) {
-		// search through the current stack and propagate subsequent tokens
-		for (auto t = tokens.begin(); t != tokens.end(); t++) {
-			auto rule = rewrite.begin()+t->rule;
-			for (auto l = t->leaves.begin(); l != t->leaves.end(); l++) {
-				// top of the Expression tree "->"
-				//rule->operations.back()
-
-				// At a given leaf, I need to match all of the operators in the rewrite rule to some of the operators in this Expression. This needs to account for commutivity. Associativity is encoded in the rewrite rules.
-				
-			}
-		}
-
+	vector<Token> tokens;
+	// initialize the initial tokens
+	for (int i = 0; i < (int)operations.size(); i++) {
 		// search through the "rewrite" rules and add all of the matching starts
-		for (int j = 0; j < (int)rewrite.size(); j++) {
-			if (rewrite[j].operations.empty()) {
+		for (auto j = rulesBegin; j != rulesEnd; j++) {
+			if (not j->isExpr()) {
 				continue;
 			}
-			auto rule = std::prev(rewrite[j].operations.end());
-			// func must be rewrite "->"
-			if (rule->func != 24 or rule->operands.size() != 2u) {
+			auto rule = rewrite.operations.begin() + j->index;
+			if (rule->func != 8 or rule->operands.size() != 2u) {
 				continue;
-			} 
-			auto lhs = rule.operands.begin();
-			auto rhs = std::next(lhs);
-			if (lhs->isConst()
-				or lhs->isVar()) {
-				// an Operation matches a constant or
-				// variable if the Operation is identity
-				// ("+") and has a single Operand that is a
-				// constant
-
-				for (int k = 0; k < (int)operations[i].operands.size(); k++) {
-					if (operations[i].operands[k].type == lhs->type
-						and ((lhs->isConst()
-							and operations[i].operands[k].index == lhs->index)
-							or lhs->isVar())
-						and operations[i].operands[k].hasData == lhs->hasData
-						and operations[i].operands[k].hasValid == lhs->hasValid) {
-						// we found a matching Operand
-					}
-				}
-				
-			} else if (lhs->isExpr()) {
-				auto expr = rewrite[j].operations.begin() + lhs->index;
-				if (expr->func == operations[i].func
-					and (expr->operands.size() == operations[i].operands.size()
-						or (expr->operands.size() < operations[i].operands.size()
-							and expr->is_commutative()))) {
-					// we can start a matching Expression
-				}
+			}
+			auto lhs = rule->operands.begin();
+			Token newToken;
+			if (canMap(Operand::exprOf(i), *lhs, *this, rewrite, true, &newToken.mapping)) {
+				newToken.rule = *j;
+				newToken.leaves.push_back({Operand::exprOf(i), *lhs});
+				tokens.push_back(newToken);
 			}
 		}
-	}*/
+	}
 
+	// Find expression matches with depth-first search
+	vector<Token> matches;
+	while (not tokens.empty()) {
+		Token curr = tokens.back();
+		tokens.pop_back();
+
+		Operand from = curr.leaves.back().first;
+		Operand to = curr.leaves.back().second;
+		curr.branches.push_back(curr.leaves.back().first);
+		curr.leaves.pop_back();
+
+		if (to.isExpr()) {
+			auto fOp = operations.begin() + from.index;
+			auto tOp = rewrite.operations.begin() + to.index;
+
+			bool commute = tOp->is_commutative();
+			CombinationIterator it((int)fOp->operands.size(), (int)tOp->operands.size());
+			do {
+				Token next = curr;
+				bool found = true;
+				for (auto i = it.begin(); i != it.end() and found; i++) {
+					next.leaves.push_back({fOp->operands[*i], tOp->operands[i-it.begin()]});
+					found = canMap(fOp->operands[*i], tOp->operands[i-it.begin()], *this, rewrite, false, &next.mapping);
+				}
+
+				if (found) {
+					tokens.push_back(next);
+				}
+			} while (commute ? it.nextPerm() : it.nextShift());
+		} else if (curr.leaves.empty()) {
+			matches.push_back(curr);
+		} else {
+			tokens.push_back(curr);
+		}
+	}
+	cout << "This: " << *this << endl;
+
+	for (auto m = matches.begin(); m != matches.end(); m++) {
+		cout << "Rule: " << m->rule << endl;
+		cout << "Leaves: " << ::to_string(m->leaves) << endl;
+		cout << "Branches: " << ::to_string(m->branches) << endl;
+		cout << "Mapping: " << ::to_string(m->mapping) << endl << endl;
+	}
+	
+	cout << "Rules: " << rewrite << endl;
+
+	// TODO(edward.bingham) Write an insertion function to insert N operations somewhere in the expression and update the indices appropriately
+	// Break out the matching functionality into it's own function
+	// Add support for bidirectional rules
+	// Implement the replacement procedure, create the new expression, replace the operation at the top level of the old expression, then delete the other unused pieces of the old expression.
+	// Implement the cost function, assign a "complexity" metric to certain operators, and then accumulate the cost of all of the operators in the expression
+	// Implement the bidirectional search function to search rule applications that minimize the cost function but then apply all of the unidirectional rules in between
+	// Create a set of unidirectional rewrite rules to change bitwise operators into arithmetic operators, and then a set of unidirectional rules to switch them back
+	// Tie this all together into an easy-to-use minimization system.
+
+	// TODO(edward.bingham) Then I need to implement encoding
+	// Use the unidirectional expression rewrite system?
+	// propagate validity?
+
+	// TODO(edward.bingham) Quantifier elimination
 
 
 	// TODO(edward.bingham) implement Expression simplification using term replacement
@@ -1103,28 +1227,19 @@ Expression &Expression::operator=(Operand e)
 	return *this;
 }
 
-string Expression::to_string(int index) {
+string Expression::to_string() {
 	if (operations.empty()) {
-		return "(gnd)";
-	}
-
-	if (index < 0) {
-		index = (int)operations.size()-1;
+		return "(gnd)\n";
 	}
 
 	stringstream os;
-	os << "(";
-	if (index < (int)operations.size()) {
-		os << operations[index];
-	} else {
-		os << "{out of range " << index << "/" << operations.size() << "}";
+	for (int i = (int)operations.size()-1; i >= 0; i--) {
+		os << i << ": " << operations[i] << endl;
 	}
-	os << ")";
 	return os.str();
 }
 
-ostream &operator<<(ostream &os, Expression e)
-{
+ostream &operator<<(ostream &os, Expression e) {
 	os << e.to_string();
 	return os;
 }
@@ -1685,7 +1800,7 @@ Expression operator||(Operand e0, Operand e1)
 
 Expression array(vector<Expression> e) {
 	Expression result;
-	result.set("[,]", e);
+	result.set(",", e);
 	return result;
 }
 

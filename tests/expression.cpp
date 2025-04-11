@@ -262,3 +262,13 @@ TEST(Expression, PropagateConstants)
 	EXPECT_EQ(e.operations[0].operands[0].cnst.ival, 12);
 }
 
+TEST(Expression, Simplify)
+{
+	Operand a = Operand::varOf(0);
+	Operand b = Operand::varOf(1);
+	Operand c = Operand::varOf(2);
+	
+	Expression e = (a+b)*c-c*a;
+	e.minimize();
+}
+

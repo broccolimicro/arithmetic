@@ -913,6 +913,18 @@ void Expression::apply(vector<Expression> uid_map) {
 	operations = result;
 }
 
+void Expression::insert(size_t index, size_t num) {
+	operations.resize(operations.size()+num);
+	std::move(operations.begin()+index, operations.end(), operations.begin()+index+num);
+	for (auto i = operations.begin()+index+num; i != operations.end(); i++) {
+		for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
+			if (j->isExpr() and j->index >= index) {
+				j->index += num;
+			}
+		}
+	}
+}
+
 // Erase the Operation at "index" from this Expression, fix all of the indexing issues that might create in other operations
 void Expression::erase(size_t index) {
 	for (int i = (int)operations.size()-1; i > (int)index; i--) {
@@ -1074,56 +1086,45 @@ struct CombinationIterator {
 	}
 };
 
-Expression &Expression::minimize(Expression rewrite) {
+vector<Expression::Token> Expression::match(const Expression &rules) {
 	// TODO(edward.bingham) I need a way to canonicalize expressions and hash
 	// them so that I can do the state search algorithm.
-	if (rewrite.operations.empty()) {
-		rewrite = basic_rewrite();
+	if (rules.operations.empty() or rules.operations.back().func != 24) {
+		printf("error: no rules rules found\n");
 	}
-
-	if (rewrite.operations.empty() or rewrite.operations.back().func != 24) {
-		printf("error: no rewrite rules found\n");
-	}
-	auto rulesBegin = rewrite.operations.back().operands.begin();
-	auto rulesEnd = rewrite.operations.back().operands.end();
+	auto rulesBegin = rules.operations.back().operands.begin();
+	auto rulesEnd = rules.operations.back().operands.end();
 	for (auto i = rulesBegin; i != rulesEnd; i++) {
-		if (not i->isExpr() or rewrite.operations[i->index].func != 8) {
-			printf("error: invalid format for rewrite rule\n");
+		if (not i->isExpr() or rules.operations[i->index].func != 8) {
+			printf("error: invalid format for rules rule\n");
 		}
 	}
-
-	struct Token {
-		Operand rule;
-		// (index of this.operations[], index of rule.operations[])
-		vector<pair<Operand, Operand> > leaves;
-		vector<Operand> branches;
-
-		// map variable index to Operand in this
-		map<int, Operand> mapping;
-	};
 
 	vector<Token> tokens;
 	// initialize the initial tokens
 	for (int i = 0; i < (int)operations.size(); i++) {
-		// search through the "rewrite" rules and add all of the matching starts
+		// search through the "rules" rules and add all of the matching starts
 		for (auto j = rulesBegin; j != rulesEnd; j++) {
 			if (not j->isExpr()) {
 				continue;
 			}
-			auto rule = rewrite.operations.begin() + j->index;
+			auto rule = rules.operations.begin() + j->index;
 			if (rule->func != 8 or rule->operands.size() != 2u) {
 				continue;
 			}
 			auto lhs = rule->operands.begin();
 			Token newToken;
-			if (canMap(Operand::exprOf(i), *lhs, *this, rewrite, true, &newToken.mapping)) {
+			if (canMap(Operand::exprOf(i), *lhs, *this, rules, true, &newToken.mapping)) {
 				newToken.rule = *j;
 				newToken.leaves.push_back({Operand::exprOf(i), *lhs});
 				tokens.push_back(newToken);
 			}
 		}
 	}
+	return tokens;
+}
 
+vector<Expression::Token> Expression::search(const Expression &rules, vector<Expression::Token> tokens) {
 	// Find expression matches with depth-first search
 	vector<Token> matches;
 	while (not tokens.empty()) {
@@ -1137,7 +1138,7 @@ Expression &Expression::minimize(Expression rewrite) {
 
 		if (to.isExpr()) {
 			auto fOp = operations.begin() + from.index;
-			auto tOp = rewrite.operations.begin() + to.index;
+			auto tOp = rules.operations.begin() + to.index;
 
 			bool commute = tOp->is_commutative();
 			CombinationIterator it((int)fOp->operands.size(), (int)tOp->operands.size());
@@ -1146,7 +1147,7 @@ Expression &Expression::minimize(Expression rewrite) {
 				bool found = true;
 				for (auto i = it.begin(); i != it.end() and found; i++) {
 					next.leaves.push_back({fOp->operands[*i], tOp->operands[i-it.begin()]});
-					found = canMap(fOp->operands[*i], tOp->operands[i-it.begin()], *this, rewrite, false, &next.mapping);
+					found = canMap(fOp->operands[*i], tOp->operands[i-it.begin()], *this, rules, false, &next.mapping);
 				}
 
 				if (found) {
@@ -1159,18 +1160,27 @@ Expression &Expression::minimize(Expression rewrite) {
 			tokens.push_back(curr);
 		}
 	}
+	return matches;
+}
+
+Expression &Expression::minimize() {
+	static const Expression rules = basic_rewrite();
+	
+	vector<Token> tokens = match(rules);
+	tokens = search(rules, tokens);
+	
 	cout << "This: " << *this << endl;
 
-	for (auto m = matches.begin(); m != matches.end(); m++) {
+	for (auto m = tokens.begin(); m != tokens.end(); m++) {
 		cout << "Rule: " << m->rule << endl;
 		cout << "Leaves: " << ::to_string(m->leaves) << endl;
 		cout << "Branches: " << ::to_string(m->branches) << endl;
 		cout << "Mapping: " << ::to_string(m->mapping) << endl << endl;
 	}
 	
-	cout << "Rules: " << rewrite << endl;
+	cout << "Rules: " << rules << endl;
 
-	// TODO(edward.bingham) Write an insertion function to insert N operations somewhere in the expression and update the indices appropriately
+	// TODO(edward.bingham)
 	// Break out the matching functionality into it's own function
 	// Add support for bidirectional rules
 	// Implement the replacement procedure, create the new expression, replace the operation at the top level of the old expression, then delete the other unused pieces of the old expression.

@@ -133,12 +133,26 @@ struct Expression {
 	void apply(vector<Expression> uid_map);
 
 	// operating on the Expression
+	void insert(size_t index, size_t num);
 	void erase(size_t index);
 	Expression &erase_dangling();
 	void replace(Operand o0, Operand o1);
 	Expression &propagate_constants();
 	vector<pair<Operand, Operand> > match(Operand lhs, const Expression &rule, Operand rhs, map<int, Operand> *mapping=nullptr);
-	Expression &minimize(Expression rewrite = Expression());
+
+	struct Token {
+		Operand rule;
+		// (index of this.operations[], index of rule.operations[])
+		vector<pair<Operand, Operand> > leaves;
+		vector<Operand> branches;
+
+		// map variable index to Operand in this
+		map<int, Operand> mapping;
+	};
+
+	vector<Token> match(const Expression &rules);
+	vector<Token> search(const Expression &rules, vector<Token> tokens);
+	Expression &minimize();
 
 	Expression &operator=(Operand e);
 

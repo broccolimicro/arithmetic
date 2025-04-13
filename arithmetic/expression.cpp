@@ -1347,8 +1347,40 @@ void Expression::replace(Operand from, Operand to) {
 
 void Expression::replace(const Expression &rules, Match match) {
 	if (not match.replace.isExpr()) {
-		replace(Operand::exprOf(match.expr.back()), match.replace);
+		size_t ins = 0;
+		size_t slot = match.expr.back();
 		match.expr.pop_back();
+
+		if (match.top.empty()) {
+			operations[slot].operands.clear();
+			operations[slot].func = -1;
+		} else {
+			// If this match doesn't cover all operands, we only want to replace
+			// the ones that are covered.
+			for (int i = (int)match.top.size()-1; i >= 0; i--) {
+				operations[slot].operands.erase(operations[slot].operands.begin() + match.top[i]);
+			}
+			ins = match.top[0];
+		}
+
+		if (match.replace.isVar()) {
+			auto v = match.vars.find(match.replace.index);
+			if (v != match.vars.end()) {
+				operations[slot].operands.insert(
+					operations[slot].operands.begin()+ins,
+					v->second);
+				++ins;
+			} else {
+				printf("variable not mapped\n");
+			}
+		} else {
+			operations[slot].operands.insert(
+				operations[slot].operands.begin()+ins,
+				match.replace);
+			++ins;
+		}
+
+		match.top.clear();
 	} else {
 		size_t top = operations.size()-1;
 		if (not match.expr.empty()) {
@@ -1382,8 +1414,8 @@ void Expression::replace(const Expression &rules, Match match) {
 			if (match.top.empty()) {
 				operations[slot].operands.clear();
 			} else {
-				// TODO(edward.bingham) If this match doesn't cover all operands, we only
-				// want to replace the ones that are covered.
+				// If this match doesn't cover all operands, we only want to replace
+				// the ones that are covered.
 				for (int i = (int)match.top.size()-1; i >= 0; i--) {
 					operations[slot].operands.erase(operations[slot].operands.begin() + match.top[i]);
 				}

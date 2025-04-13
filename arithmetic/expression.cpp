@@ -1115,8 +1115,10 @@ Expression &Expression::canonicalize() {
 			}
 		}
 
-		if (operations[i].operands.size() == 1u and operations[i].operands[0].isConst() and i != (int)operations.size()-1) {
+		if (operations[i].operands.size() == 1u and operations[i].operands[0].isConst()) {
 			replace[i] = Operation::evaluate(operations[i].func, {operations[i].operands[0].get()});
+		} if (operations[i].operands.size() == 1u and operations[i].is_commutative()) {
+			replace[i] = operations[i].operands[0];
 		} else {
 			for (int k = i-1; k >= 0; k--) {
 				if (replace[k].isVar() and areSame(operations[i], operations[k])) {
@@ -1131,9 +1133,19 @@ Expression &Expression::canonicalize() {
 	cout << ::to_string(replace) << endl;
 
 	// eliminate dangling expressions
+	if (replace.back().isConst()) {
+		operations.clear();
+		set("", replace.back());
+		return *this;
+	} else if (replace.back().isExpr()) {
+		size_t top = replace.back().index;
+		operations.erase(operations.begin()+top+1, operations.end());
+		replace.erase(replace.begin()+top+1, replace.end());
+	}
+
 	std::set<int> references;
 	for (int i = (int)operations.size()-1; i >= 0; i--) {
-		if (not replace[i].isVar()) {
+		if (not replace[i].isVar() and i != (int)operations.size()-1) {
 			continue;
 		}
 

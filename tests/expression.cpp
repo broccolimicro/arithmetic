@@ -268,7 +268,22 @@ TEST(Expression, Simplify)
 	Operand b = Operand::varOf(1);
 	Operand c = Operand::varOf(2);
 	
-	Expression e = a*c+b*c-c*a;
-	e.minimize();
+	Expression dut = a*c+b*c-c*a;
+	dut.minimize();
 }
+
+TEST(Expression, ChainOfAdds)
+{
+	Operand a = Operand::varOf(0);
+	Operand b = Operand::varOf(1);
+	Operand c = Operand::varOf(2);
+	Operand d = Operand::varOf(3);
+	Operand e = Operand::varOf(4);
+	Operand f = Operand::varOf(5);
+	Operand g = Operand::varOf(6);
+	
+	Expression dut = a+b+c+d+e+f+g;
+	dut.minimize();
+}
+
 

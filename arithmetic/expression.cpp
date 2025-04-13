@@ -1082,6 +1082,83 @@ Expression &Expression::propagate_constants() {
 	return *this;
 }
 
+Expression &Expression::canonicalize() {
+	vector<Operand> replace(operations.size(), Operand::varOf(0));
+	// propagate constants up through the precedence levels
+	for (int i = 0; i < (int)operations.size(); i++) {
+		if (operations[i].is_commutative()) {
+			sort(operations[i].operands.begin(), operations[i].operands.end(),
+				[](const Operand &a, const Operand &b) {
+					return a.type < b.type or (a.type == b.type
+						and ((a.type == Operand::CONST and order(a.cnst, b.cnst) < 0)
+							or (a.type != Operand::CONST and a.index < b.index)));
+				});
+		}
+
+		// merge adjacent constants from left to right as a result of operator precedence
+		auto j = operations[i].operands.begin();
+		if (j->isExpr() and not replace[j->index].isVar()) {
+			*j = replace[j->index];
+		}
+
+		while (j != operations[i].operands.end() and next(j) != operations[i].operands.end()) {
+			auto k = next(j);
+			if (k->isExpr() and not replace[k->index].isVar()) {
+				*k = replace[k->index];
+			}
+
+			if (j->isConst() and k->isConst()) {
+				*j = Operation::evaluate(operations[i].func, {j->get(), k->get()});
+				operations[i].operands.erase(k);
+			} else {
+				j++;
+			}
+		}
+
+		if (operations[i].operands.size() == 1u and operations[i].operands[0].isConst() and i != (int)operations.size()-1) {
+			replace[i] = Operation::evaluate(operations[i].func, {operations[i].operands[0].get()});
+		} else {
+			for (int k = i-1; k >= 0; k--) {
+				if (replace[k].isVar() and areSame(operations[i], operations[k])) {
+					replace[i] = Operand::exprOf(k);
+					break;
+				}
+			}
+		}
+	}
+
+
+	cout << ::to_string(replace) << endl;
+
+	// eliminate dangling expressions
+	std::set<int> references;
+	for (int i = (int)operations.size()-1; i >= 0; i--) {
+		if (not replace[i].isVar()) {
+			continue;
+		}
+
+		if (i != (int)operations.size()-1 and references.find(i) == references.end()) {
+			replace[i].type = Operand::CONST;
+		}
+
+		for (auto j = operations[i].operands.begin(); j != operations[i].operands.end(); j++) {
+			if (j->isExpr() and (int)j->index < i) {
+				references.insert(j->index);
+			}
+		}
+	}
+
+	cout << operations.back() << endl;	
+	cout << ::to_string(replace) << endl;
+
+	for (int i = (int)replace.size()-1; i >= 0; i--) {
+		if (not replace[i].isVar()) {
+			erase(i);
+		}
+	}
+	return *this;
+}
+
 struct CombinationIterator {
 	std::vector<int> indices;
 	int n, k;
@@ -1156,7 +1233,8 @@ vector<Expression::Match> Expression::search(const Expression &rules, size_t cou
 	auto rulesBegin = rules.operations.back().operands.begin();
 	auto rulesEnd = rules.operations.back().operands.end();
 	for (auto i = rulesBegin; i != rulesEnd; i++) {
-		if (not i->isExpr() or rules.operations[i->index].func != 8) {
+		// ==, >
+		if (not i->isExpr() or (rules.operations[i->index].func != 8 and rules.operations[i->index].func != 11)) {
 			printf("error: invalid format for rules rule\n");
 		}
 	}
@@ -1169,7 +1247,8 @@ vector<Expression::Match> Expression::search(const Expression &rules, size_t cou
 				continue;
 			}
 			auto rule = rules.operations.begin() + j->index;
-			if (rule->func != 8 or rule->operands.size() != 2u) {
+			// ==, >
+			if ((rule->func != 8 and rule->func != 11) or rule->operands.size() != 2u) {
 				continue;
 			}
 			auto lhs = rule->operands.begin();
@@ -1207,13 +1286,19 @@ vector<Expression::Match> Expression::search(const Expression &rules, size_t cou
 			do {
 				Match nextMatch = curr;
 				vector<Leaf> nextLeaves = leaves;
+				vector<size_t> operands;
 				bool found = true;
 				for (auto i = it.begin(); i != it.end() and found; i++) {
 					nextLeaves.push_back({fOp->operands[*i], tOp->operands[i-it.begin()]});
+					operands.push_back(*i);
 					found = canMap(fOp->operands[*i], tOp->operands[i-it.begin()], *this, rules, false, &nextMatch.vars);
 				}
 
 				if (found) {
+					if (nextMatch.top.empty()) {
+						sort(operands.begin(), operands.end());
+						nextMatch.top = operands;
+					}
 					stack.push_back({nextLeaves, nextMatch});
 				}
 			} while (commute ? it.nextPerm() : it.nextShift());
@@ -1265,16 +1350,17 @@ void Expression::replace(const Expression &rules, Match match) {
 		replace(Operand::exprOf(match.expr.back()), match.replace);
 		match.expr.pop_back();
 	} else {
-		size_t top = operations.size();
+		size_t top = operations.size()-1;
 		if (not match.expr.empty()) {
 			top = match.expr.back();
 		}
 
 		size_t num = rules.count(match.replace);
 		if (num > match.expr.size()) {
+			num -= match.expr.size();
 			insert(top, num);
-			for (size_t i = top+1; i < top+num+1; i++) {
-				match.expr.push_back(i);
+			for (size_t i = 0; i < num; i++) {
+				match.expr.push_back(i+top+1);
 			}
 			top = match.expr.back();
 		}
@@ -1292,26 +1378,46 @@ void Expression::replace(const Expression &rules, Match match) {
 			size_t slot = pos.first->second;
 
 			operations[slot].func = rules.operations[curr].func;
-			operations[slot].operands.clear();
+			size_t ins = 0;
+			if (match.top.empty()) {
+				operations[slot].operands.clear();
+			} else {
+				// TODO(edward.bingham) If this match doesn't cover all operands, we only
+				// want to replace the ones that are covered.
+				for (int i = (int)match.top.size()-1; i >= 0; i--) {
+					operations[slot].operands.erase(operations[slot].operands.begin() + match.top[i]);
+				}
+				ins = match.top[0];
+			}
 			for (auto op = rules.operations[curr].operands.begin(); op != rules.operations[curr].operands.end(); op++) {
 				if (op->isExpr()) {
 					auto o = exprMap.insert({op->index, match.expr.back()});
 					if (o.second) {
 						match.expr.pop_back();
 					}
-					operations[slot].operands.push_back(Operand::exprOf(o.first->second));
+					operations[slot].operands.insert(
+						operations[slot].operands.begin()+ins,
+						Operand::exprOf(o.first->second));
+					++ins;
 					stack.push_back(op->index);
 				} else if (op->isVar()) {
 					auto v = match.vars.find(op->index);
 					if (v != match.vars.end()) {
-						operations[slot].operands.push_back(v->second);
+						operations[slot].operands.insert(
+							operations[slot].operands.begin()+ins,
+							v->second);
+						++ins;
 					} else {
 						printf("variable not mapped\n");
 					}
 				} else {
-					operations[slot].operands.push_back(*op);
+					operations[slot].operands.insert(
+						operations[slot].operands.begin()+ins,
+						*op);
+					++ins;
 				}
 			}
+			match.top.clear();
 		}
 	}
 
@@ -1339,6 +1445,8 @@ Expression &Expression::minimize() {
 	
 	cout << "This: " << *this << endl;
 
+	canonicalize();
+	cout << "Canon: " << *this << endl;
 	vector<Match> tokens = search(rules, 1u);
 	for (auto m = tokens.begin(); m != tokens.end(); m++) {
 		cout << "Rule: " << m->replace << endl;
@@ -1348,6 +1456,8 @@ Expression &Expression::minimize() {
 	while (not tokens.empty()) {
 		replace(rules, tokens);
 		cout << "This: " << *this << endl;
+		canonicalize();
+		cout << "Canon: " << *this << endl;
 		
 		tokens = search(rules, 1u);
 		for (auto m = tokens.begin(); m != tokens.end(); m++) {
@@ -1358,8 +1468,9 @@ Expression &Expression::minimize() {
 	}
 
 	// TODO(edward.bingham)
+	// Add canonicalization and merging
+	// special rule in replacement for top-level commutative expressions
 	// Add support for bidirectional rules
-	// Implement the replacement procedure, create the new expression, replace the operation at the top level of the old expression, then delete the other unused pieces of the old expression.
 	// Implement the cost function, assign a "complexity" metric to certain operators, and then accumulate the cost of all of the operators in the expression
 	// Implement the bidirectional search function to search rule applications that minimize the cost function but then apply all of the unidirectional rules in between
 	// Create a set of unidirectional rewrite rules to change bitwise operators into arithmetic operators, and then a set of unidirectional rules to switch them back

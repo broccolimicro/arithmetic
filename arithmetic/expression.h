@@ -138,12 +138,15 @@ struct Expression {
 	void erase(vector<size_t> index, bool doSort=false);
 	Expression &erase_dangling();
 	Expression &propagate_constants();
+	Expression &canonicalize();
 
 	struct Match {
 		// what to replace this match with from the rules
 		Operand replace;
 		// index into operations
 		vector<size_t> expr;
+		// index into operands for expr.back()
+		vector<size_t> top;
 
 		// map variable index to Operand in this
 		map<size_t, Operand> vars;

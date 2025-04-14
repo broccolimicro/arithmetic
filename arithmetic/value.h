@@ -69,8 +69,8 @@ struct value
 	static value intOf(int64_t ival);
 	static value realOf(double rval);
 	static value arrOf(vector<value> arr);
-	static value structOf(vector<value> arr);
-	
+	static value structOf(vector<value> arr);	
+
 	bool isSubsetOf(value v) const;
 
 	operator bool() const;

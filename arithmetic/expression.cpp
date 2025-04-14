@@ -3,6 +3,7 @@
 #include "rewrite.h"
 
 #include <sstream>
+#include <array>
 #include <common/standard.h>
 #include <common/text.h>
 
@@ -216,6 +217,10 @@ string Operation::funcString(int func) {
 
 	// DESIGN(edward.bingham) order of these operations matters for the propagate function!
 
+	// DESIGN(edward.bingham) Channel receive will not be used as an operator in
+	// the expression engine. Channel actions should be decomposed into their
+	// appropriate protocols while expanding the CHP.
+
 	switch (func)
 	{
 	case 0: return "!";  // bitwise not
@@ -239,7 +244,7 @@ string Operation::funcString(int func) {
 	case 18: return "*";
 	case 19: return "/";
 	case 20: return "%";
-	case 21: return "?"; // channel receive? or should we make this the ternary operator (?:)?
+	case 21: return "?"; // ternary operator
 	case 22: return "&"; // boolean or
 	case 23: return "|"; // boolean and
 	case 24: return ","; // array
@@ -309,6 +314,180 @@ int Operation::funcIndex(string func, int args) {
 		return 25;
 
 	return -1;
+}
+
+pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
+	// If I have two fixed-point inputs, then the offset determines the
+	// complexity of the operator because it can affect the overlap of the two
+	// inputs. Again, because encodings may not be base-2, the offset may not be
+	// an integer.
+
+	int i;
+	Type result(0.0, 0.0, 0.0);
+	double cost = 0.0;
+	std::array<double, 2> ovr;
+	switch (func) {
+	case 0: // bitwise not (!) -- rotate digit for non-base-2
+		result = args[0];
+		result.delay += 1.0;
+		cost = args[0].width;
+		return {result, cost};
+	case 1: // identity
+		result = args[0];
+		cost = 0.0;
+		return {result, cost};
+	case 2: // negation (-)
+		result = args[0];
+		result.delay += args[0].width;
+		cost = args[0].width;
+		return {result, cost};
+	case 3: // validity
+	case 4: // boolean not (~)
+		result = Type(0.0, 0.0, log2(args[0].width));
+		cost = args[0].width;
+		return {result, cost};
+	case 5: // bitwise or (||) -- max of digit for non-base-2
+	case 7: // bitwise xor (^)
+		result = args[0];
+		for (i = 1; i < (int)args.size(); i++) {
+			ovr = overlap(result, args[i]);
+			cost += ovr[0];
+			result.width = ovr[1];
+			if (args[i].coeff < result.coeff) {
+				result.coeff = args[i].coeff;
+			}
+			result.delay = max(result.delay, args[i].delay);
+		}
+		result.delay += (double)args.size() - 1.0;
+		return {result, cost};
+	case 6: // bitwise and (&&)
+		result = args[0];
+		for (i = 1; i < (int)args.size(); i++) {
+			ovr = overlap(result, args[i]);
+			result.width = ovr[0];
+			if (args[i].coeff > result.coeff) {
+				result.coeff = args[i].coeff;
+			}
+			result.delay = max(result.delay, args[i].delay);
+		}
+		result.delay += (double)args.size() - 1.0;
+		cost = result.width*(double)(args.size()-1);
+		return {result, cost};
+	case 8: // equality (==)
+	case 9: // inequality (!=)
+		result = Type(0.0, 0.0, 0.0);
+		ovr = overlap(args[0], args[1]);
+		result.delay = max(args[0].delay, args[1].delay) + log2(ovr[1]);
+		cost = ovr[1];
+		return {result, cost};
+	case 10: // "<";
+	case 11: // ">";
+	case 12: // "<=";
+	case 13: // ">=";
+		result = Type(0.0, 0.0, 0.0);
+		ovr = overlap(args[0], args[1]);
+		result.delay = max(args[0].delay, args[1].delay) + ovr[1];
+		cost = ovr[1];
+		return {result, cost};
+	case 14: // shift left  "<<" (arithmetic/logical based on type?)
+		result = Type(args[0].coeff*pow(2.0, args[1].coeff),
+		              args[0].width + args[1].coeff*pow(2.0, args[1].width) - args[1].coeff,
+									max(args[0].delay, args[1].delay)+args[1].width);
+		cost = args[0].width*args[1].width;
+		return {result, cost};
+	case 15: // shift right ">>" (arithmetic/logical based on type?)
+		result = Type(args[0].coeff/pow(2.0, args[1].coeff*pow(2.0, args[1].width)),
+		              args[0].width + args[1].coeff*pow(2.0, args[1].width) - args[1].coeff,
+									max(args[0].delay, args[1].delay)+args[1].width);
+		cost = args[0].width*args[1].width;
+		return {result, cost};
+	case 16: // addition "+"
+	case 17: // subtraction "-"
+		// TODO(edward.bingham) I should really keep track of overlapping intervals
+		// here and then the critical path is the total overlap at the bit with
+		// maximum overlap. If there are multiple bits with the same maximum
+		// overlap, then we use the least significant one. Then we look at the
+		// location of the first overlap relative to the width of the final result
+		// and add that in for the carry chain. Complexity is dependent upon the
+		// wallace/dadda tree used to implement the reduction along with the ripple
+		// carry or carry look-ahead used to implement the final sum.
+		result = args[0];
+		cost = 0.0;
+		for (i = 1; i < (int)args.size(); i++) {
+			ovr = overlap(result, args[i]);
+			if (ovr[0] > 0.0) {
+				cost += ovr[0];
+			}
+			
+			result.width = ovr[1];
+			if (args[i].coeff < result.coeff) {
+				result.coeff = args[i].coeff;
+			}
+			result.delay = max(result.delay, args[i].delay);
+		}
+		result.delay += (double)args.size() + result.width;
+		return {result, cost};
+	case 18: // multiply "*"
+		// TODO(edward.bingham) This assumes a set of N sequental multiplications.
+		// Doing so completely ignores multiplication trees and bit-level
+		// parallelism. It's likely going to make iterative multiplication look
+		// more expensive than it really is.
+		result = args[0];
+		cost = 0.0;
+		for (i = 1; i < (int)args.size(); i++) {
+			cost += result.width*args[i].width;
+			result.width += args[i].width;
+			result.coeff *= args[i].coeff;
+			result.delay = max(result.delay, args[i].delay);
+		}
+		result.delay += result.width;
+		return {result, cost};
+	case 19: // divide "/"
+	case 20: // modulus "%"
+		// TODO(edward.bingham) I'm really not sure about this
+		result = args[0];
+		cost = 0.0;
+		for (i = 1; i < (int)args.size(); i++) {
+			cost += result.width*args[i].width;
+			result.delay = max(result.delay, args[i].delay) + result.width*args[i].width;
+			result.coeff /= args[i].coeff;
+		}
+		return {result, cost};
+	case 21: // ternary operator "a ? b : c"
+		ovr = overlap(args[1], args[2]);
+		result.coeff = min(args[1].coeff, args[2].coeff);
+		result.width = ovr[1];
+		result.delay = max(max(args[0].delay, args[1].delay), args[2].delay) + 1.0;
+		cost = ovr[1];
+		return {result, cost};
+	case 22: // boolean AND "&"
+	case 23: // boolean OR "|"
+		result = Type(0.0, 0.0, args[0].delay);
+		for (i = 1; i < (int)args.size(); i++) {
+			result.delay = max(result.delay, args[i].delay);
+		}
+		cost = 0.0;
+		return {result, cost};
+	case 24: // array ","
+		// TODO(edward.bingham) we need to create a way to handle arrayed types
+		result = args[0];
+		for (i = 1; i < (int)args.size(); i++) {
+			result.delay = max(result.delay, args[i].delay);
+		}
+		result.bounds.push_back((int)args.size());
+		cost = 0.0;
+		return {result, cost};
+	case 25: // index "."
+		// Need to select the appropriate type from the array
+		// but we can compute cost
+		result = args[0];
+		result.bounds.pop_back();
+		result.delay = max(result.delay, args[1].delay)+1.0;
+		cost = pow(2.0, args[1].width);
+		return {result, cost};
+	default:
+		return {result, cost};
+	}
 }
 
 void Operation::set(string func, vector<Operand> args) {
@@ -422,8 +601,13 @@ value Operation::evaluate(int func, vector<value> args) {
 			return args[0];
 		}
 		return (args[0] %  args[1]);
-	case 21: // TODO(edward.bingham) operator?
-		return args[0];
+	case 21: // ternary operator
+		if (args.size() == 1u) {
+			return args[0];
+		} else if (args.size() == 2u) {
+			args.push_back(value::X());
+		}
+		return args[0] ? args[1] : args[2];
 	case 22: //cout << args[0] << "&&" << args[1] << " = " << (args[0] &&  args[1]) << endl;
 		for (i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] & args[i];
@@ -1233,6 +1417,44 @@ struct CombinationIterator {
 	}
 };
 
+Cost Expression::cost(vector<Type> vars) const {
+	// I would need to know the biwidth of each variable/constant
+	// How do I think about encoding and keeping track of "accuracy"?
+	
+	// I can start by assuming a constant N accross all variables, represented by a "cost" of 1.0.
+
+	// Then I need to understand the cost of each operation
+	double complexity = 0.0;
+	vector<Type> expr;
+	for (int i = 0; i < (int)operations.size(); i++) {
+		vector<Type> args;
+		for (auto j = operations[i].operands.begin(); j != operations[i].operands.end(); j++) {
+			if (j->isConst()) {
+				if (j->cnst.type == value::BOOL) {
+					args.push_back(Type(0.0, 0.0, 0.0));
+				} else if (j->cnst.type == value::INT) {
+					args.push_back(Type((double)j->cnst.ival, 0.0, 0.0));
+				} else if (j->cnst.type == value::REAL) {
+					args.push_back(Type(j->cnst.rval, 0.0, 0.0));
+				}
+			} else if (j->isVar()) {
+				args.push_back(vars[j->index]);
+			} else if (j->isExpr()) {
+				args.push_back(expr[j->index]);
+			}
+		}
+		auto result = operations[i].funcCost(operations[i].func, args);
+		expr.push_back(result.first);
+		complexity += result.second;
+	}
+
+	double delay = 0.0;
+	if (not expr.empty()) {
+		delay = expr.back().delay;
+	}
+	return Cost(complexity, delay);
+}
+
 vector<Expression::Match> Expression::search(const Expression &rules, size_t count) {
 	using Leaf = pair<Operand, Operand>;
 	vector<pair<vector<Leaf>, Match> > stack;
@@ -1512,8 +1734,6 @@ Expression &Expression::minimize() {
 	}
 
 	// TODO(edward.bingham)
-	// Add canonicalization and merging
-	// special rule in replacement for top-level commutative expressions
 	// Add support for bidirectional rules
 	// Implement the cost function, assign a "complexity" metric to certain operators, and then accumulate the cost of all of the operators in the expression
 	// Implement the bidirectional search function to search rule applications that minimize the cost function but then apply all of the unidirectional rules in between
@@ -1525,7 +1745,6 @@ Expression &Expression::minimize() {
 	// propagate validity?
 
 	// TODO(edward.bingham) Quantifier elimination
-
 
 	// TODO(edward.bingham) implement Expression simplification using term replacement
 	// 1. find a way to represent replacement rules

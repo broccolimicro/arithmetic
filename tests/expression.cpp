@@ -267,9 +267,15 @@ TEST(Expression, Simplify)
 	Operand a = Operand::varOf(0);
 	Operand b = Operand::varOf(1);
 	Operand c = Operand::varOf(2);
+
+	vector<Type> vars({Type(1.0, 16.0, 0.0), Type(1.0, 16.0, 0.0), Type(1.0, 16.0, 0.0)});
 	
 	Expression dut = a*c+b*c-c*a;
+	Cost cost = dut.cost(vars);
 	dut.minimize();
+	Cost cost2 = dut.cost(vars);
+	EXPECT_LE(cost2.complexity, cost.complexity);
+	EXPECT_LE(cost2.critical, cost.critical);
 }
 
 TEST(Expression, ChainOfAdds)

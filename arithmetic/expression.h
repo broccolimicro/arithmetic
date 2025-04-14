@@ -3,6 +3,7 @@
 #include <common/standard.h>
 
 #include "state.h"
+#include "type.h"
 
 namespace arithmetic {
 
@@ -63,11 +64,17 @@ struct Operation
 	Operation(string func, vector<Operand> args);
 	~Operation();
 
+	// TODO(edward.bingham) implement expression comprehension with a template
+	// parameter It repeats all operands for each value of the template
+	// parameter, in order. Use this to match commutative expressions in the
+	// rewrite rules.
+
 	int func;
 	vector<Operand> operands;
 
 	static string funcString(int func);
 	static int funcIndex(string func, int args=2);
+	static pair<Type, double> funcCost(int func, vector<Type> args);
 
 	void set(string func, vector<Operand> args);
 	string get() const;
@@ -155,6 +162,7 @@ struct Expression {
 		void erase(vector<size_t> index);
 	};
 
+	Cost cost(vector<Type> vars) const;
 	vector<Match> search(const Expression &rules, size_t count=0);
 	void replace(Operand o0, Operand o1);
 	void replace(const Expression &rules, Match token);

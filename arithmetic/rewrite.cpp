@@ -37,8 +37,8 @@ Expression rewriteBasic() {
 		(is_valid(a)|b) > (a|b),
 		(is_valid(a|b)) > (a|b),
 		
-		(a & (b & c)) > (Expression("&", {a, b, c})),
-		(a | (b | c)) > (Expression("|", {a, b, c})),
+		(a & (b & c)) > (Expression(Operation::BOOLEAN_AND, {a, b, c})),
+		(a | (b | c)) > (Expression(Operation::BOOLEAN_OR, {a, b, c})),
 
 		(a-b) > (a+(-b)),
 		(a+a) > (2*a),
@@ -49,7 +49,7 @@ Expression rewriteBasic() {
 		(true+a) > (a),
 		(is_valid(a+b)) > (a&b),
 		(~(a+b)) > (~a|~b),
-		(a + (b + c)) > (Expression("+", {a, b, c})),
+		(a + (b + c)) > (Expression(Operation::ADD, {a, b, c})),
 
 		(a/a) > (1),
 		(a/b) > (a*(1/b)),
@@ -61,7 +61,7 @@ Expression rewriteBasic() {
 		(true+a) > (a),
 		(is_valid(a*b)) > (a&b),
 		(~(a*b)) > (~a|~b),
-		(a * (b * c)) > (Expression("*", {a, b, c})),
+		(a * (b * c)) > (Expression(Operation::MULTIPLY, {a, b, c})),
 	
 		(a < b) > (a-b < 0),
 		(a > b) > (b < a),
@@ -76,9 +76,9 @@ Expression rewriteBasic() {
 		(0 || a) > (a),
 		(-1 && a) > (a),
 		(-1 || a) > (-1),
-		(a && (b && c)) > (Expression("&&", {a, b, c})),
+		(a && (b && c)) > (Expression(Operation::BITWISE_AND, {a, b, c})),
 		(a || a) > (a),
-		(a || (b || c)) > (Expression("||", {a, b, c})),
+		(a || (b || c)) > (Expression(Operation::BITWISE_OR, {a, b, c})),
 		(!!a) > (a)
 	}));
 

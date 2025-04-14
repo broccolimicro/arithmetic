@@ -58,11 +58,55 @@ ostream &operator<<(ostream &os, Operand o);
 
 bool areSame(Operand o0, Operand o1);
 
-struct Operation
-{
+struct Operator {
+	Operator();
+	Operator(vector<string> infix, string prefix="", string postfix="", bool commutative=false, bool reflexive=false);
+	~Operator();
+
+	string prefix;
+	vector<string> infix;
+	string postfix;
+
+	bool commutative;
+	bool reflexive;
+};
+
+struct Operation {
 	Operation();
-	Operation(string func, vector<Operand> args);
+	Operation(int func, vector<Operand> args);
 	~Operation();
+
+	static vector<Operator> operators;
+	static int BITWISE_NOT;
+	static int IDENTITY;
+	static int NEGATION;
+	static int VALIDITY;
+	static int BOOLEAN_NOT;
+	static int BITWISE_OR;
+	static int BITWISE_AND;
+	static int BITWISE_XOR;
+	static int EQUAL;
+	static int NOT_EQUAL;
+	static int LESS;
+	static int GREATER;
+	static int LESS_EQUAL;
+	static int GREATER_EQUAL;
+	static int SHIFT_LEFT;
+	static int SHIFT_RIGHT;
+	static int ADD;
+	static int SUBTRACT;
+	static int MULTIPLY;
+	static int DIVIDE;
+	static int MOD;
+	static int TERNARY;
+	static int BOOLEAN_OR;
+	static int BOOLEAN_AND;
+	static int BOOLEAN_XOR;
+	static int ARRAY;
+	static int INDEX;
+
+	static int push(Operator op);
+	static void loadOperators();
 
 	// TODO(edward.bingham) implement expression comprehension with a template
 	// parameter It repeats all operands for each value of the template
@@ -76,9 +120,8 @@ struct Operation
 	static int funcIndex(string func, int args=2);
 	static pair<Type, double> funcCost(int func, vector<Type> args);
 
-	void set(string func, vector<Operand> args);
-	string get() const;
-	bool is_commutative() const;
+	void set(int func, vector<Operand> args);
+	bool isCommutative() const;
 
 	static value evaluate(int func, vector<value> args);
 	value evaluate(state values, vector<value> expressions) const;
@@ -95,13 +138,13 @@ ostream &operator<<(ostream &os, Operation o);
 struct Expression {
 	Expression();
 	Expression(Operand arg0);
-	Expression(string func, Operand arg0);
-	Expression(string func, Expression arg0);
-	Expression(string func, Operand arg0, Operand arg1);
-	Expression(string func, Expression arg0, Operand arg1);
-	Expression(string func, Operand arg0, Expression arg1);
-	Expression(string func, Expression arg0, Expression arg1);
-	Expression(string func, vector<Expression> args);
+	Expression(int func, Operand arg0);
+	Expression(int func, Expression arg0);
+	Expression(int func, Operand arg0, Operand arg1);
+	Expression(int func, Expression arg0, Operand arg1);
+	Expression(int func, Operand arg0, Expression arg1);
+	Expression(int func, Expression arg0, Expression arg1);
+	Expression(int func, vector<Expression> args);
 	~Expression();
 
 	// The Expression consists entirely of a tree of operations stored in an
@@ -119,16 +162,16 @@ struct Expression {
 	int push(Operation arg);
 
 	void set(Operand arg0);
-	void set(string func, Operand arg0);
-	void set(string func, Expression arg0);
-	void set(string func, Operand arg0, Operand arg1);
-	void set(string func, Expression arg0, Expression arg1);
-	void set(string func, Expression arg0, Operand arg1);
-	void set(string func, Operand arg0, Expression arg1);
-	void set(string func, vector<Expression> args);
-	void push(string func);
-	void push(string func, Operand arg0);
-	void push(string func, Expression arg0);
+	void set(int func, Operand arg0);
+	void set(int func, Expression arg0);
+	void set(int func, Operand arg0, Operand arg1);
+	void set(int func, Expression arg0, Expression arg1);
+	void set(int func, Expression arg0, Operand arg1);
+	void set(int func, Operand arg0, Expression arg1);
+	void set(int func, vector<Expression> args);
+	void push(int func);
+	void push(int func, Operand arg0);
+	void push(int func, Expression arg0);
 	value evaluate(state values) const;
 	bool is_null() const;
 	bool is_constant() const;

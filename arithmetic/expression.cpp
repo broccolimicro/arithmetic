@@ -10,6 +10,35 @@
 namespace arithmetic
 {
 
+vector<Operator> Operation::operators;
+int Operation::BITWISE_NOT = -1;
+int Operation::IDENTITY = -1;
+int Operation::NEGATION = -1;
+int Operation::VALIDITY = -1;
+int Operation::BOOLEAN_NOT = -1;
+int Operation::BITWISE_OR = -1;
+int Operation::BITWISE_AND = -1;
+int Operation::BITWISE_XOR = -1;
+int Operation::EQUAL = -1;
+int Operation::NOT_EQUAL = -1;
+int Operation::LESS = -1;
+int Operation::GREATER = -1;
+int Operation::LESS_EQUAL = -1;
+int Operation::GREATER_EQUAL = -1;
+int Operation::SHIFT_LEFT = -1;
+int Operation::SHIFT_RIGHT = -1;
+int Operation::ADD = -1;
+int Operation::SUBTRACT = -1;
+int Operation::MULTIPLY = -1;
+int Operation::DIVIDE = -1;
+int Operation::MOD = -1;
+int Operation::TERNARY = -1;
+int Operation::BOOLEAN_OR = -1;
+int Operation::BOOLEAN_AND = -1;
+int Operation::BOOLEAN_XOR = -1;
+int Operation::ARRAY = -1;
+int Operation::INDEX = -1;
+
 Operand::Operand(value v) {
 	type = CONST;
 	cnst = v;
@@ -177,6 +206,22 @@ bool areSame(Operand o0, Operand o1) {
 		or (o0.isExpr() and o1.isExpr() and o0.index == o1.index));
 }
 
+Operator::Operator() {
+	commutative = false;
+	reflexive = true;
+}
+
+Operator::Operator(vector<string> infix, string prefix, string postfix, bool commutative, bool reflexive) {
+	this->prefix = prefix;
+	this->infix = infix;
+	this->postfix = postfix;
+	this->commutative = commutative;
+	this->reflexive = reflexive;
+}
+
+Operator::~Operator() {
+}
+
 bool canMap(Operand o0, Operand o1, const Expression &e0, const Expression &e1, bool init, map<size_t, Operand> *vars) {
 	if (o1.isConst()) {
 		return o0.isConst() and areSame(o0.cnst, o1.cnst);
@@ -194,7 +239,7 @@ bool canMap(Operand o0, Operand o1, const Expression &e0, const Expression &e1, 
 		auto op1 = e1.operations.begin() + o1.index;
 		return (op0->func == op1->func
 			and (op0->operands.size() == op1->operands.size()
-				or ((op1->is_commutative() or init)
+				or ((op1->isCommutative() or init)
 					and op0->operands.size() > op1->operands.size())));
 	}
 	return false;
@@ -204,14 +249,20 @@ Operation::Operation() {
 	func = -1;
 }
 
-Operation::Operation(string func, vector<Operand> args) {
+Operation::Operation(int func, vector<Operand> args) {
 	set(func, args);
 }
 
 Operation::~Operation() {
 }
 
-string Operation::funcString(int func) {
+int Operation::push(Operator op) {
+	int result = (int)operators.size();
+	operators.push_back(op);
+	return result;
+}
+
+void Operation::loadOperators() {
 	// DESIGN(edward.bingham) bitwise and boolean operations have been switched
 	// to be consistent with HSE and boolean logic expressions
 
@@ -221,104 +272,39 @@ string Operation::funcString(int func) {
 	// the expression engine. Channel actions should be decomposed into their
 	// appropriate protocols while expanding the CHP.
 
-	// TODO(edward.bingham) create an "Operator" class that keeps track of the
-	// prefix, infix, suffix, commutivity and reflexivity. Create a static
-	// collection of operators in the Expression class and a function to load
-	// them.
+	if (Operation::operators.empty()) {
+		printf("loading operators\n");
 
-	switch (func)
-	{
-	case 0: return "!";  // bitwise not
-	case 1: return "+";  // identity
-	case 2: return "-";  // negation
-	case 3: return "(bool)"; // boolean check
-	case 4: return "~";  // boolean not
-	case 5: return "||"; // bitwise or
-	case 6: return "&&"; // bitwise and
-	case 7: return "^";  // bitwise xor
-	case 8: return "==";
-	case 9: return "!=";
-	case 10: return "<";
-	case 11: return ">";
-	case 12: return "<=";
-	case 13: return ">=";
-	case 14: return "<<"; // shift left  (arithmetic/logical based on type?)
-	case 15: return ">>"; // shift right (arithmetic/logical based on type?)
-	case 16: return "+";
-	case 17: return "-";
-	case 18: return "*";
-	case 19: return "/";
-	case 20: return "%";
-	case 21: return "?"; // ternary operator
-	case 22: return "&"; // boolean or
-	case 23: return "|"; // boolean and
-	case 24: return ","; // array
-	case 25: return "."; // index
-	default: return "";
-	}
-}
+		BITWISE_NOT   = push(Operator({}, "!"));
+		IDENTITY      = push(Operator({}, "+", "", false, true));
+		NEGATION      = push(Operator({}, "-"));
+		VALIDITY      = push(Operator({}, "(bool)"));
+		BOOLEAN_NOT   = push(Operator({}, "~"));
+		BITWISE_OR    = push(Operator({"||"}, "", "", true));
+		BITWISE_AND   = push(Operator({"&&"}, "", "", true));
+		BITWISE_XOR   = push(Operator({"^^"}, "", "", true));
+		EQUAL         = push(Operator({"=="}));
+		NOT_EQUAL     = push(Operator({"!="}));
+		LESS          = push(Operator({"<"}));
+		GREATER       = push(Operator({">"}));
+		LESS_EQUAL    = push(Operator({"<="}));
+		GREATER_EQUAL = push(Operator({">="}));
+		SHIFT_LEFT    = push(Operator({"<<"}));
+		SHIFT_RIGHT   = push(Operator({">>"}));
+		ADD           = push(Operator({"+"}, "", "", true));
+		SUBTRACT      = push(Operator({"-"}));
+		MULTIPLY      = push(Operator({"*"}, "", "", true));
+		DIVIDE        = push(Operator({"/"}));
+		MOD           = push(Operator({"%"}));
+		TERNARY       = push(Operator({"?", ":"}));
+		BOOLEAN_OR    = push(Operator({"|"}, "", "", true));
+		BOOLEAN_AND   = push(Operator({"&"}, "", "", true));
+		BOOLEAN_XOR   = push(Operator({"^"}, "", "", true));
+		ARRAY         = push(Operator({","}, "[", "]"));
+		INDEX         = push(Operator({"[", "]["}, "", "]"));
 
-int Operation::funcIndex(string func, int args) {
-	// unary operators
-	if (func == "!" and args == 1)
-		return 0;
-	else if (func == "+" and args == 1) // identity
-		return 1;
-	else if (func == "-" and args == 1)
-		return 2;
-	else if (func == "(bool)" and args == 1)
-		return 3;
-	else if (func == "~" and args == 1)
-		return 4;
-
-	// binary operators
-	else if (func == "||")
-		return 5;
-	else if (func == "&&")
-		return 6;
-	else if (func == "^")
-		return 7;
-	else if (func == "==")
-		return 8;
-	else if (func == "~=")
-		return 9;
-	else if (func == "<")
-		return 10;
-	else if (func == ">")
-		return 11;
-	else if (func == "<=")
-		return 12;
-	else if (func == ">=")
-		return 13;
-	else if (func == "<<")
-		return 14;
-	else if (func == ">>")
-		return 15;
-	else if (func == "+")
-		return 16;
-	else if (func == "-")
-		return 17;
-	else if (func == "*")
-		return 18;
-	else if (func == "/")
-		return 19;
-	else if (func == "%")
-		return 20;
-	else if (func == "?")
-		return 21;
-	else if (func == "&")
-		return 22;
-	else if (func == "|")
-		return 23;
-
-	// concat arrays
-	else if (func == ",")
-		return 24;
-	// index
-	else if (func == ".")
-		return 25;
-
-	return -1;
+		printf("loaded %d operators\n", (int)Operation::operators.size());
+	} 
 }
 
 pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
@@ -331,28 +317,26 @@ pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
 	Type result(0.0, 0.0, 0.0);
 	double cost = 0.0;
 	std::array<double, 2> ovr;
-	switch (func) {
-	case 0: // bitwise not (!) -- rotate digit for non-base-2
+	if (func == Operation::BITWISE_NOT) { // bitwise not (!) -- rotate digit for non-base-2
 		result = args[0];
 		result.delay += 1.0;
 		cost = args[0].width;
 		return {result, cost};
-	case 1: // identity
+	} else if (func == Operation::IDENTITY) { // identity
 		result = args[0];
 		cost = 0.0;
 		return {result, cost};
-	case 2: // negation (-)
+	} else if (func == Operation::NEGATION) { // negation (-)
 		result = args[0];
 		result.delay += args[0].width;
 		cost = args[0].width;
 		return {result, cost};
-	case 3: // validity
-	case 4: // boolean not (~)
+	} else if (func == Operation::VALIDITY
+		or func == Operation::BOOLEAN_NOT) { // boolean not (~)
 		result = Type(0.0, 0.0, log2(args[0].width));
 		cost = args[0].width;
 		return {result, cost};
-	case 5: // bitwise or (||) -- max of digit for non-base-2
-	case 7: // bitwise xor (^)
+	} else if (func == Operation::BITWISE_OR) { // bitwise or (||) -- max of digit for non-base-2
 		result = args[0];
 		for (i = 1; i < (int)args.size(); i++) {
 			ovr = overlap(result, args[i]);
@@ -365,7 +349,7 @@ pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
 		}
 		result.delay += (double)args.size() - 1.0;
 		return {result, cost};
-	case 6: // bitwise and (&&)
+	} else if (func == Operation::BITWISE_AND) { // bitwise and (&&)
 		result = args[0];
 		for (i = 1; i < (int)args.size(); i++) {
 			ovr = overlap(result, args[i]);
@@ -378,36 +362,35 @@ pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
 		result.delay += (double)args.size() - 1.0;
 		cost = result.width*(double)(args.size()-1);
 		return {result, cost};
-	case 8: // equality (==)
-	case 9: // inequality (!=)
+	} else if (func == Operation::EQUAL
+		or func == Operation::NOT_EQUAL) { // inequality (!=)
 		result = Type(0.0, 0.0, 0.0);
 		ovr = overlap(args[0], args[1]);
 		result.delay = max(args[0].delay, args[1].delay) + log2(ovr[1]);
 		cost = ovr[1];
 		return {result, cost};
-	case 10: // "<";
-	case 11: // ">";
-	case 12: // "<=";
-	case 13: // ">=";
+	} else if (func == Operation::LESS
+		or func == Operation::GREATER
+		or func == Operation::LESS_EQUAL
+		or func == Operation::GREATER_EQUAL) { // ">=";
 		result = Type(0.0, 0.0, 0.0);
 		ovr = overlap(args[0], args[1]);
 		result.delay = max(args[0].delay, args[1].delay) + ovr[1];
 		cost = ovr[1];
 		return {result, cost};
-	case 14: // shift left  "<<" (arithmetic/logical based on type?)
+	} else if (func == Operation::SHIFT_LEFT) { // shift left  "<<" (arithmetic/logical based on type?)
 		result = Type(args[0].coeff*pow(2.0, args[1].coeff),
 		              args[0].width + args[1].coeff*pow(2.0, args[1].width) - args[1].coeff,
 									max(args[0].delay, args[1].delay)+args[1].width);
 		cost = args[0].width*args[1].width;
 		return {result, cost};
-	case 15: // shift right ">>" (arithmetic/logical based on type?)
+	} else if (func == Operation::SHIFT_RIGHT) { // shift right ">>" (arithmetic/logical based on type?)
 		result = Type(args[0].coeff/pow(2.0, args[1].coeff*pow(2.0, args[1].width)),
 		              args[0].width + args[1].coeff*pow(2.0, args[1].width) - args[1].coeff,
 									max(args[0].delay, args[1].delay)+args[1].width);
 		cost = args[0].width*args[1].width;
 		return {result, cost};
-	case 16: // addition "+"
-	case 17: // subtraction "-"
+	} else if (func == Operation::ADD or func == Operation::SUBTRACT) { // subtraction "-"
 		// TODO(edward.bingham) I should really keep track of overlapping intervals
 		// here and then the critical path is the total overlap at the bit with
 		// maximum overlap. If there are multiple bits with the same maximum
@@ -432,7 +415,7 @@ pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
 		}
 		result.delay += (double)args.size() + result.width;
 		return {result, cost};
-	case 18: // multiply "*"
+	} else if (func == Operation::MULTIPLY) { // multiply "*"
 		// TODO(edward.bingham) This assumes a set of N sequental multiplications.
 		// Doing so completely ignores multiplication trees and bit-level
 		// parallelism. It's likely going to make iterative multiplication look
@@ -447,8 +430,7 @@ pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
 		}
 		result.delay += result.width;
 		return {result, cost};
-	case 19: // divide "/"
-	case 20: // modulus "%"
+	} else if (func == Operation::DIVIDE or func == Operation::MOD) { // modulus "%"
 		// TODO(edward.bingham) I'm really not sure about this
 		result = args[0];
 		cost = 0.0;
@@ -458,22 +440,23 @@ pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
 			result.coeff /= args[i].coeff;
 		}
 		return {result, cost};
-	case 21: // ternary operator "a ? b : c"
+	} else if (func == Operation::TERNARY) { // ternary operator "a ? b : c"
 		ovr = overlap(args[1], args[2]);
 		result.coeff = min(args[1].coeff, args[2].coeff);
 		result.width = ovr[1];
 		result.delay = max(max(args[0].delay, args[1].delay), args[2].delay) + 1.0;
 		cost = ovr[1];
 		return {result, cost};
-	case 22: // boolean AND "&"
-	case 23: // boolean OR "|"
+	} else if (func == Operation::BOOLEAN_AND
+		or func == Operation::BOOLEAN_OR
+		or func == Operation::BOOLEAN_XOR) { // boolean AND "&"
 		result = Type(0.0, 0.0, args[0].delay);
 		for (i = 1; i < (int)args.size(); i++) {
 			result.delay = max(result.delay, args[i].delay);
 		}
 		cost = 0.0;
 		return {result, cost};
-	case 24: // array ","
+	} else if (func == Operation::ARRAY) { // array ","
 		// TODO(edward.bingham) we need to create a way to handle arrayed types
 		result = args[0];
 		for (i = 1; i < (int)args.size(); i++) {
@@ -482,7 +465,7 @@ pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
 		result.bounds.push_back((int)args.size());
 		cost = 0.0;
 		return {result, cost};
-	case 25: // index "."
+	} else if (func == Operation::INDEX) { // index "."
 		// Need to select the appropriate type from the array
 		// but we can compute cost
 		result = args[0];
@@ -490,146 +473,136 @@ pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
 		result.delay = max(result.delay, args[1].delay)+1.0;
 		cost = pow(2.0, args[1].width);
 		return {result, cost};
-	default:
-		return {result, cost};
 	}
+	return {result, cost};
 }
 
-void Operation::set(string func, vector<Operand> args) {
-	this->func = Operation::funcIndex(func, (int)args.size());
+void Operation::set(int func, vector<Operand> args) {
+	this->func = func;
 	this->operands = args;
 }
 
-string Operation::get() const {
-	return Operation::funcString(func);
-}
-
-bool Operation::is_commutative() const {
-	return (func >= 5 and func <= 9)
-		or func == 16
-		or func == 18
-		or func == 22
-		or func == 23
-		or func == 25;
+bool Operation::isCommutative() const {
+	if (func < (int)Operation::operators.size()) {
+		return Operation::operators[func].commutative;
+	}
+	return false;
 }
 
 value Operation::evaluate(int func, vector<value> args) {
-	int i = 0;
-	switch (func) {
-	case 0: //cout << "~" << args[0] << " = " << ~args[0] << endl;
+	if (func == Operation::BITWISE_NOT) {
 		return !args[0];
-	case 1: //cout << "+" << args[0] << " = " << +args[0] << endl;
+	} else if (func == Operation::IDENTITY) {
 		return args[0];
-	case 2: //cout << "-" << args[0] << " = " << -args[0] << endl;
+	} else if (func == Operation::NEGATION) {
 		return -args[0];
-	case 3:
+	} else if (func == Operation::VALIDITY) {
 		return valid(args[0]);
-	case 4: //cout << "!" << args[0] << " = " << !args[0] << endl;
+	} else if (func == Operation::BOOLEAN_NOT) {
 		return ~args[0];
-	case 5: //cout << args[0] << "|" << args[1] << " = " << (args[0] |  args[1]) << endl;
-		for (i = 1; i < (int)args.size(); i++) {
+	} else if (func == Operation::BITWISE_OR) {
+		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] || args[i];
 		}
 		return args[0];
-	case 6: //cout << args[0] << "&" << args[1] << " = " << (args[0] &  args[1]) << endl;
-		for (i = 1; i < (int)args.size(); i++) {
+	} else if (func == Operation::BITWISE_AND) {
+		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] && args[i];
 		}
 		return args[0];
-	case 7: //cout << args[0] << "^" << args[1] << " = " << (args[0] ^  args[1]) << endl;
-		for (i = 1; i < (int)args.size(); i++) {
+	} else if (func == Operation::BOOLEAN_XOR) {
+		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] ^ args[i];
 		}
 		return args[0];
-	case 8: //cout << args[0] << "==" << args[1] << " = " << (args[0] ==  args[1]) << endl;
+	} else if (func == Operation::EQUAL) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] == args[1]);
-	case 9: //cout << args[0] << "!=" << args[1] << " = " << (args[0] !=  args[1]) << endl;
+	} else if (func == Operation::NOT_EQUAL) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] != args[1]);
-	case 10: //cout << args[0] << "<" << args[1] << " = " << (args[0] <  args[1]) << endl;
+	} else if (func == Operation::LESS) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] <  args[1]);
-	case 11: //cout << args[0] << ">" << args[1] << " = " << (args[0] >  args[1]) << endl;
+	} else if (func == Operation::GREATER) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] >  args[1]);
-	case 12: //cout << args[0] << "<=" << args[1] << " = " << (args[0] <=  args[1]) << endl;
+	} else if (func == Operation::LESS_EQUAL) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] <= args[1]);
-	case 13: //cout << args[0] << ">=" << args[1] << " = " << (args[0] >=  args[1]) << endl;
+	} else if (func == Operation::GREATER_EQUAL) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] >= args[1]);
-	case 14: //cout << args[0] << "<<" << args[1] << " = " << (args[0] <<  args[1]) << endl;
+	} else if (func == Operation::SHIFT_LEFT) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] << args[1]);
-	case 15: //cout << args[0] << ">>" << args[1] << " = " << (args[0] >>  args[1]) << endl;
+	} else if (func == Operation::SHIFT_RIGHT) { //cout << args[0] << ">>" << args[1] << " = " << (args[0] >>  args[1]) << endl;
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] >> args[1]);
-	case 16: //cout << args[0] << "+" << args[1] << " = " << (args[0] +  args[1]) << endl;
-		for (i = 1; i < (int)args.size(); i++) {
+	} else if (func == Operation::ADD) { //cout << args[0] << "+" << args[1] << " = " << (args[0] +  args[1]) << endl;
+		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] + args[i];
 		}
 		return args[0];
-	case 17: //cout << args[0] << "-" << args[1] << " = " << (args[0] -  args[1]) << endl;
-		for (i = 1; i < (int)args.size(); i++) {
+	} else if (func == Operation::SUBTRACT) { //cout << args[0] << "-" << args[1] << " = " << (args[0] -  args[1]) << endl;
+		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] - args[i];
 		}
 		return args[0];
-	case 18: //cout << args[0] << "*" << args[1] << " = " << (args[0] *  args[1]) << endl;
-		for (i = 1; i < (int)args.size(); i++) {
+	} else if (func == Operation::MULTIPLY) { //cout << args[0] << "*" << args[1] << " = " << (args[0] *  args[1]) << endl;
+		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] * args[i];
 		}
 		return args[0];
-	case 19: //cout << args[0] << "/" << args[1] << " = " << (args[0] /  args[1]) << endl;
+	} else if (func == Operation::DIVIDE) { //cout << args[0] << "/" << args[1] << " = " << (args[0] /  args[1]) << endl;
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] /  args[1]);
-	case 20: //cout << args[0] << "%" << args[1] << " = " << (args[0] %  args[1]) << endl;
+	} else if (func == Operation::MOD) { //cout << args[0] << "%" << args[1] << " = " << (args[0] %  args[1]) << endl;
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] %  args[1]);
-	case 21: // ternary operator
+	} else if (func == Operation::TERNARY) { // ternary operator
 		if (args.size() == 1u) {
 			return args[0];
 		} else if (args.size() == 2u) {
 			args.push_back(value::X());
 		}
 		return args[0] ? args[1] : args[2];
-	case 22: //cout << args[0] << "&&" << args[1] << " = " << (args[0] &&  args[1]) << endl;
-		for (i = 1; i < (int)args.size(); i++) {
+	} else if (func == Operation::BOOLEAN_AND) { //cout << args[0] << "&&" << args[1] << " = " << (args[0] &&  args[1]) << endl;
+		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] & args[i];
 		}
 		return args[0];
-	case 23: //cout << args[0] << "||" << args[1] << " = " << (args[0] ||  args[1]) << endl;
-		for (i = 1; i < (int)args.size(); i++) {
+	} else if (func == Operation::BOOLEAN_OR) { //cout << args[0] << "||" << args[1] << " = " << (args[0] ||  args[1]) << endl;
+		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] | args[i];
 		}
 		return args[0];
-	case 24: // concat arrays
+	} else if (func == Operation::ARRAY) { // concat arrays
 		return value::arrOf(args);
-	case 25: // index
+	} else if (func == Operation::INDEX) { // index
 		return index(args[0], args[1]);
-	default:
-		return args[0];
 	}
+	return args[0];
 }
 
 value Operation::evaluate(state values, vector<value> expressions) const {
@@ -773,16 +746,25 @@ bool areSame(Operation o0, Operation o1) {
 
 ostream &operator<<(ostream &os, Operation o) {
 	os << "f(" << o.func << "): ";
-	if (o.operands.size() == 1u) {
-		os << o.get();
+	Operator op;
+	if (o.func >= 0 and o.func < (int)Operation::operators.size()) {
+		op = Operation::operators[o.func];
+	} else {
+		op = Operation::operators[Operation::IDENTITY];
+		printf("error: unrecognized operator\n");
 	}
 
-	for (auto v = o.operands.begin(); v != o.operands.end(); v++) {
-		if (v != o.operands.begin()) {
-			os << o.get();
+	os << op.prefix;
+
+	for (int i = 0; i < (int)o.operands.size(); i++) {
+		if (i != 0 and i-1 < (int)op.infix.size()) {
+			os << op.infix[i-1];
+		} else if (i != 0 and not op.infix.empty()) {
+			os << op.infix.back();
 		}
-		os << *v;
+		os << o.operands[i];
 	}
+	os << op.postfix;
 	return os;
 }
 
@@ -793,31 +775,31 @@ Expression::Expression(Operand arg0) {
 	set(arg0);
 }
 
-Expression::Expression(string func, Operand arg0) {
+Expression::Expression(int func, Operand arg0) {
 	set(func, arg0);
 }
 
-Expression::Expression(string func, Expression arg0) {
+Expression::Expression(int func, Expression arg0) {
 	set(func, arg0);
 }
 
-Expression::Expression(string func, Operand arg0, Operand arg1) {
+Expression::Expression(int func, Operand arg0, Operand arg1) {
 	set(func, arg0, arg1);
 }
 
-Expression::Expression(string func, Expression arg0, Operand arg1) {
+Expression::Expression(int func, Expression arg0, Operand arg1) {
 	set(func, arg0, arg1);
 }
 
-Expression::Expression(string func, Operand arg0, Expression arg1) {
+Expression::Expression(int func, Operand arg0, Expression arg1) {
 	set(func, arg0, arg1);
 }
 
-Expression::Expression(string func, Expression arg0, Expression arg1) {
+Expression::Expression(int func, Expression arg0, Expression arg1) {
 	set(func, arg0, arg1);
 }
 
-Expression::Expression(string func, vector<Expression> args) {
+Expression::Expression(int func, vector<Expression> args) {
 	set(func, args);
 }
 
@@ -839,9 +821,8 @@ int Expression::find(Operation arg) {
 int Expression::push(Operation arg) {
 	// simplify the Expression using a simple simplification rule
 	// TODO(edward.bingham) move this into the minimization function and just call that on arg
-	if (arg.func == 5 or arg.func == 6 or
-			arg.func == 22 or arg.func == 23) {
-		// & | && ||
+	if (arg.func == Operation::BOOLEAN_AND or arg.func == Operation::BOOLEAN_OR or
+			arg.func == Operation::BITWISE_AND or arg.func == Operation::BITWISE_OR) {
 		for (int i = (int)arg.operands.size()-1; i >= 1; i--) {
 			bool found = false;
 			for (int j = 0; j < i; j++) {
@@ -871,33 +852,33 @@ int Expression::push(Operation arg) {
 
 void Expression::set(Operand arg0) {
 	operations.clear();
-	operations.push_back(Operation("", {arg0}));
+	operations.push_back(Operation(Operation::IDENTITY, {arg0}));
 }
 
-void Expression::set(string func, Operand arg0) {
+void Expression::set(int func, Operand arg0) {
 	operations.clear();
 	operations.push_back(Operation(func, {arg0}));
 }
 
-void Expression::set(string func, Expression arg0) {
+void Expression::set(int func, Expression arg0) {
 	operations = arg0.operations;
 	Operand op0 = Operand::exprOf(operations.size()-1);
-	while (op0.isExpr() and (operations.back().func == 1 or operations.back().func < 0)) {
+	while (op0.isExpr() and (operations.back().func == Operation::IDENTITY or operations.back().func < 0)) {
 		op0 = operations.back().operands[0];
 		operations.pop_back();
 	}
 	push(Operation(func, {op0}));
 }
 
-void Expression::set(string func, Operand arg0, Operand arg1) {
+void Expression::set(int func, Operand arg0, Operand arg1) {
 	operations.clear();
 	operations.push_back(Operation(func, {arg0, arg1}));
 }
 
-void Expression::set(string func, Expression arg0, Expression arg1) {
+void Expression::set(int func, Expression arg0, Expression arg1) {
 	operations = arg0.operations;
 	Operand op0 = Operand::exprOf(operations.size()-1);
-	while (op0.isExpr() and (operations.back().func == 1 or operations.back().func < 0)) {
+	while (op0.isExpr() and (operations.back().func == Operation::IDENTITY or operations.back().func < 0)) {
 		op0 = operations.back().operands[0];
 		operations.pop_back();
 	}
@@ -914,7 +895,7 @@ void Expression::set(string func, Expression arg0, Expression arg1) {
 	}
 
 	Operand op1 = Operand::exprOf(offset.back());
-	while (op1.isExpr() and (operations.back().func == 1 or operations.back().func < 0)) {
+	while (op1.isExpr() and (operations.back().func == Operation::IDENTITY or operations.back().func < 0)) {
 		op1 = operations.back().operands[0];
 		operations.pop_back();
 	}
@@ -922,29 +903,29 @@ void Expression::set(string func, Expression arg0, Expression arg1) {
 	push(Operation(func, {op0, op1}));
 }
 
-void Expression::set(string func, Expression arg0, Operand arg1)
+void Expression::set(int func, Expression arg0, Operand arg1)
 {
 	operations = arg0.operations;
 	Operand op0 = Operand::exprOf(operations.size()-1);
-	while (op0.isExpr() and (operations.back().func == 1 or operations.back().func < 0)) {
+	while (op0.isExpr() and (operations.back().func == Operation::IDENTITY or operations.back().func < 0)) {
 		op0 = operations.back().operands[0];
 		operations.pop_back();
 	}
 	push(Operation(func, {op0, arg1}));
 }
 
-void Expression::set(string func, Operand arg0, Expression arg1)
+void Expression::set(int func, Operand arg0, Expression arg1)
 {
 	operations = arg1.operations;
 	Operand op1 = Operand::exprOf(operations.size()-1);
-	while (op1.isExpr() and (operations.back().func == 1 or operations.back().func < 0)) {
+	while (op1.isExpr() and (operations.back().func == Operation::IDENTITY or operations.back().func < 0)) {
 		op1 = operations.back().operands[0];
 		operations.pop_back();
 	}
 	push(Operation(func, {arg0, op1}));
 }
 
-void Expression::set(string func, vector<Expression> args)
+void Expression::set(int func, vector<Expression> args)
 {
 	operations.clear();
 	vector<Operand> operands;
@@ -961,7 +942,7 @@ void Expression::set(string func, vector<Expression> args)
 			offset.push_back(push(*j));
 		}
 		operands.push_back(Operand::exprOf(offset.back()));
-		while (operands.back().isExpr() and (operations.back().func == 1 or operations.back().func < 0)) {
+		while (operands.back().isExpr() and (operations.back().func == Operation::IDENTITY or operations.back().func < 0)) {
 			operands.back() = operations.back().operands[0];
 			operations.pop_back();
 		}
@@ -970,19 +951,19 @@ void Expression::set(string func, vector<Expression> args)
 	push(Operation(func, operands));
 }
 
-void Expression::push(string func) {
+void Expression::push(int func) {
 	Operand op0 = Operand::exprOf(operations.size()-1);
 	push(Operation(func, {op0}));
 }
 
-void Expression::push(string func, Operand arg0) {
+void Expression::push(int func, Operand arg0) {
 	Operand op0 = Operand::exprOf(operations.size()-1);
 	push(Operation(func, {op0, arg0}));
 }
 
-void Expression::push(string func, Expression arg0) {
+void Expression::push(int func, Expression arg0) {
 	Operand op0 = Operand::exprOf(operations.size()-1);
-	while (op0.isExpr() and (operations.back().func == 1 or operations.back().func < 0)) {
+	while (op0.isExpr() and (operations.back().func == Operation::IDENTITY or operations.back().func < 0)) {
 		op0 = operations.back().operands[0];
 		operations.pop_back();
 	}
@@ -999,7 +980,7 @@ void Expression::push(string func, Expression arg0) {
 	}
 
 	Operand op1 = Operand::exprOf(offset.back());
-	while (op1.isExpr() and (operations.back().func == 1 or operations.back().func < 0)) {
+	while (op1.isExpr() and (operations.back().func == Operation::IDENTITY or operations.back().func < 0)) {
 		op1 = operations.back().operands[0];
 		operations.pop_back();
 	}
@@ -1082,7 +1063,7 @@ bool Expression::is_wire() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is null after constant propagation using quantified element elimination
 	for (auto i = operations.begin(); i != operations.end(); i++) {
-		if (i->func == 3 or i->func == 4 or i->func == 22 or i->func == 23) {
+		if (i->func == Operation::VALIDITY or i->func == Operation::BOOLEAN_NOT or i->func == Operation::BOOLEAN_AND or i->func == Operation::BOOLEAN_OR) {
 			return true;
 		}
 		for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
@@ -1275,7 +1256,7 @@ Expression &Expression::canonicalize() {
 	vector<Operand> replace(operations.size(), Operand::varOf(0));
 	// propagate constants up through the precedence levels
 	for (int i = 0; i < (int)operations.size(); i++) {
-		if (operations[i].is_commutative()) {
+		if (operations[i].isCommutative()) {
 			sort(operations[i].operands.begin(), operations[i].operands.end(),
 				[](const Operand &a, const Operand &b) {
 					return a.type < b.type or (a.type == b.type
@@ -1306,7 +1287,7 @@ Expression &Expression::canonicalize() {
 
 		if (operations[i].operands.size() == 1u and operations[i].operands[0].isConst()) {
 			replace[i] = Operation::evaluate(operations[i].func, {operations[i].operands[0].get()});
-		} if (operations[i].operands.size() == 1u and operations[i].is_commutative()) {
+		} if (operations[i].operands.size() == 1u and operations[i].isCommutative()) {
 			replace[i] = operations[i].operands[0];
 		} else {
 			for (int k = i-1; k >= 0; k--) {
@@ -1321,7 +1302,7 @@ Expression &Expression::canonicalize() {
 	// eliminate dangling expressions
 	if (replace.back().isConst()) {
 		operations.clear();
-		set("", replace.back());
+		set(Operation::IDENTITY, replace.back());
 		return *this;
 	} else if (replace.back().isExpr()) {
 		size_t top = replace.back().index;
@@ -1464,7 +1445,7 @@ vector<Expression::Match> Expression::search(const Expression &rules, size_t cou
 	// number of operands. I need to create a comprehension functionality to
 	// support those more complex matches.
 
-	if (rules.operations.empty() or rules.operations.back().func != 24) {
+	if (rules.operations.empty() or rules.operations.back().func != Operation::ARRAY) {
 		printf("error: no rules rules found\n");
 	}
 	auto rulesBegin = rules.operations.back().operands.begin();
@@ -1472,9 +1453,9 @@ vector<Expression::Match> Expression::search(const Expression &rules, size_t cou
 	for (auto i = rulesBegin; i != rulesEnd; i++) {
 		// ==, <, >
 		if (not i->isExpr()
-			or (rules.operations[i->index].func != 8
-				and rules.operations[i->index].func != 10
-				and rules.operations[i->index].func != 11)) {
+			or (rules.operations[i->index].func != Operation::EQUAL
+				and rules.operations[i->index].func != Operation::LESS
+				and rules.operations[i->index].func != Operation::GREATER)) {
 			printf("error: invalid format for rules rule\n");
 		}
 	}
@@ -1489,15 +1470,15 @@ vector<Expression::Match> Expression::search(const Expression &rules, size_t cou
 			auto rule = rules.operations.begin() + j->index;
 			// ==, <, >
 			if (rule->operands.size() != 2u
-				or (rule->func != 8
-					and rule->func != 10
-					and rule->func != 11)) {
+				or (rule->func != Operation::EQUAL
+					and rule->func != Operation::LESS
+					and rule->func != Operation::GREATER)) {
 				continue;
 			}
 			auto lhs = rule->operands.begin();
 			auto rhs = std::next(lhs);
 			// map left to right
-			if (rule->func == 11 or (fwd and rule->func == 8)) {
+			if (rule->func == Operation::GREATER or (fwd and rule->func == Operation::EQUAL)) {
 				Match match;
 				vector<Leaf> leaves;
 				if (canMap(Operand::exprOf(i), *lhs, *this, rules, true, &match.vars)) {
@@ -1508,7 +1489,7 @@ vector<Expression::Match> Expression::search(const Expression &rules, size_t cou
 			}
 
 			// map right to left
-			if (rule->func == 10 or (bwd and rule->func == 8)) {
+			if (rule->func == Operation::LESS or (bwd and rule->func == Operation::EQUAL)) {
 				Match match;
 				vector<Leaf> leaves;
 				if (canMap(Operand::exprOf(i), *rhs, *this, rules, true, &match.vars)) {
@@ -1538,7 +1519,7 @@ vector<Expression::Match> Expression::search(const Expression &rules, size_t cou
 			auto fOp = operations.begin() + from.index;
 			auto tOp = rules.operations.begin() + to.index;
 
-			bool commute = tOp->is_commutative();
+			bool commute = tOp->isCommutative();
 			CombinationIterator it((int)fOp->operands.size(), (int)tOp->operands.size());
 			do {
 				Match nextMatch = curr;
@@ -1777,7 +1758,7 @@ Expression espresso(Expression expr, vector<Type> vars, Expression directed, Exp
 
 Expression &Expression::operator=(Operand e)
 {
-	set("", e);
+	set(Operation::IDENTITY, e);
 	return *this;
 }
 
@@ -1801,14 +1782,14 @@ ostream &operator<<(ostream &os, Expression e) {
 Expression operator!(Expression e)
 {
 	Expression result;
-	result.set("!", e);
+	result.set(Operation::BITWISE_NOT, e);
 	return result;
 }
 
 Expression operator-(Expression e)
 {
 	Expression result;
-	result.set("-", e);
+	result.set(Operation::NEGATION, e);
 	return result;
 }
 
@@ -1821,7 +1802,9 @@ Expression is_valid(Expression e)
 	} else if (e.is_wire()) {
 		return e;
 	}*/
-	return Expression("(bool)", e);
+	Expression result;
+	result.set(Operation::VALIDITY, e);
+	return result;
 }
 
 Expression operator~(Expression e)
@@ -1831,118 +1814,120 @@ Expression operator~(Expression e)
 	} else if (e.is_neutral()) {
 		return Operand(true);
 	}*/
-	return Expression("~", e);
+	Expression result;
+	result.set(Operation::BOOLEAN_NOT, e);
+	return result;
 }
 
 Expression operator||(Expression e0, Expression e1)
 {
 	Expression result;
-	result.set("||", e0, e1);
+	result.set(Operation::BITWISE_NOT, e0, e1);
 	return result;
 }
 
 Expression operator&&(Expression e0, Expression e1)
 {
 	Expression result;
-	result.set("&&", e0, e1);
+	result.set(Operation::BITWISE_AND, e0, e1);
 	return result;
 }
 
 Expression operator^(Expression e0, Expression e1)
 {
 	Expression result;
-	result.set("^", e0, e1);
+	result.set(Operation::BOOLEAN_XOR, e0, e1);
 	return result;
 }
 
 Expression operator==(Expression e0, Expression e1)
 {
 	Expression result;
-	result.set("==", e0, e1);
+	result.set(Operation::EQUAL, e0, e1);
 	return result;
 }
 
 Expression operator!=(Expression e0, Expression e1)
 {
 	Expression result;
-	result.set("~=", e0, e1);
+	result.set(Operation::NOT_EQUAL, e0, e1);
 	return result;
 }
 
 Expression operator<(Expression e0, Expression e1)
 {
 	Expression result;
-	result.set("<", e0, e1);
+	result.set(Operation::LESS, e0, e1);
 	return result;
 }
 
 Expression operator>(Expression e0, Expression e1)
 {
 	Expression result;
-	result.set(">", e0, e1);
+	result.set(Operation::GREATER, e0, e1);
 	return result;
 }
 
 Expression operator<=(Expression e0, Expression e1)
 {
 	Expression result;
-	result.set("<=", e0, e1);
+	result.set(Operation::LESS_EQUAL, e0, e1);
 	return result;
 }
 
 Expression operator>=(Expression e0, Expression e1)
 {
 	Expression result;
-	result.set(">=", e0, e1);
+	result.set(Operation::GREATER_EQUAL, e0, e1);
 	return result;
 }
 
 Expression operator<<(Expression e0, Expression e1)
 {
 	Expression result;
-	result.set("<<", e0, e1);
+	result.set(Operation::SHIFT_LEFT, e0, e1);
 	return result;
 }
 
 Expression operator>>(Expression e0, Expression e1)
 {
 	Expression result;
-	result.set(">>", e0, e1);
+	result.set(Operation::SHIFT_RIGHT, e0, e1);
 	return result;
 }
 
 Expression operator+(Expression e0, Expression e1)
 {
 	Expression result;
-	result.set("+", e0, e1);
+	result.set(Operation::ADD, e0, e1);
 	return result;
 }
 
 Expression operator-(Expression e0, Expression e1)
 {
 	Expression result;
-	result.set("-", e0, e1);
+	result.set(Operation::SUBTRACT, e0, e1);
 	return result;
 }
 
 Expression operator*(Expression e0, Expression e1)
 {
 	Expression result;
-	result.set("*", e0, e1);
+	result.set(Operation::MULTIPLY, e0, e1);
 	return result;
 }
 
 Expression operator/(Expression e0, Expression e1)
 {
 	Expression result;
-	result.set("/", e0, e1);
+	result.set(Operation::DIVIDE, e0, e1);
 	return result;
 }
 
 Expression operator%(Expression e0, Expression e1)
 {
 	Expression result;
-	result.set("%", e0, e1);
+	result.set(Operation::MOD, e0, e1);
 	return result;
 }
 
@@ -1957,7 +1942,9 @@ Expression operator&(Expression e0, Expression e1)
 	} else if (e1.is_valid()) {
 		return is_valid(e0);
 	}*/
-	return Expression("&", e0, e1);
+	Expression result;
+	result.set(Operation::BOOLEAN_AND, e0, e1);
+	return result;
 }
 
 Expression operator|(Expression e0, Expression e1)
@@ -1971,390 +1958,392 @@ Expression operator|(Expression e0, Expression e1)
 	} else if (e1.is_neutral()) {
 		return is_valid(e0);
 	}*/
-	return Expression("|", e0, e1);
+	Expression result;
+	result.set(Operation::BOOLEAN_OR, e0, e1);
+	return result;
 }
 
 Expression operator|(Expression e0, Operand e1)
 {
 	Expression result;
-	result.set("|", e0, e1);
+	result.set(Operation::BOOLEAN_OR, e0, e1);
 	return result;
 }
 
 Expression operator&(Expression e0, Operand e1)
 {
 	Expression result;
-	result.set("&", e0, e1);
+	result.set(Operation::BOOLEAN_AND, e0, e1);
 	return result;
 }
 
 Expression operator^(Expression e0, Operand e1)
 {
 	Expression result;
-	result.set("^", e0, e1);
+	result.set(Operation::BOOLEAN_XOR, e0, e1);
 	return result;
 }
 
 Expression operator==(Expression e0, Operand e1)
 {
 	Expression result;
-	result.set("==", e0, e1);
+	result.set(Operation::EQUAL, e0, e1);
 	return result;
 }
 
 Expression operator!=(Expression e0, Operand e1)
 {
 	Expression result;
-	result.set("~=", e0, e1);
+	result.set(Operation::NOT_EQUAL, e0, e1);
 	return result;
 }
 
 Expression operator<(Expression e0, Operand e1)
 {
 	Expression result;
-	result.set("<", e0, e1);
+	result.set(Operation::LESS, e0, e1);
 	return result;
 }
 
 Expression operator>(Expression e0, Operand e1)
 {
 	Expression result;
-	result.set(">", e0, e1);
+	result.set(Operation::GREATER, e0, e1);
 	return result;
 }
 
 Expression operator<=(Expression e0, Operand e1)
 {
 	Expression result;
-	result.set("<=", e0, e1);
+	result.set(Operation::LESS_EQUAL, e0, e1);
 	return result;
 }
 
 Expression operator>=(Expression e0, Operand e1)
 {
 	Expression result;
-	result.set(">=", e0, e1);
+	result.set(Operation::GREATER_EQUAL, e0, e1);
 	return result;
 }
 
 Expression operator<<(Expression e0, Operand e1)
 {
 	Expression result;
-	result.set("<<", e0, e1);
+	result.set(Operation::SHIFT_LEFT, e0, e1);
 	return result;
 }
 
 Expression operator>>(Expression e0, Operand e1)
 {
 	Expression result;
-	result.set(">>", e0, e1);
+	result.set(Operation::SHIFT_RIGHT, e0, e1);
 	return result;
 }
 
 Expression operator+(Expression e0, Operand e1)
 {
 	Expression result;
-	result.set("+", e0, e1);
+	result.set(Operation::ADD, e0, e1);
 	return result;
 }
 
 Expression operator-(Expression e0, Operand e1)
 {
 	Expression result;
-	result.set("-", e0, e1);
+	result.set(Operation::SUBTRACT, e0, e1);
 	return result;
 }
 
 Expression operator*(Expression e0, Operand e1)
 {
 	Expression result;
-	result.set("*", e0, e1);
+	result.set(Operation::MULTIPLY, e0, e1);
 	return result;
 }
 
 Expression operator/(Expression e0, Operand e1)
 {
 	Expression result;
-	result.set("/", e0, e1);
+	result.set(Operation::DIVIDE, e0, e1);
 	return result;
 }
 
 Expression operator%(Expression e0, Operand e1)
 {
 	Expression result;
-	result.set("%", e0, e1);
+	result.set(Operation::MOD, e0, e1);
 	return result;
 }
 
 Expression operator&&(Expression e0, Operand e1)
 {
 	Expression result;
-	result.set("&&", e0, e1);
+	result.set(Operation::BITWISE_AND, e0, e1);
 	return result;
 }
 
 Expression operator||(Expression e0, Operand e1)
 {
 	Expression result;
-	result.set("||", e0, e1);
+	result.set(Operation::BITWISE_OR, e0, e1);
 	return result;
 }
 
 Expression operator|(Operand e0, Expression e1)
 {
 	Expression result;
-	result.set("|", e0, e1);
+	result.set(Operation::BOOLEAN_OR, e0, e1);
 	return result;
 }
 
 Expression operator&(Operand e0, Expression e1)
 {
 	Expression result;
-	result.set("&", e0, e1);
+	result.set(Operation::BOOLEAN_AND, e0, e1);
 	return result;
 }
 
 Expression operator^(Operand e0, Expression e1)
 {
 	Expression result;
-	result.set("^", e0, e1);
+	result.set(Operation::BOOLEAN_XOR, e0, e1);
 	return result;
 }
 
 Expression operator==(Operand e0, Expression e1)
 {
 	Expression result;
-	result.set("==", e0, e1);
+	result.set(Operation::EQUAL, e0, e1);
 	return result;
 }
 
 Expression operator!=(Operand e0, Expression e1)
 {
 	Expression result;
-	result.set("~=", e0, e1);
+	result.set(Operation::NOT_EQUAL, e0, e1);
 	return result;
 }
 
 Expression operator<(Operand e0, Expression e1)
 {
 	Expression result;
-	result.set("<", e0, e1);
+	result.set(Operation::LESS, e0, e1);
 	return result;
 }
 
 Expression operator>(Operand e0, Expression e1)
 {
 	Expression result;
-	result.set(">", e0, e1);
+	result.set(Operation::GREATER, e0, e1);
 	return result;
 }
 
 Expression operator<=(Operand e0, Expression e1)
 {
 	Expression result;
-	result.set("<=", e0, e1);
+	result.set(Operation::LESS_EQUAL, e0, e1);
 	return result;
 }
 
 Expression operator>=(Operand e0, Expression e1)
 {
 	Expression result;
-	result.set(">=", e0, e1);
+	result.set(Operation::GREATER_EQUAL, e0, e1);
 	return result;
 }
 
 Expression operator<<(Operand e0, Expression e1)
 {
 	Expression result;
-	result.set("<<", e0, e1);
+	result.set(Operation::SHIFT_LEFT, e0, e1);
 	return result;
 }
 
 Expression operator>>(Operand e0, Expression e1)
 {
 	Expression result;
-	result.set(">>", e0, e1);
+	result.set(Operation::SHIFT_RIGHT, e0, e1);
 	return result;
 }
 
 Expression operator+(Operand e0, Expression e1)
 {
 	Expression result;
-	result.set("+", e0, e1);
+	result.set(Operation::ADD, e0, e1);
 	return result;
 }
 
 Expression operator-(Operand e0, Expression e1)
 {
 	Expression result;
-	result.set("-", e0, e1);
+	result.set(Operation::SUBTRACT, e0, e1);
 	return result;
 }
 
 Expression operator*(Operand e0, Expression e1)
 {
 	Expression result;
-	result.set("*", e0, e1);
+	result.set(Operation::MULTIPLY, e0, e1);
 	return result;
 }
 
 Expression operator/(Operand e0, Expression e1)
 {
 	Expression result;
-	result.set("/", e0, e1);
+	result.set(Operation::DIVIDE, e0, e1);
 	return result;
 }
 
 Expression operator%(Operand e0, Expression e1)
 {
 	Expression result;
-	result.set("%", e0, e1);
+	result.set(Operation::MOD, e0, e1);
 	return result;
 }
 
 Expression operator&&(Operand e0, Expression e1)
 {
 	Expression result;
-	result.set("&&", e0, e1);
+	result.set(Operation::BITWISE_AND, e0, e1);
 	return result;
 }
 
 Expression operator||(Operand e0, Expression e1)
 {
 	Expression result;
-	result.set("||", e0, e1);
+	result.set(Operation::BITWISE_OR, e0, e1);
 	return result;
 }
 
 Expression operator|(Operand e0, Operand e1)
 {
 	Expression result;
-	result.set("|", e0, e1);
+	result.set(Operation::BOOLEAN_OR, e0, e1);
 	return result;
 }
 
 Expression operator&(Operand e0, Operand e1)
 {
 	Expression result;
-	result.set("&", e0, e1);
+	result.set(Operation::BOOLEAN_AND, e0, e1);
 	return result;
 }
 
 Expression operator^(Operand e0, Operand e1)
 {
 	Expression result;
-	result.set("^", e0, e1);
+	result.set(Operation::BOOLEAN_XOR, e0, e1);
 	return result;
 }
 
 Expression operator==(Operand e0, Operand e1)
 {
 	Expression result;
-	result.set("==", e0, e1);
+	result.set(Operation::EQUAL, e0, e1);
 	return result;
 }
 
 Expression operator!=(Operand e0, Operand e1)
 {
 	Expression result;
-	result.set("~=", e0, e1);
+	result.set(Operation::NOT_EQUAL, e0, e1);
 	return result;
 }
 
 Expression operator<(Operand e0, Operand e1)
 {
 	Expression result;
-	result.set("<", e0, e1);
+	result.set(Operation::LESS, e0, e1);
 	return result;
 }
 
 Expression operator>(Operand e0, Operand e1)
 {
 	Expression result;
-	result.set(">", e0, e1);
+	result.set(Operation::GREATER, e0, e1);
 	return result;
 }
 
 Expression operator<=(Operand e0, Operand e1)
 {
 	Expression result;
-	result.set("<=", e0, e1);
+	result.set(Operation::LESS_EQUAL, e0, e1);
 	return result;
 }
 
 Expression operator>=(Operand e0, Operand e1)
 {
 	Expression result;
-	result.set(">=", e0, e1);
+	result.set(Operation::GREATER_EQUAL, e0, e1);
 	return result;
 }
 
 Expression operator<<(Operand e0, Operand e1)
 {
 	Expression result;
-	result.set("<<", e0, e1);
+	result.set(Operation::SHIFT_LEFT, e0, e1);
 	return result;
 }
 
 Expression operator>>(Operand e0, Operand e1)
 {
 	Expression result;
-	result.set(">>", e0, e1);
+	result.set(Operation::SHIFT_RIGHT, e0, e1);
 	return result;
 }
 
 Expression operator+(Operand e0, Operand e1)
 {
 	Expression result;
-	result.set("+", e0, e1);
+	result.set(Operation::ADD, e0, e1);
 	return result;
 }
 
 Expression operator-(Operand e0, Operand e1)
 {
 	Expression result;
-	result.set("-", e0, e1);
+	result.set(Operation::SUBTRACT, e0, e1);
 	return result;
 }
 
 Expression operator*(Operand e0, Operand e1)
 {
 	Expression result;
-	result.set("*", e0, e1);
+	result.set(Operation::MULTIPLY, e0, e1);
 	return result;
 }
 
 Expression operator/(Operand e0, Operand e1)
 {
 	Expression result;
-	result.set("/", e0, e1);
+	result.set(Operation::DIVIDE, e0, e1);
 	return result;
 }
 
 Expression operator%(Operand e0, Operand e1)
 {
 	Expression result;
-	result.set("%", e0, e1);
+	result.set(Operation::MOD, e0, e1);
 	return result;
 }
 
 Expression operator&&(Operand e0, Operand e1)
 {
 	Expression result;
-	result.set("&&", e0, e1);
+	result.set(Operation::BITWISE_AND, e0, e1);
 	return result;
 }
 
 Expression operator||(Operand e0, Operand e1)
 {
 	Expression result;
-	result.set("||", e0, e1);
+	result.set(Operation::BITWISE_OR, e0, e1);
 	return result;
 }
 
 Expression array(vector<Expression> e) {
 	Expression result;
-	result.set(",", e);
+	result.set(Operation::ARRAY, e);
 	return result;
 }
 

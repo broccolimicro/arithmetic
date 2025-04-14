@@ -5,8 +5,8 @@
 using namespace arithmetic;
 using namespace std;
 
-TEST(Expression, Operand_bitwise_or)
-{
+TEST(Expression, OperandBitwiseOr) {
+	Operation::loadOperators();
 	Operand x = Operand::varOf(0);
 	Operand y = Operand::varOf(1);
 	
@@ -25,8 +25,8 @@ TEST(Expression, Operand_bitwise_or)
 	EXPECT_EQ(result.ival, xval | yval);
 }
 
-TEST(Expression, Operand_bitwise_and)
-{
+TEST(Expression, OperandBitwiseAnd) {
+	Operation::loadOperators();
 	Operand x = Operand::varOf(0);
 	Operand y = Operand::varOf(1);
 	
@@ -45,8 +45,8 @@ TEST(Expression, Operand_bitwise_and)
 	EXPECT_EQ(result.ival, xval & yval);
 }
 
-TEST(Expression, Operand_bitwise_xor)
-{
+TEST(Expression, OperandBitwiseXor) {
+	Operation::loadOperators();
 	Operand x = Operand::varOf(0);
 	Operand y = Operand::varOf(1);
 	
@@ -65,8 +65,8 @@ TEST(Expression, Operand_bitwise_xor)
 	EXPECT_EQ(result.ival, xval ^ yval);
 }
 
-TEST(Expression, Operand_equal_to)
-{
+TEST(Expression, OperandEqualTo) {
+	Operation::loadOperators();
 	int valid = value::VALID;
 	int neutral = value::NEUTRAL;
 	int unstable = value::UNSTABLE;
@@ -105,8 +105,8 @@ TEST(Expression, Operand_equal_to)
 	EXPECT_EQ(result.bval, neutral);
 }
 
-TEST(Expression, Operand_not_equal_to)
-{
+TEST(Expression, OperandNotEqualTo) {
+	Operation::loadOperators();
 	int valid = value::VALID;
 	int neutral = value::NEUTRAL;
 	int unstable = value::UNSTABLE;
@@ -145,8 +145,8 @@ TEST(Expression, Operand_not_equal_to)
 	EXPECT_EQ(result.bval, neutral);
 }
 
-TEST(Expression, OperandLessThan)
-{
+TEST(Expression, OperandLessThan) {
+	Operation::loadOperators();
 	int valid = value::VALID;
 	int neutral = value::NEUTRAL;
 	int unstable = value::UNSTABLE;
@@ -185,8 +185,8 @@ TEST(Expression, OperandLessThan)
 	EXPECT_EQ(result.bval, neutral);
 }
 
-TEST(Expression, OperandGreaterThan)
-{
+TEST(Expression, OperandGreaterThan) {
+	Operation::loadOperators();
 	int valid = value::VALID;
 	int neutral = value::NEUTRAL;
 	int unstable = value::UNSTABLE;
@@ -225,8 +225,8 @@ TEST(Expression, OperandGreaterThan)
 	EXPECT_EQ(result.bval, neutral);
 }
 
-TEST(Expression, Compound)
-{
+TEST(Expression, Compound) {
+	Operation::loadOperators();
 	Operand a = Operand::varOf(0);
 	Operand b = Operand::varOf(1);
 	Operand c = Operand::varOf(2);
@@ -246,8 +246,8 @@ TEST(Expression, Compound)
 	EXPECT_EQ(result.ival, 27);
 }
 
-TEST(Expression, PropagateConstants)
-{
+TEST(Expression, PropagateConstants) {
+	Operation::loadOperators();
 	Operand a = Operand::intOf(4);
 	Operand b = Operand::intOf(8);
 	Operand c = Operand::intOf(2);
@@ -262,8 +262,8 @@ TEST(Expression, PropagateConstants)
 	EXPECT_EQ(e.operations[0].operands[0].cnst.ival, 12);
 }
 
-TEST(Expression, Simplify)
-{
+TEST(Expression, Simplify) {
+	Operation::loadOperators();
 	Operand a = Operand::varOf(0);
 	Operand b = Operand::varOf(1);
 	Operand c = Operand::varOf(2);
@@ -280,8 +280,8 @@ TEST(Expression, Simplify)
 	EXPECT_LE(cost2.critical, cost.critical);
 }
 
-TEST(Expression, ChainOfAdds)
-{
+TEST(Expression, ChainOfAdds) {
+	Operation::loadOperators();
 	Operand a = Operand::varOf(0);
 	Operand b = Operand::varOf(1);
 	Operand c = Operand::varOf(2);

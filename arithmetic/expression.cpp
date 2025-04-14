@@ -1412,12 +1412,11 @@ struct CombinationIterator {
 };
 
 Cost Expression::cost(vector<Type> vars) const {
-	// I would need to know the biwidth of each variable/constant
-	// How do I think about encoding and keeping track of "accuracy"?
-	
-	// I can start by assuming a constant N accross all variables, represented by a "cost" of 1.0.
+	// TODO(edward.bingham) I need to handle arrays operations properly. Types
+	// don't currently represent arrays the same way that values do.
 
-	// Then I need to understand the cost of each operation
+	// TODO(edward.bingham) create a function in value that emits the proper type.
+
 	double complexity = 0.0;
 	vector<Type> expr;
 	for (int i = 0; i < (int)operations.size(); i++) {
@@ -1455,6 +1454,11 @@ vector<Expression::Match> Expression::search(const Expression &rules, size_t cou
 
 	// TODO(edward.bingham) I need a way to canonicalize expressions and hash
 	// them so that I can do the state search algorithm.
+
+	// TODO(edward.bingham) rules aren't currently able to match with a variable
+	// number of operands. I need to create a comprehension functionality to
+	// support those more complex matches.
+
 	if (rules.operations.empty() or rules.operations.back().func != 24) {
 		printf("error: no rules rules found\n");
 	}

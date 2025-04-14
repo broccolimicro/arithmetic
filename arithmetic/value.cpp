@@ -259,6 +259,19 @@ value::operator bool() const {
 	return isValid();
 }
 
+Type value::typeOf() const {
+	if (type == value::BOOL) {
+		return Type(0.0, 0.0, 0.0);
+	} else if (type == value::INT) {
+		return Type((double)ival, 0.0, 0.0);
+	} else if (type == value::REAL) {
+		return Type(rval, 0.0, 0.0);
+	}
+	// TODO(edward.bingham) figure out how to handle arrays and structures
+	printf("error: not yet implemented\n");
+	return Type();
+}
+
 value operator~(value v) {
 	if (v.type == value::value::ARRAY or v.type >= value::value::STRUCT) {
 		value result = value::boolOf(false);

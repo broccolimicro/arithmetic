@@ -1382,24 +1382,13 @@ struct CombinationIterator {
 };
 
 Cost Expression::cost(vector<Type> vars) const {
-	// TODO(edward.bingham) I need to handle arrays operations properly. Types
-	// don't currently represent arrays the same way that values do.
-
-	// TODO(edward.bingham) create a function in value that emits the proper type.
-
 	double complexity = 0.0;
 	vector<Type> expr;
 	for (int i = 0; i < (int)operations.size(); i++) {
 		vector<Type> args;
 		for (auto j = operations[i].operands.begin(); j != operations[i].operands.end(); j++) {
 			if (j->isConst()) {
-				if (j->cnst.type == value::BOOL) {
-					args.push_back(Type(0.0, 0.0, 0.0));
-				} else if (j->cnst.type == value::INT) {
-					args.push_back(Type((double)j->cnst.ival, 0.0, 0.0));
-				} else if (j->cnst.type == value::REAL) {
-					args.push_back(Type(j->cnst.rval, 0.0, 0.0));
-				}
+				args.push_back(j->cnst.typeOf());
 			} else if (j->isVar()) {
 				args.push_back(vars[j->index]);
 			} else if (j->isExpr()) {

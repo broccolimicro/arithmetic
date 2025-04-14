@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common/standard.h>
+#include "type.h"
 
 namespace arithmetic
 {
@@ -74,6 +75,8 @@ struct value
 	bool isSubsetOf(value v) const;
 
 	operator bool() const;
+
+	Type typeOf() const;
 };
 
 bool areSame(value v0, value v1);

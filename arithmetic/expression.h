@@ -158,7 +158,6 @@ struct Expression {
 	// final value for the Expression.
 	vector<Operation> operations;
 
-	int find(Operation arg);
 	int push(Operation arg);
 
 	void set(Operand arg0);

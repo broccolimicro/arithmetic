@@ -550,32 +550,32 @@ value Operation::evaluate(int func, vector<value> args) {
 			return args[0];
 		}
 		return (args[0] << args[1]);
-	} else if (func == Operation::SHIFT_RIGHT) { //cout << args[0] << ">>" << args[1] << " = " << (args[0] >>  args[1]) << endl;
+	} else if (func == Operation::SHIFT_RIGHT) { 
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] >> args[1]);
-	} else if (func == Operation::ADD) { //cout << args[0] << "+" << args[1] << " = " << (args[0] +  args[1]) << endl;
+	} else if (func == Operation::ADD) { 
 		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] + args[i];
 		}
 		return args[0];
-	} else if (func == Operation::SUBTRACT) { //cout << args[0] << "-" << args[1] << " = " << (args[0] -  args[1]) << endl;
+	} else if (func == Operation::SUBTRACT) { 
 		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] - args[i];
 		}
 		return args[0];
-	} else if (func == Operation::MULTIPLY) { //cout << args[0] << "*" << args[1] << " = " << (args[0] *  args[1]) << endl;
+	} else if (func == Operation::MULTIPLY) { 
 		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] * args[i];
 		}
 		return args[0];
-	} else if (func == Operation::DIVIDE) { //cout << args[0] << "/" << args[1] << " = " << (args[0] /  args[1]) << endl;
+	} else if (func == Operation::DIVIDE) { 
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] /  args[1]);
-	} else if (func == Operation::MOD) { //cout << args[0] << "%" << args[1] << " = " << (args[0] %  args[1]) << endl;
+	} else if (func == Operation::MOD) { 
 		if (args.size() == 1u) {
 			return args[0];
 		}
@@ -587,12 +587,12 @@ value Operation::evaluate(int func, vector<value> args) {
 			args.push_back(value::X());
 		}
 		return args[0] ? args[1] : args[2];
-	} else if (func == Operation::BOOLEAN_AND) { //cout << args[0] << "&&" << args[1] << " = " << (args[0] &&  args[1]) << endl;
+	} else if (func == Operation::BOOLEAN_AND) { 
 		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] & args[i];
 		}
 		return args[0];
-	} else if (func == Operation::BOOLEAN_OR) { //cout << args[0] << "||" << args[1] << " = " << (args[0] ||  args[1]) << endl;
+	} else if (func == Operation::BOOLEAN_OR) { 
 		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] | args[i];
 		}
@@ -806,43 +806,14 @@ Expression::Expression(int func, vector<Expression> args) {
 Expression::~Expression() {
 }
 
-int Expression::find(Operation arg) {
-	// TODO(edward.bingham) Maybe want to look for one Operation contains another
-	// as well rather than just strict matching if we're going to support more
-	// than two operands for commutative operators
-	for (int i = 0; i < (int)operations.size(); i++) {
-		if (areSame(operations[i], arg)) {
-			return i;
-		}
-	}
-	return -1;
-}
-
 int Expression::push(Operation arg) {
-	// simplify the Expression using a simple simplification rule
-	// TODO(edward.bingham) move this into the minimization function and just call that on arg
-	if (arg.func == Operation::BOOLEAN_AND or arg.func == Operation::BOOLEAN_OR or
-			arg.func == Operation::BITWISE_AND or arg.func == Operation::BITWISE_OR) {
-		for (int i = (int)arg.operands.size()-1; i >= 1; i--) {
-			bool found = false;
-			for (int j = 0; j < i; j++) {
-				if (areSame(arg.operands[i], arg.operands[j])) {
-					found = true;
-					break;
-				}
-			}
-
-			if (found) {
-				arg.operands.erase(arg.operands.begin()+i);
-			}
-		}
-		if (arg.operands.size() == 1) {
-			arg.func = -1;
+	// add to operations list if doesn't exist
+	int pos = -1;
+	for (int i = 0; i < (int)operations.size() and pos < 0; i++) {
+		if (areSame(operations[i], arg)) {
+			pos = i;
 		}
 	}
-
-	// add to operations list if doesn't exist
-	int pos = find(arg);
 	if (pos < 0) {
 		pos = operations.size();
 		operations.push_back(arg);

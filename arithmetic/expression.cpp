@@ -221,6 +221,11 @@ string Operation::funcString(int func) {
 	// the expression engine. Channel actions should be decomposed into their
 	// appropriate protocols while expanding the CHP.
 
+	// TODO(edward.bingham) create an "Operator" class that keeps track of the
+	// prefix, infix, suffix, commutivity and reflexivity. Create a static
+	// collection of operators in the Expression class and a function to load
+	// them.
+
 	switch (func)
 	{
 	case 0: return "!";  // bitwise not

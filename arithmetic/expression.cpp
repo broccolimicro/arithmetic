@@ -1238,8 +1238,8 @@ Expression &Expression::canonicalize() {
 			sort(operations[i].operands.begin(), operations[i].operands.end(),
 				[](const Operand &a, const Operand &b) {
 					return a.type < b.type or (a.type == b.type
-						and ((a.type == Operand::CONST and order(a.cnst, b.cnst) < 0)
-							or (a.type != Operand::CONST and a.index < b.index)));
+						and ((a.isConst() and order(a.cnst, b.cnst) < 0)
+							or (not a.isConst() and a.index < b.index)));
 				});
 		}
 
@@ -1264,10 +1264,13 @@ Expression &Expression::canonicalize() {
 		}
 
 		if (operations[i].operands.size() == 1u and operations[i].operands[0].isConst()) {
+			// evaluate unary operations against constants
 			replace[i] = Operation::evaluate(operations[i].func, {operations[i].operands[0].get()});
-		} if (operations[i].operands.size() == 1u and operations[i].isCommutative()) {
+		} if (operations[i].operands.size() == 1u and (operations[i].isCommutative() or operations[i].isReflexive())) {
+			// replace reflexive expressions
 			replace[i] = operations[i].operands[0];
 		} else {
+			// look for identical operations
 			for (int k = i-1; k >= 0; k--) {
 				if (replace[k].isVar() and areSame(operations[i], operations[k])) {
 					replace[i] = Operand::exprOf(k);
@@ -1310,6 +1313,9 @@ Expression &Expression::canonicalize() {
 			erase(i);
 		}
 	}
+
+	// TODO(edward.bingham) reorder operations into a canonical order
+	
 	return *this;
 }
 

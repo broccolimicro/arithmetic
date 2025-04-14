@@ -167,7 +167,6 @@ struct Expression {
 	void replace(Operand o0, Operand o1);
 	void replace(const Expression &rules, Match token);
 	size_t count(Operand start) const;
-	void replace(const Expression &rules, vector<Match> tokens);
 	Expression &minimize(Expression directed=Expression());
 
 	Expression &operator=(Operand e);

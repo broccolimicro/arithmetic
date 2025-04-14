@@ -1706,93 +1706,24 @@ void Expression::replace(const Expression &rules, Match match) {
 	}
 }
 
-
-void Expression::replace(const Expression &rules, vector<Expression::Match> tokens) {
-	//for (auto token = tokens.begin(); token != tokens.end(); token++) {
-	if (not tokens.empty()) {
-		replace(rules, tokens.back());
-	}
-		// update indices after insert
-	//	for (auto i = std::next(token); i != tokens.end(); i++) {
-	//	}
-	//}
-}
-
 Expression &Expression::minimize(Expression directed) {
 	static const Expression rules = rewriteBasic();
 	if (directed.operations.empty()) {
 		directed = rules;
 	}
 
-	//cout << "Rules: " << directed << endl;
-	
-	//cout << "This: " << *this << endl;
-
 	canonicalize();
-	//cout << "Canon: " << *this << endl;
 	vector<Match> tokens = search(directed, 1u);
-	/*for (auto m = tokens.begin(); m != tokens.end(); m++) {
-		cout << "Rule: " << m->replace << endl;
-		cout << "Branches: " << ::to_string(m->expr) << endl;
-		cout << "Mapping: " << ::to_string(m->vars) << endl << endl;
-	}*/
 	while (not tokens.empty()) {
-		replace(directed, tokens);
-		//cout << "This: " << *this << endl;
+		replace(directed, tokens.back());
 		canonicalize();
-		//cout << "Canon: " << *this << endl;
-		
 		tokens = search(directed, 1u);
-		/*for (auto m = tokens.begin(); m != tokens.end(); m++) {
-			cout << "Rule: " << m->replace << endl;
-			cout << "Branches: " << ::to_string(m->expr) << endl;
-			cout << "Mapping: " << ::to_string(m->vars) << endl << endl;
-		}*/
 	}
-
-	// TODO(edward.bingham)
-	// Implement the bidirectional search function to search rule applications that minimize the cost function but then apply all of the unidirectional rules in between
-	// Create a set of unidirectional rewrite rules to change bitwise operators into arithmetic operators, and then a set of unidirectional rules to switch them back
-	// Tie this all together into an easy-to-use minimization system.
 
 	// TODO(edward.bingham) Then I need to implement encoding
 	// Use the unidirectional expression rewrite system?
 	// propagate validity?
-
-	// TODO(edward.bingham) Quantifier elimination
-
-	// TODO(edward.bingham) implement Expression simplification using term replacement
-	// 1. find a way to represent replacement rules
-	//   a. regular expressions-like thing from the root of an Expression or from
-	//   the leaves? What are L-Systems? What about just Expression->Expression?
-	//   Rete's algorithm?
-	// 2. create a library of replacement rules
-	//   a. A replacement rule could be unidirectional or bidirectional.
-	// 3. follow all unidirectional replacement rules that match
-	// 4. search all bidirectional replacement rules that match
-	// 5. repeat 3 and 4
-	// 6. ensure the Expression is left in a normal form
-	//   a. push all constants to the left
-	//   b. prefer addition of negative over subtraction
-	//   c. prefer multiplication of inverse over division
-	//   d. merge all constants and all same-term literals
-
-	// Maybe express normal form using a collection of unidirectional rewrite rules?
-	// Take a look at rewrite.cpp for example rewrite rules
-	// How do I represent a rewrite rule?
-	// pair of expressions
-	// How do I match?
-	// A literal in the key is a literal, constant, or sub Expression in the
-	// matched Expression. Match propagation of matched subexpressions.
-	// How do I manage the list of rewrite rules?
-	// Load them into a static variable on program initialization.
-	// Is this an efficient representation of the rewrite rules?
-	// Rete's algorithm doesn't handle search, it's continuous evaluation.
-	// Regular expressions? All of the rewrite rules can be represented in a
-	// single Expression structure where the rewrite operator can be represented
-	// by the Operation("->", key, rewrite).
-
-	// structure encodings as a set of rewrite rules and canonicalization rules
+	
 	return *this;
 }
 
@@ -1801,6 +1732,17 @@ Expression espresso(Expression expr, vector<Type> vars, Expression directed, Exp
 	if (undirected.operations.empty()) {
 		undirected = rules;
 	}
+
+	// TODO(edward.bingham) Implement the bidirectional search function to search
+	// rule applications that minimize the cost function but then apply all of
+	// the unidirectional rules in between
+
+	// TODO(edward.bingham) Create a set of unidirectional rewrite rules to
+	// change bitwise operators into arithmetic operators, and then a set of
+	// unidirectional rules to switch them back
+
+	// TODO(edward.bingham) Tie this all together into an easy-to-use
+	// minimization system.
 
 	Expression result;
 	Cost best(1e20, 1e20);

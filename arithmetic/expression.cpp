@@ -483,10 +483,17 @@ void Operation::set(int func, vector<Operand> args) {
 }
 
 bool Operation::isCommutative() const {
-	if (func < (int)Operation::operators.size()) {
+	if (func >= 0 and func < (int)Operation::operators.size()) {
 		return Operation::operators[func].commutative;
 	}
 	return false;
+}
+
+bool Operation::isReflexive() const {
+	if (func >= 0 and func < (int)Operation::operators.size()) {
+		return Operation::operators[func].reflexive;
+	}
+	return true;
 }
 
 value Operation::evaluate(int func, vector<value> args) {
@@ -834,7 +841,7 @@ void Expression::set(int func, Operand arg0) {
 void Expression::set(int func, Expression arg0) {
 	operations = arg0.operations;
 	Operand op0 = Operand::exprOf(operations.size()-1);
-	while (op0.isExpr() and (operations.back().func == Operation::IDENTITY or operations.back().func < 0)) {
+	while (op0.isExpr() and operations.back().isReflexive()) {
 		op0 = operations.back().operands[0];
 		operations.pop_back();
 	}
@@ -849,7 +856,7 @@ void Expression::set(int func, Operand arg0, Operand arg1) {
 void Expression::set(int func, Expression arg0, Expression arg1) {
 	operations = arg0.operations;
 	Operand op0 = Operand::exprOf(operations.size()-1);
-	while (op0.isExpr() and (operations.back().func == Operation::IDENTITY or operations.back().func < 0)) {
+	while (op0.isExpr() and operations.back().isReflexive()) {
 		op0 = operations.back().operands[0];
 		operations.pop_back();
 	}
@@ -866,7 +873,7 @@ void Expression::set(int func, Expression arg0, Expression arg1) {
 	}
 
 	Operand op1 = Operand::exprOf(offset.back());
-	while (op1.isExpr() and (operations.back().func == Operation::IDENTITY or operations.back().func < 0)) {
+	while (op1.isExpr() and operations.back().isReflexive()) {
 		op1 = operations.back().operands[0];
 		operations.pop_back();
 	}
@@ -878,7 +885,7 @@ void Expression::set(int func, Expression arg0, Operand arg1)
 {
 	operations = arg0.operations;
 	Operand op0 = Operand::exprOf(operations.size()-1);
-	while (op0.isExpr() and (operations.back().func == Operation::IDENTITY or operations.back().func < 0)) {
+	while (op0.isExpr() and operations.back().isReflexive()) {
 		op0 = operations.back().operands[0];
 		operations.pop_back();
 	}
@@ -889,7 +896,7 @@ void Expression::set(int func, Operand arg0, Expression arg1)
 {
 	operations = arg1.operations;
 	Operand op1 = Operand::exprOf(operations.size()-1);
-	while (op1.isExpr() and (operations.back().func == Operation::IDENTITY or operations.back().func < 0)) {
+	while (op1.isExpr() and operations.back().isReflexive()) {
 		op1 = operations.back().operands[0];
 		operations.pop_back();
 	}
@@ -913,7 +920,7 @@ void Expression::set(int func, vector<Expression> args)
 			offset.push_back(push(*j));
 		}
 		operands.push_back(Operand::exprOf(offset.back()));
-		while (operands.back().isExpr() and (operations.back().func == Operation::IDENTITY or operations.back().func < 0)) {
+		while (operands.back().isExpr() and operations.back().isReflexive()) {
 			operands.back() = operations.back().operands[0];
 			operations.pop_back();
 		}
@@ -934,7 +941,7 @@ void Expression::push(int func, Operand arg0) {
 
 void Expression::push(int func, Expression arg0) {
 	Operand op0 = Operand::exprOf(operations.size()-1);
-	while (op0.isExpr() and (operations.back().func == Operation::IDENTITY or operations.back().func < 0)) {
+	while (op0.isExpr() and operations.back().isReflexive()) {
 		op0 = operations.back().operands[0];
 		operations.pop_back();
 	}
@@ -951,7 +958,7 @@ void Expression::push(int func, Expression arg0) {
 	}
 
 	Operand op1 = Operand::exprOf(offset.back());
-	while (op1.isExpr() and (operations.back().func == Operation::IDENTITY or operations.back().func < 0)) {
+	while (op1.isExpr() and operations.back().isReflexive()) {
 		op1 = operations.back().operands[0];
 		operations.pop_back();
 	}

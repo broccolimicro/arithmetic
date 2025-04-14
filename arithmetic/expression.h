@@ -122,6 +122,7 @@ struct Operation {
 
 	void set(int func, vector<Operand> args);
 	bool isCommutative() const;
+	bool isReflexive() const;
 
 	static value evaluate(int func, vector<value> args);
 	value evaluate(state values, vector<value> expressions) const;

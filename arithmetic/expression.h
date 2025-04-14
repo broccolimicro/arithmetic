@@ -163,17 +163,19 @@ struct Expression {
 	};
 
 	Cost cost(vector<Type> vars) const;
-	vector<Match> search(const Expression &rules, size_t count=0);
+	vector<Match> search(const Expression &rules, size_t count=0, bool fwd=true, bool bwd=true);
 	void replace(Operand o0, Operand o1);
 	void replace(const Expression &rules, Match token);
 	size_t count(Operand start) const;
 	void replace(const Expression &rules, vector<Match> tokens);
-	Expression &minimize();
+	Expression &minimize(Expression directed=Expression());
 
 	Expression &operator=(Operand e);
 
 	string to_string();
 };
+
+Expression espresso(Expression expr, vector<Type> vars=vector<Type>(), Expression directed=Expression(), Expression undirected=Expression());
 
 bool canMap(Operand search, Operand rule, const Expression &e0, const Expression &e1, bool init, map<size_t, Operand> *vars=nullptr);
 

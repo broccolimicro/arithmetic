@@ -5,7 +5,8 @@
 namespace arithmetic {
 
 // load basic simplifcation rules into rewrite vector
-Expression basic_rewrite();
+Expression rewriteBasic();
+Expression rewriteUndirected();
 
 }
 

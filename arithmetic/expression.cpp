@@ -1313,9 +1313,6 @@ Expression &Expression::canonicalize() {
 		}
 	}
 
-
-	cout << ::to_string(replace) << endl;
-
 	// eliminate dangling expressions
 	if (replace.back().isConst()) {
 		operations.clear();
@@ -1343,9 +1340,6 @@ Expression &Expression::canonicalize() {
 			}
 		}
 	}
-
-	cout << operations.back() << endl;	
-	cout << ::to_string(replace) << endl;
 
 	for (int i = (int)replace.size()-1; i >= 0; i--) {
 		if (not replace[i].isVar()) {
@@ -1455,7 +1449,7 @@ Cost Expression::cost(vector<Type> vars) const {
 	return Cost(complexity, delay);
 }
 
-vector<Expression::Match> Expression::search(const Expression &rules, size_t count) {
+vector<Expression::Match> Expression::search(const Expression &rules, size_t count, bool fwd, bool bwd) {
 	using Leaf = pair<Operand, Operand>;
 	vector<pair<vector<Leaf>, Match> > stack;
 
@@ -1467,8 +1461,11 @@ vector<Expression::Match> Expression::search(const Expression &rules, size_t cou
 	auto rulesBegin = rules.operations.back().operands.begin();
 	auto rulesEnd = rules.operations.back().operands.end();
 	for (auto i = rulesBegin; i != rulesEnd; i++) {
-		// ==, >
-		if (not i->isExpr() or (rules.operations[i->index].func != 8 and rules.operations[i->index].func != 11)) {
+		// ==, <, >
+		if (not i->isExpr()
+			or (rules.operations[i->index].func != 8
+				and rules.operations[i->index].func != 10
+				and rules.operations[i->index].func != 11)) {
 			printf("error: invalid format for rules rule\n");
 		}
 	}
@@ -1481,18 +1478,35 @@ vector<Expression::Match> Expression::search(const Expression &rules, size_t cou
 				continue;
 			}
 			auto rule = rules.operations.begin() + j->index;
-			// ==, >
-			if ((rule->func != 8 and rule->func != 11) or rule->operands.size() != 2u) {
+			// ==, <, >
+			if (rule->operands.size() != 2u
+				or (rule->func != 8
+					and rule->func != 10
+					and rule->func != 11)) {
 				continue;
 			}
 			auto lhs = rule->operands.begin();
 			auto rhs = std::next(lhs);
-			Match match;
-			vector<Leaf> leaves;
-			if (canMap(Operand::exprOf(i), *lhs, *this, rules, true, &match.vars)) {
-				match.replace = *rhs;
-				leaves.push_back({Operand::exprOf(i), *lhs});
-				stack.push_back({leaves, match});
+			// map left to right
+			if (rule->func == 11 or (fwd and rule->func == 8)) {
+				Match match;
+				vector<Leaf> leaves;
+				if (canMap(Operand::exprOf(i), *lhs, *this, rules, true, &match.vars)) {
+					match.replace = *rhs;
+					leaves.push_back({Operand::exprOf(i), *lhs});
+					stack.push_back({leaves, match});
+				}
+			}
+
+			// map right to left
+			if (rule->func == 10 or (bwd and rule->func == 8)) {
+				Match match;
+				vector<Leaf> leaves;
+				if (canMap(Operand::exprOf(i), *rhs, *this, rules, true, &match.vars)) {
+					match.replace = *lhs;
+					leaves.push_back({Operand::exprOf(i), *rhs});
+					stack.push_back({leaves, match});
+				}
 			}
 		}
 	}
@@ -1704,38 +1718,39 @@ void Expression::replace(const Expression &rules, vector<Expression::Match> toke
 	//}
 }
 
-Expression &Expression::minimize() {
-	static const Expression rules = basic_rewrite();
+Expression &Expression::minimize(Expression directed) {
+	static const Expression rules = rewriteBasic();
+	if (directed.operations.empty()) {
+		directed = rules;
+	}
 
-	cout << "Rules: " << rules << endl;
+	//cout << "Rules: " << directed << endl;
 	
-	cout << "This: " << *this << endl;
+	//cout << "This: " << *this << endl;
 
 	canonicalize();
-	cout << "Canon: " << *this << endl;
-	vector<Match> tokens = search(rules, 1u);
-	for (auto m = tokens.begin(); m != tokens.end(); m++) {
+	//cout << "Canon: " << *this << endl;
+	vector<Match> tokens = search(directed, 1u);
+	/*for (auto m = tokens.begin(); m != tokens.end(); m++) {
 		cout << "Rule: " << m->replace << endl;
 		cout << "Branches: " << ::to_string(m->expr) << endl;
 		cout << "Mapping: " << ::to_string(m->vars) << endl << endl;
-	}
+	}*/
 	while (not tokens.empty()) {
-		replace(rules, tokens);
-		cout << "This: " << *this << endl;
+		replace(directed, tokens);
+		//cout << "This: " << *this << endl;
 		canonicalize();
-		cout << "Canon: " << *this << endl;
+		//cout << "Canon: " << *this << endl;
 		
-		tokens = search(rules, 1u);
-		for (auto m = tokens.begin(); m != tokens.end(); m++) {
+		tokens = search(directed, 1u);
+		/*for (auto m = tokens.begin(); m != tokens.end(); m++) {
 			cout << "Rule: " << m->replace << endl;
 			cout << "Branches: " << ::to_string(m->expr) << endl;
 			cout << "Mapping: " << ::to_string(m->vars) << endl << endl;
-		}
+		}*/
 	}
 
 	// TODO(edward.bingham)
-	// Add support for bidirectional rules
-	// Implement the cost function, assign a "complexity" metric to certain operators, and then accumulate the cost of all of the operators in the expression
 	// Implement the bidirectional search function to search rule applications that minimize the cost function but then apply all of the unidirectional rules in between
 	// Create a set of unidirectional rewrite rules to change bitwise operators into arithmetic operators, and then a set of unidirectional rules to switch them back
 	// Tie this all together into an easy-to-use minimization system.
@@ -1779,6 +1794,34 @@ Expression &Expression::minimize() {
 
 	// structure encodings as a set of rewrite rules and canonicalization rules
 	return *this;
+}
+
+Expression espresso(Expression expr, vector<Type> vars, Expression directed, Expression undirected) {
+	static const Expression rules = rewriteUndirected();
+	if (undirected.operations.empty()) {
+		undirected = rules;
+	}
+
+	Expression result;
+	Cost best(1e20, 1e20);
+	expr.minimize(directed);
+
+	vector<pair<Cost, Expression> > stack;
+	stack.push_back({expr.cost(vars), expr});
+	while (not stack.empty()) {
+		pair<Cost, Expression> curr = stack.back();
+		stack.pop_back();
+
+		vector<Expression::Match> opts = curr.second.search(undirected);
+		for (auto i = opts.begin(); i != opts.end(); i++) {
+			Expression next = curr.second;
+			next.replace(undirected, *i);
+			Cost cost = next.cost(vars);
+			stack.push_back({cost, next});
+		}
+	}
+
+	return result;
 }
 
 Expression &Expression::operator=(Operand e)

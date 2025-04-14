@@ -2,24 +2,19 @@
 
 namespace arithmetic {
 
-Expression basic_rewrite() {
+Expression rewriteBasic() {
 	// matches all variables and Expressions
 	Operand a = Operand::varOf(0);
 	Operand b = Operand::varOf(1);
 	Operand c = Operand::varOf(2);
 
 	Operand X = Operand::X();
-	Operand U = Operand::U(); // matches all valid things including constants
+	Operand U = Operand::U();
 
 	// true matches valid
 	// false matches neutral
-
-	// just create a function that tells whether an operator is commutative, and add logic to check both paths and reorder for canonicalization
-
 	// All rewrites on only constants handled explicitly (without rewrite rules, using value)
  
-	// I need to distinguish between canonicalization rules and simplification rules?
-
 	Expression rules = arithmetic::array(vector<Expression>({
 		(~(~a)) > (is_valid(a)),
 		(is_valid(~a)) > (~a),
@@ -87,17 +82,32 @@ Expression basic_rewrite() {
 		(!!a) > (a)
 	}));
 
-	rules.canonicalize();
-	//	match( ~(a & b), ~a | ~b ),
-	//	match( ~(a | b), ~a & ~b ),
-	//	match( a & (b | c), (a & b) | (a & c) ),
-	//	match( -(a + b), (-a)+(-b) ),
-	//	match( -(a * b), (-a)*b ),
-	//	match( a * (b + c), (a * b) + (a * c) ),
-	//	match( a ^ b, (a && (!b)) || ((!a) && b) ),
-	//	match( !(a && b), (!a) || (!b) ),
-	//	match( !(a || b), (!a) && (!b) )
+	return rules.canonicalize();
+}
 
+Expression rewriteUndirected() {
+	// matches all variables and Expressions
+	Operand a = Operand::varOf(0);
+	Operand b = Operand::varOf(1);
+	Operand c = Operand::varOf(2);
+
+	Operand X = Operand::X();
+	Operand U = Operand::U();
+
+	Expression rules = arithmetic::array(vector<Expression>({
+		(~(a & b)) == (~a | ~b),
+		(~(a | b)) == (~a & ~b),
+		(a & (b | c)) == ((a & b) | (a & c)),
+		(-(a + b)) == ((-a)+(-b)),
+		(-(a * b)) == ((-a)*b),
+		(a * (b + c)) == ((a * b) + (a * c)),
+		(a ^ b) == ((a && (!b)) || ((!a) && b)),
+		(!(a && b)) == ((!a) || (!b)),
+		(!(a || b)) == ((!a) && (!b))
+	}));
+
+	rules.canonicalize();
+	
 	return rules;
 }
 

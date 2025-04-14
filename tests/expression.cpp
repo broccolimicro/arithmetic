@@ -272,8 +272,10 @@ TEST(Expression, Simplify)
 	
 	Expression dut = a*c+b*c-c*a;
 	Cost cost = dut.cost(vars);
+	cout << "Before: cost=" << cost.complexity << " del=" << cost.critical << endl << dut << endl;
 	dut.minimize();
 	Cost cost2 = dut.cost(vars);
+	cout << "After: cost=" << cost2.complexity << " del=" << cost2.critical << endl << dut << endl;
 	EXPECT_LE(cost2.complexity, cost.complexity);
 	EXPECT_LE(cost2.critical, cost.critical);
 }

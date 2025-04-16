@@ -1346,6 +1346,14 @@ Expression &Expression::canonicalize(bool rules) {
 	}
 
 	// TODO(edward.bingham) reorder operations into a canonical order
+
+	// 1. identify a mapping from expression index -> expression index
+	//   a. determine recursively if one expression should be placed before another
+	//   b. use that to order expressons from left to right in the operands in a way that is unaffected by expression index
+	//   c. order the expressions for post-order traversal
+	// 2. apply that mapping and update all indices
+
+	// TODO(edward.bingham) create hash function on expression for insertion into hash map
 	
 	return *this;
 }

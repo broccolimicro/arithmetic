@@ -82,6 +82,7 @@ struct Operation {
 	static int NEGATION;
 	static int VALIDITY;
 	static int BOOLEAN_NOT;
+	static int INVERSE;
 	static int BITWISE_OR;
 	static int BITWISE_AND;
 	static int BITWISE_XOR;
@@ -116,8 +117,6 @@ struct Operation {
 	int func;
 	vector<Operand> operands;
 
-	static string funcString(int func);
-	static int funcIndex(string func, int args=2);
 	static pair<Type, double> funcCost(int func, vector<Type> args);
 
 	void set(int func, vector<Operand> args);
@@ -188,7 +187,7 @@ struct Expression {
 	void erase(vector<size_t> index, bool doSort=false);
 	Expression &erase_dangling();
 	Expression &propagate_constants();
-	Expression &canonicalize();
+	Expression &canonicalize(bool rules=false);
 
 	struct Match {
 		// what to replace this match with from the rules
@@ -199,10 +198,7 @@ struct Expression {
 		vector<size_t> top;
 
 		// map variable index to Operand in this
-		map<size_t, Operand> vars;
-
-		void insert(size_t index, size_t num);
-		void erase(vector<size_t> index);
+		map<size_t, vector<Operand> > vars;
 	};
 
 	Cost cost(vector<Type> vars) const;
@@ -219,17 +215,20 @@ struct Expression {
 
 Expression espresso(Expression expr, vector<Type> vars=vector<Type>(), Expression directed=Expression(), Expression undirected=Expression());
 
-bool canMap(Operand search, Operand rule, const Expression &e0, const Expression &e1, bool init, map<size_t, Operand> *vars=nullptr);
+bool canMap(vector<Operand> search, Operand rule, const Expression &e0, const Expression &e1, bool init, map<size_t, vector<Operand> > *vars=nullptr);
 
 ostream &operator<<(ostream &os, Expression e);
+ostream &operator<<(ostream &os, Expression::Match m);
 
 Expression operator~(Expression e);
 Expression operator-(Expression e);
 Expression is_valid(Expression e);
 Expression operator!(Expression e);
+Expression inv(Expression e);
 Expression operator|(Expression e0, Expression e1);
 Expression operator&(Expression e0, Expression e1);
 Expression operator^(Expression e0, Expression e1);
+Expression bitwiseXor(Expression e0, Expression e1);
 Expression operator==(Expression e0, Expression e1);
 Expression operator!=(Expression e0, Expression e1);
 Expression operator<(Expression e0, Expression e1);
@@ -249,6 +248,7 @@ Expression operator||(Expression e0, Expression e1);
 Expression operator|(Expression e0, Operand e1);
 Expression operator&(Expression e0, Operand e1);
 Expression operator^(Expression e0, Operand e1);
+Expression bitwiseXor(Expression e0, Operand e1);
 Expression operator==(Expression e0, Operand e1);
 Expression operator!=(Expression e0, Operand e1);
 Expression operator<(Expression e0, Operand e1);
@@ -268,6 +268,7 @@ Expression operator||(Expression e0, Operand e1);
 Expression operator|(Operand e0, Expression e1);
 Expression operator&(Operand e0, Expression e1);
 Expression operator^(Operand e0, Expression e1);
+Expression bitwiseXor(Operand e0, Expression e1);
 Expression operator==(Operand e0, Expression e1);
 Expression operator!=(Operand e0, Expression e1);
 Expression operator<(Operand e0, Expression e1);
@@ -287,6 +288,7 @@ Expression operator||(Operand e0, Expression e1);
 Expression operator|(Operand e0, Operand e1);
 Expression operator&(Operand e0, Operand e1);
 Expression operator^(Operand e0, Operand e1);
+Expression bitwiseXor(Operand e0, Operand e1);
 Expression operator==(Operand e0, Operand e1);
 Expression operator!=(Operand e0, Operand e1);
 Expression operator<(Operand e0, Operand e1);
@@ -304,6 +306,25 @@ Expression operator&&(Operand e0, Operand e1);
 Expression operator||(Operand e0, Operand e1);
 
 Expression array(vector<Expression> e);
+
+// Used to create elastic rewrite rules for commutative operators
+Expression booleanOr(Expression e0);
+Expression booleanAnd(Expression e0);
+Expression booleanXor(Expression e0);
+Expression bitwiseOr(Expression e0);
+Expression bitwiseAnd(Expression e0);
+Expression bitwiseXor(Expression e0);
+Expression add(Expression e0);
+Expression mult(Expression e0);
+
+Expression booleanOr(vector<Expression> e0);
+Expression booleanAnd(vector<Expression> e0);
+Expression booleanXor(vector<Expression> e0);
+Expression bitwiseOr(vector<Expression> e0);
+Expression bitwiseAnd(vector<Expression> e0);
+Expression bitwiseXor(vector<Expression> e0);
+Expression add(vector<Expression> e0);
+Expression mult(vector<Expression> e0);
 
 int passes_guard(const state &encoding, const state &global, const Expression &guard, state *total);
 Expression weakest_guard(const Expression &guard, const Expression &exclude);

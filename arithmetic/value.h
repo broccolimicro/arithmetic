@@ -90,6 +90,7 @@ value operator-(value v);
 value valid(value v);
 // bitwise NOT
 value operator!(value v);
+value inv(value v);
 // bitwise AND, OR, and XOR
 value operator||(value v0, value v1);
 value operator&&(value v0, value v1);

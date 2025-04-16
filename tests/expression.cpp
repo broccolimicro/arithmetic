@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <arithmetic/expression.h>
+#include <common/text.h>
 
 using namespace arithmetic;
 using namespace std;
@@ -270,7 +271,7 @@ TEST(Expression, Simplify) {
 
 	vector<Type> vars({Type(1.0, 16.0, 0.0), Type(1.0, 16.0, 0.0), Type(1.0, 16.0, 0.0)});
 	
-	Expression dut = a*c+b*c-c*a;
+	Expression dut = (a*c+b*c-c*a)/c;
 	Cost cost = dut.cost(vars);
 	cout << "Before: cost=" << cost.complexity << " del=" << cost.critical << endl << dut << endl;
 	dut.minimize();
@@ -293,5 +294,23 @@ TEST(Expression, ChainOfAdds) {
 	Expression dut = a+b+c+d+e+f+g;
 	dut.minimize();
 }
+
+TEST(Expression, ElasticRewrite) {
+	Operation::loadOperators();
+	Operand a = Operand::varOf(0);
+	Operand b = Operand::varOf(1);
+	Operand c = Operand::varOf(2);
+	Operand d = Operand::varOf(3);
+	Operand e = Operand::varOf(4);
+	
+	Expression dut = e*add({a,b,c,d});
+	Expression rules = arithmetic::array({
+		a*add(b) > add(a*b),
+	});
+
+	auto m = dut.search(rules);
+	cout << ::to_string(m) << endl;
+}
+
 
 

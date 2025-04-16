@@ -37,8 +37,8 @@ Expression rewriteBasic() {
 		(is_valid(a)|b) > (a|b),
 		(is_valid(a|b)) > (a|b),
 		
-		(a & (b & c)) > (Expression(Operation::BOOLEAN_AND, {a, b, c})),
-		(a | (b | c)) > (Expression(Operation::BOOLEAN_OR, {a, b, c})),
+		(a & booleanAnd(b)) > (a & b),
+		(a | booleanOr(b)) > (a | b),
 
 		(a-b) > (a+(-b)),
 		(a+a) > (2*a),
@@ -49,10 +49,10 @@ Expression rewriteBasic() {
 		(true+a) > (a),
 		(is_valid(a+b)) > (a&b),
 		(~(a+b)) > (~a|~b),
-		(a + (b + c)) > (Expression(Operation::ADD, {a, b, c})),
+		(a + add(b)) > (a + b),
 
-		(a/a) > (1),
-		(a/b) > (a*(1/b)),
+		(a*inv(a)) > (1),
+		(a/b) > (a*inv(b)),
 		(false*a) > (false),
 		(X*a) > (X),
 		(0*a) > (0),
@@ -61,7 +61,7 @@ Expression rewriteBasic() {
 		(true+a) > (a),
 		(is_valid(a*b)) > (a&b),
 		(~(a*b)) > (~a|~b),
-		(a * (b * c)) > (Expression(Operation::MULTIPLY, {a, b, c})),
+		(a * mult(b)) > (a * b),
 	
 		(a < b) > (a-b < 0),
 		(a > b) > (b < a),
@@ -76,13 +76,13 @@ Expression rewriteBasic() {
 		(0 || a) > (a),
 		(-1 && a) > (a),
 		(-1 || a) > (-1),
-		(a && (b && c)) > (Expression(Operation::BITWISE_AND, {a, b, c})),
+		(a && bitwiseAnd(b)) > (a && b),
 		(a || a) > (a),
-		(a || (b || c)) > (Expression(Operation::BITWISE_OR, {a, b, c})),
+		(a || bitwiseOr(b)) > (a || b),
 		(!!a) > (a)
 	}));
 
-	return rules.canonicalize();
+	return rules.canonicalize(true);
 }
 
 Expression rewriteUndirected() {
@@ -95,18 +95,20 @@ Expression rewriteUndirected() {
 	Operand U = Operand::U();
 
 	Expression rules = arithmetic::array(vector<Expression>({
-		(~(a & b)) == (~a | ~b),
-		(~(a | b)) == (~a & ~b),
-		(a & (b | c)) == ((a & b) | (a & c)),
-		(-(a + b)) == ((-a)+(-b)),
+		(~booleanAnd(a)) == booleanOr(~a),
+		(~booleanOr(a)) == booleanAnd(~a),
+		(a & booleanOr(b)) == booleanOr(a & b),
+		(!bitwiseAnd(a)) == bitwiseOr(!a),
+		(!bitwiseOr(a)) == bitwiseAnd(!a),
+		(a && bitwiseOr(b)) == bitwiseOr(a && b),
+		(-add(a)) == add(-a),
 		(-(a * b)) == ((-a)*b),
-		(a * (b + c)) == ((a * b) + (a * c)),
-		(a ^ b) == ((a && (!b)) || ((!a) && b)),
-		(!(a && b)) == ((!a) || (!b)),
-		(!(a || b)) == ((!a) && (!b))
+		(a * add(b)) == add(a * b),
+		(a ^ b) == ((a & (~b)) | ((~a) & b)),
+		bitwiseXor(a, b) == ((a && (!b)) || ((!a) && b)),
 	}));
 
-	rules.canonicalize();
+	rules.canonicalize(true);
 	
 	return rules;
 }

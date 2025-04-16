@@ -324,9 +324,25 @@ value operator!(value v) {
 		v.ival = ~v.ival;
 		return v;
 	}
-	printf("error: 'operator-' not defined for '%s'\n", v.ctypeName());
+	printf("error: 'operator!' not defined for '%s'\n", v.ctypeName());
 	return value::X();
 }
+
+// Inverse
+value inv(value v) {
+	if (v.type == value::value::BOOL) {
+		return v;
+	} else if (v.type == value::value::INT) {
+		v.ival = 0;
+		return v;
+	} else if (v.type == value::value::REAL) {
+		v.rval = 1.0/v.rval;
+		return v;
+	}
+	printf("error: 'inverse' not defined for '%s'\n", v.ctypeName());
+	return value::X();
+}
+
 
 // Bitwise OR
 value operator||(value v0, value v1) {

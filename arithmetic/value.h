@@ -10,14 +10,14 @@ namespace arithmetic
 // value with a single neutral state. This is purposefully limited
 // for now to keep the CHP language and simulator simple to
 // implement.
-struct value
+struct Value
 {
-	value();
-	value(bool bval);
-	value(int64_t ival);
-	value(int ival);
-	value(double rval);
-	~value();
+	Value();
+	Value(bool bval);
+	Value(int64_t ival);
+	Value(int ival);
+	Value(double rval);
+	~Value();
 
 	// used by "type"
 	enum {
@@ -42,7 +42,7 @@ struct value
 		// "false" in guard expressions.
 		NEUTRAL  = 0,
 		// The value encodes a valid integer value if it is greater than
-		// or value::valid or Vdd if it is equal to value::valid. This is used to
+		// or Value::valid or Vdd if it is equal to Value::valid. This is used to
 		// represent "true" in guard expressions.	
 		VALID    = 1,
 		// The value is not currently known.
@@ -55,7 +55,7 @@ struct value
 		double rval;
 	};
 
-	vector<value> arr;
+	vector<Value> arr;
 
 	bool isValid() const;
 	bool isNeutral() const;
@@ -64,65 +64,65 @@ struct value
 	const char *ctypeName() const;
 	string typeName() const;
 
-	static value X();
-	static value U();
-	static value boolOf(bool valid);
-	static value intOf(int64_t ival);
-	static value realOf(double rval);
-	static value arrOf(vector<value> arr);
-	static value structOf(vector<value> arr);	
+	static Value X();
+	static Value U();
+	static Value boolOf(bool valid);
+	static Value intOf(int64_t ival);
+	static Value realOf(double rval);
+	static Value arrOf(vector<Value> arr);
+	static Value structOf(vector<Value> arr);	
 
-	bool isSubsetOf(value v) const;
+	bool isSubsetOf(Value v) const;
 
 	operator bool() const;
 
 	Type typeOf() const;
 };
 
-bool areSame(value v0, value v1);
-int order(value v0, value v1);
+bool areSame(Value v0, Value v1);
+int order(Value v0, Value v1);
 
-ostream &operator<<(ostream &os, value v);
+ostream &operator<<(ostream &os, Value v);
 
 // boolean NOT using neutral as false and any valid value as true
-value operator~(value v);
-value operator-(value v);
-value valid(value v);
+Value operator~(Value v);
+Value operator-(Value v);
+Value valid(Value v);
 // bitwise NOT
-value operator!(value v);
-value inv(value v);
+Value operator!(Value v);
+Value inv(Value v);
 // bitwise AND, OR, and XOR
-value operator||(value v0, value v1);
-value operator&&(value v0, value v1);
-value operator^(value v0, value v1);
-value operator<<(value v0, value v1);
-value operator>>(value v0, value v1);
-value operator+(value v0, value v1);
-value operator-(value v0, value v1);
-value operator*(value v0, value v1);
-value operator/(value v0, value v1);
-value operator%(value v0, value v1);
+Value operator||(Value v0, Value v1);
+Value operator&&(Value v0, Value v1);
+Value operator^(Value v0, Value v1);
+Value operator<<(Value v0, Value v1);
+Value operator>>(Value v0, Value v1);
+Value operator+(Value v0, Value v1);
+Value operator-(Value v0, Value v1);
+Value operator*(Value v0, Value v1);
+Value operator/(Value v0, Value v1);
+Value operator%(Value v0, Value v1);
 
 // boolean equality operators return neutral as false and a 0-bit
-// valid (representing the value 0) as true.
-value operator==(value v0, value v1);
-value operator!=(value v0, value v1);
-value operator<(value v0, value v1);
-value operator>(value v0, value v1);
-value operator<=(value v0, value v1);
-value operator>=(value v0, value v1);
+// valid (representing the Value 0) as true.
+Value operator==(Value v0, Value v1);
+Value operator!=(Value v0, Value v1);
+Value operator<(Value v0, Value v1);
+Value operator>(Value v0, Value v1);
+Value operator<=(Value v0, Value v1);
+Value operator>=(Value v0, Value v1);
 
 // boolean AND and OR using neutral as false and any valid value as true.
-value operator&(value v0, value v1);
-value operator|(value v0, value v1);
+Value operator&(Value v0, Value v1);
+Value operator|(Value v0, Value v1);
 
-value boolOf(value v);
-value realOf(value v);
-value intOf(value v);
-value index(value v, value i);
+Value boolOf(Value v);
+Value realOf(Value v);
+Value intOf(Value v);
+Value index(Value v, Value i);
 
-// set operators of the lattice documented in value::isSubsetOf()
-value intersect(value v0, value v1);
-value union_of(value v0, value v1);
+// set operators of the lattice documented in Value::isSubsetOf()
+Value intersect(Value v0, Value v1);
+Value unionOf(Value v0, Value v1);
 
 }

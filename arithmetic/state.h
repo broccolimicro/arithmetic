@@ -10,15 +10,15 @@ namespace arithmetic
 // States operate outside of the delay-insensitive value space. They
 // are used by the simulator to keep track of the current value of
 // each variable.
-struct state
+struct State
 {
-	state();
-	state(int uid, value v);
-	~state();
+	State();
+	State(int uid, Value v);
+	~State();
 
 	// Each value at index i represents the current value of the
 	// variable at index i in a ucs::variable_set structure.
-	vector<value> values;
+	vector<Value> values;
 
 	size_t size() const;
 	void extendX(int num);
@@ -26,68 +26,68 @@ struct state
 	void extendU(int num);
 	void trunk(int size);
 	void clear();
-	void push_back(value v);
+	void push_back(Value v);
 
-	value get(int uid) const;
-	void set(int uid, value v);
-	void sv_intersect(int uid, value v);
+	Value get(int uid) const;
+	void set(int uid, Value v);
+	void svIntersect(int uid, Value v);
 
-	bool isSubsetOf(const state &s) const;
+	bool isSubsetOf(const State &s) const;
 
-	state &operator&=(state s);
-	state &operator|=(state s);
-	state &operator=(state s);
+	State &operator&=(State s);
+	State &operator|=(State s);
+	State &operator=(State s);
 
-	value &operator[](int uid);
-	value operator[](int uid) const;
+	Value &operator[](int uid);
+	Value operator[](int uid) const;
 
-	state remote(vector<vector<int> > groups);
+	State remote(vector<vector<int> > groups);
 
-	bool is_tautology() const;
+	bool isTautology() const;
 
-	state mask() const;
-	state mask(const state &m) const;
-	state combine_mask(const state &m) const;
+	State mask() const;
+	State mask(const State &m) const;
+	State combineMask(const State &m) const;
 
-	void apply(vector<int> uid_map);
+	void apply(vector<int> uidMap);
 };
 
-ostream &operator<<(ostream &os, const state &s);
+ostream &operator<<(ostream &os, const State &s);
 
-bool operator==(state s0, state s1);
-bool operator!=(state s0, state s1);
-bool operator<(state s0, state s1);
-bool operator>(state s0, state s1);
-bool operator<=(state s0, state s1);
-bool operator>=(state s0, state s1);
+bool operator==(State s0, State s1);
+bool operator!=(State s0, State s1);
+bool operator<(State s0, State s1);
+bool operator>(State s0, State s1);
+bool operator<=(State s0, State s1);
+bool operator>=(State s0, State s1);
 
 // Set operators intersect and union
-state operator&(state s0, state s1);
-state operator|(state s0, state s1);
+State operator&(State s0, State s1);
+State operator|(State s0, State s1);
 
-state local_assign(state s0, state s1, bool stable);
-state remote_assign(state s0, state s1, bool stable);
-bool vacuous_assign(const state &encoding, const state &assignment, bool stable);
+State localAssign(State s0, State s1, bool stable);
+State remoteAssign(State s0, State s1, bool stable);
+bool vacuousAssign(const State &encoding, const State &assignment, bool stable);
 
-bool are_interfering(const state &s0, const state &s1);
-state interfere(state s0, const state &s1);
+bool areInterfering(const State &s0, const State &s1);
+State interfere(State s0, const State &s1);
 
-struct region {
-	region();
-	~region();
+struct Region {
+	Region();
+	~Region();
 
-	vector<state> states;
+	vector<State> states;
 
-	region remote(vector<vector<int> > groups);
+	Region remote(vector<vector<int> > groups);
 	
-	bool is_tautology() const;
+	bool isTautology() const;
 
-	state &operator[](int idx);
-	state operator[](int idx) const;
+	State &operator[](int idx);
+	State operator[](int idx) const;
 
-	void apply(vector<int> uid_map);
+	void apply(vector<int> uidMap);
 };
 
-bool vacuous_assign(const state &encoding, const region &assignment, bool stable);
+bool vacuousAssign(const State &encoding, const Region &assignment, bool stable);
 
 }

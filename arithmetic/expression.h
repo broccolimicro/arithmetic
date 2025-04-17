@@ -8,7 +8,7 @@
 namespace arithmetic {
 
 struct Operand {
-	Operand(value v = value());
+	Operand(Value v = Value());
 	Operand(bool bval);
 	Operand(int64_t ival);
 	Operand(int ival);
@@ -25,7 +25,7 @@ struct Operand {
 	int type;
 
 	// used for CONST
-	value cnst;
+	Value cnst;
 
 	// used for VAR and EXPR
 	size_t index;
@@ -34,8 +34,8 @@ struct Operand {
 	bool isExpr() const;
 	bool isVar() const;
 
-	value get(state values=state(), vector<value> expressions=vector<value>()) const;
-	void set(state &values, vector<value> &expressions, value v) const;
+	Value get(State values=State(), vector<Value> expressions=vector<Value>()) const;
+	void set(State &values, vector<Value> &expressions, Value v) const;
 
 	// Constants
 	static Operand X();
@@ -43,15 +43,15 @@ struct Operand {
 	static Operand boolOf(bool bval);
 	static Operand intOf(int64_t ival);
 	static Operand realOf(double rval);
-	static Operand arrOf(vector<value> arr);
-	static Operand structOf(vector<value> arr);
+	static Operand arrOf(vector<Value> arr);
+	static Operand structOf(vector<Value> arr);
 
 	static Operand exprOf(size_t index);
 	void offsetExpr(int off);
 
 	static Operand varOf(size_t index);
-	void apply(vector<int> uid_map);
-	void apply(vector<Operand> uid_map);
+	void apply(vector<int> uidMap);
+	void apply(vector<Operand> uidMap);
 };
 
 ostream &operator<<(ostream &os, Operand o);
@@ -109,11 +109,6 @@ struct Operation {
 	static int push(Operator op);
 	static void loadOperators();
 
-	// TODO(edward.bingham) implement expression comprehension with a template
-	// parameter It repeats all operands for each value of the template
-	// parameter, in order. Use this to match commutative expressions in the
-	// rewrite rules.
-
 	int func;
 	vector<Operand> operands;
 
@@ -123,11 +118,11 @@ struct Operation {
 	bool isCommutative() const;
 	bool isReflexive() const;
 
-	static value evaluate(int func, vector<value> args);
-	value evaluate(state values, vector<value> expressions) const;
-	void propagate(state &result, const state &global, vector<value> &expressions, const vector<value> gexpressions, value v) const;
-	void apply(vector<int> uid_map);
-	void apply(vector<Operand> uid_map);
+	static Value evaluate(int func, vector<Value> args);
+	Value evaluate(State values, vector<Value> expressions) const;
+	void propagate(State &result, const State &global, vector<Value> &expressions, const vector<Value> gexpressions, Value v) const;
+	void apply(vector<int> uidMap);
+	void apply(vector<Operand> uidMap);
 	void offsetExpr(int off);
 };
 
@@ -155,7 +150,7 @@ struct Expression {
 	// 2. x*y
 	// 3. operations[1]+operations[2]
 	// Therefore the final Operation stored is the Operation that produces the
-	// final value for the Expression.
+	// final Value for the Expression.
 	vector<Operation> operations;
 
 	int push(Operation arg);
@@ -171,22 +166,23 @@ struct Expression {
 	void push(int func);
 	void push(int func, Operand arg0);
 	void push(int func, Expression arg0);
-	value evaluate(state values) const;
-	bool is_null() const;
-	bool is_constant() const;
-	bool is_valid() const;
-	bool is_neutral() const;
-	bool is_wire() const;
+	Value evaluate(State values) const;
+	bool isNull() const;
+	bool isConstant() const;
+	bool isValid() const;
+	bool isNeutral() const;
+	bool isWire() const;
 
-	void apply(vector<int> uid_map);
-	void apply(vector<Expression> uid_map);
+	void apply(vector<int> uidMap);
+	void apply(vector<Expression> uidMap);
 
 	// operating on the Expression
 	void insert(size_t index, size_t num);
 	void erase(size_t index);
 	void erase(vector<size_t> index, bool doSort=false);
-	Expression &erase_dangling();
-	Expression &propagate_constants();
+
+	Expression &eraseDangling();
+	Expression &propagateConstants();
 	Expression &canonicalize(bool rules=false);
 
 	struct Match {
@@ -222,7 +218,7 @@ ostream &operator<<(ostream &os, Expression::Match m);
 
 Expression operator~(Expression e);
 Expression operator-(Expression e);
-Expression is_valid(Expression e);
+Expression isValid(Expression e);
 Expression operator!(Expression e);
 Expression inv(Expression e);
 Expression operator|(Expression e0, Expression e1);
@@ -326,7 +322,7 @@ Expression bitwiseXor(vector<Expression> e0);
 Expression add(vector<Expression> e0);
 Expression mult(vector<Expression> e0);
 
-int passes_guard(const state &encoding, const state &global, const Expression &guard, state *total);
-Expression weakest_guard(const Expression &guard, const Expression &exclude);
+int passesGuard(const State &encoding, const State &global, const Expression &guard, State *total);
+Expression weakestGuard(const Expression &guard, const Expression &exclude);
 
 }

@@ -16,26 +16,26 @@ Expression rewriteBasic() {
 	// All rewrites on only constants handled explicitly (without rewrite rules, using value)
  
 	Expression rules = arithmetic::array(vector<Expression>({
-		(~(~a)) > (is_valid(a)),
-		(is_valid(~a)) > (~a),
-		(~is_valid(a)) > (~a),
-		(is_valid(is_valid(a))) > (is_valid(a)),
+		(~(~a)) > (isValid(a)),
+		(isValid(~a)) > (~a),
+		(~isValid(a)) > (~a),
+		(isValid(isValid(a))) > (isValid(a)),
 
-		(a&a) > (is_valid(a)),
+		(a&a) > (isValid(a)),
 		(a&~a) > (false),
-		(true&a) > (is_valid(a)),
-		(U&a) > (is_valid(a)),
+		(true&a) > (isValid(a)),
+		(U&a) > (isValid(a)),
 		(false&a) > (false),
 		(X&a) > (X),
-		(is_valid(a)&b) > (a&b),
-		(is_valid(a&b)) > (a&b),
+		(isValid(a)&b) > (a&b),
+		(isValid(a&b)) > (a&b),
 
-		(a|a) > (is_valid(a)),
+		(a|a) > (isValid(a)),
 		(a|~a) > (true),
 		(true|a) > (true),
-		(false|a) > (is_valid(a)),
-		(is_valid(a)|b) > (a|b),
-		(is_valid(a|b)) > (a|b),
+		(false|a) > (isValid(a)),
+		(isValid(a)|b) > (a|b),
+		(isValid(a|b)) > (a|b),
 		
 		(a & booleanAnd(b)) > (a & b),
 		(a | booleanOr(b)) > (a | b),
@@ -47,7 +47,7 @@ Expression rewriteBasic() {
 		(X+a) > (X),
 		(0+a) > (a),
 		(true+a) > (a),
-		(is_valid(a+b)) > (a&b),
+		(isValid(a+b)) > (a&b),
 		(~(a+b)) > (~a|~b),
 		(a + add(b)) > (a + b),
 
@@ -59,7 +59,7 @@ Expression rewriteBasic() {
 		(1*a) > (a),
 		(-1*a) > (-a),
 		(true+a) > (a),
-		(is_valid(a*b)) > (a&b),
+		(isValid(a*b)) > (a&b),
 		(~(a*b)) > (~a|~b),
 		(a * mult(b)) > (a * b),
 	
@@ -113,7 +113,7 @@ Expression rewriteUndirected() {
 	return rules;
 }
 
-/*void valrdy_rewrite(vector<Expression> &rewrite) {
+/*void valrdyRewrite(vector<Expression> &rewrite) {
 
 }*/
 

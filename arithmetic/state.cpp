@@ -5,67 +5,67 @@
 namespace arithmetic
 {
 
-state::state() {
+State::State() {
 }
 
-state::state(int uid, value v) {
+State::State(int uid, Value v) {
 	set(uid, v);
 }
 
-state::~state() {
+State::~State() {
 }
 
-size_t state::size() const {
+size_t State::size() const {
 	return values.size();
 }
 
-void state::extendX(int num) {
-	values.resize(values.size()+num, value::X());
+void State::extendX(int num) {
+	values.resize(values.size()+num, Value::X());
 }
 
-void state::extendN(int num) {
+void State::extendN(int num) {
 	values.resize(values.size()+num, false);
 }
 
-void state::extendU(int num) {
-	values.resize(values.size()+num, value::U());
+void State::extendU(int num) {
+	values.resize(values.size()+num, Value::U());
 }
 
-void state::trunk(int size) {
+void State::trunk(int size) {
 	values.resize(size);
 }
 
-void state::clear() {
+void State::clear() {
 	values.clear();
 }
 
-void state::push_back(value v) {
+void State::push_back(Value v) {
 	values.push_back(v);
 }
 
-value state::get(int uid) const {
+Value State::get(int uid) const {
 	if (uid < (int)values.size()) {
 		return values[uid];
 	} else {
-		return value::U();
+		return Value::U();
 	}
 }
 
-void state::set(int uid, value v) {
+void State::set(int uid, Value v) {
 	if (uid >= (int)values.size()) {
-		values.resize(uid+1, value::U());
+		values.resize(uid+1, Value::U());
 	}
 	values[uid] = v;
 }
 
-void state::sv_intersect(int uid, value v) {
+void State::svIntersect(int uid, Value v) {
 	if (uid >= (int)values.size()) {
-		values.resize(uid+1, value::U());
+		values.resize(uid+1, Value::U());
 	}
 	values[uid] = intersect(values[uid], v);
 }
 
-bool state::isSubsetOf(const state &s) const {
+bool State::isSubsetOf(const State &s) const {
 	int m0 = (int)min(values.size(), s.values.size());
 	for (int i = 0; i < m0; i++) {
 		if (!values[i].isSubsetOf(s.values[i])) {
@@ -80,7 +80,7 @@ bool state::isSubsetOf(const state &s) const {
 	return true;
 }
 
-state &state::operator&=(state s) {
+State &State::operator&=(State s) {
 	values.reserve(max(values.size(), s.values.size()));
 	
 	int m0 = (int)min(values.size(), s.values.size());
@@ -94,41 +94,41 @@ state &state::operator&=(state s) {
 	return *this;
 }
 
-state &state::operator|=(state s) {
+State &State::operator|=(State s) {
 	if (s.values.size() < values.size()) {
 		values.resize(s.values.size());
 	}	
 	for (int i = 0; i < (int)values.size(); i++) {
-		values[i] = union_of(values[i], s.values[i]);
+		values[i] = unionOf(values[i], s.values[i]);
 	}
 	return *this;
 }
 
-state &state::operator=(state s) {
+State &State::operator=(State s) {
 	values = s.values;
 	return *this;
 }
 
-value &state::operator[](int uid) {
+Value &State::operator[](int uid) {
 	if (uid >= (int)values.size()) {
-		values.resize(uid+1, value::U());
+		values.resize(uid+1, Value::U());
 	}
 	return values[uid];
 }
 
-value state::operator[](int uid) const {
+Value State::operator[](int uid) const {
 	if (uid < (int)values.size()) {
 		return values[uid];
 	} else {
-		return value::U();
+		return Value::U();
 	}
 }
 
-state state::remote(vector<vector<int> > groups)
+State State::remote(vector<vector<int> > groups)
 {
-	state result = *this;
+	State result = *this;
 	for (int i = 0; i < (int)result.values.size(); i++) {
-		value v = result.values[i];
+		Value v = result.values[i];
 		if (v.isUnstable()) {
 			continue;
 		}
@@ -140,7 +140,7 @@ state state::remote(vector<vector<int> > groups)
 
 			for (auto k = j->begin(); k != j->end(); k++) {
 				if (*k != i) {
-					result.sv_intersect(*k, v);
+					result.svIntersect(*k, v);
 				}
 			}
 		}
@@ -149,7 +149,7 @@ state state::remote(vector<vector<int> > groups)
 	return result;
 }
 
-bool state::is_tautology() const {
+bool State::isTautology() const {
 	for (auto v = values.begin(); v != values.end(); v++) {
 		if (not v->isUnknown()) {
 			return false;
@@ -158,26 +158,26 @@ bool state::is_tautology() const {
 	return true;
 }
 
-state state::mask() const {
-	state result;
+State State::mask() const {
+	State result;
 	result.values.reserve(values.size());
 	for (auto v = values.begin(); v != values.end(); v++) {
 		if (v->isUnstable()) {
-			result.values.push_back(value::X());
+			result.values.push_back(Value::X());
 		} else {
-			result.values.push_back(value::U());
+			result.values.push_back(Value::U());
 		}
 	}
 	return result;
 }
 
-state state::mask(const state &m) const {
-	state result;
+State State::mask(const State &m) const {
+	State result;
 	result.values.reserve(values.size());
 	int m0 = min(values.size(), m.values.size());
 	for (int i = 0; i < m0; i++) {
 		if (m.values[i].isUnstable()) {
-			result.values.push_back(value::U());
+			result.values.push_back(Value::U());
 		} else {
 			result.values.push_back(values[i]);
 		}
@@ -186,37 +186,37 @@ state state::mask(const state &m) const {
 	return result;
 }
 
-state state::combine_mask(const state &m) const {
-	state result;
+State State::combineMask(const State &m) const {
+	State result;
 	int m0 = min(values.size(), m.values.size());
 	result.values.reserve(m0);
 	for (int i = 0; i < m0; i++) {
 		result.values.push_back(
 			m.values[i].isUnstable() or
 			values[i].isUnstable() ? 
-				value::U() : value::X());
+				Value::U() : Value::X());
 	}
 	return result;
 }
 
-void state::apply(vector<int> uid_map) {
-	if (uid_map.empty()) {
+void State::apply(vector<int> uidMap) {
+	if (uidMap.empty()) {
 		return;
 	}
 
-	state result;
-	for (int i = 0; i < (int)values.size() and i < (int)uid_map.size(); i++) {
-		if (uid_map[i] >= 0) {
-			if (uid_map[i] >= (int)result.values.size()) {
-				result.values.resize(uid_map[i]+1, value());
+	State result;
+	for (int i = 0; i < (int)values.size() and i < (int)uidMap.size(); i++) {
+		if (uidMap[i] >= 0) {
+			if (uidMap[i] >= (int)result.values.size()) {
+				result.values.resize(uidMap[i]+1, Value());
 			}
-			result.values[uid_map[i]] = values[i];
+			result.values[uidMap[i]] = values[i];
 		}
 	}
 	values = result.values;
 }
 
-ostream &operator<<(ostream &os, const state &s) {
+ostream &operator<<(ostream &os, const State &s) {
 	os << "{";
 	for (int i = 0; i < (int)s.values.size(); i++) {
 		if (i != 0) {
@@ -228,7 +228,7 @@ ostream &operator<<(ostream &os, const state &s) {
 	return os;
 }
 
-bool operator==(state s0, state s1) {
+bool operator==(State s0, State s1) {
 	int m0 = (int)min(s0.values.size(), s1.values.size());
 	for (int i = 0; i < m0; i++) {
 		if (not areSame(s0.values[i], s1.values[i])) {
@@ -248,7 +248,7 @@ bool operator==(state s0, state s1) {
 	return true;
 }
 
-bool operator!=(state s0, state s1) {
+bool operator!=(State s0, State s1) {
 	int m0 = (int)min(s0.values.size(), s1.values.size());
 	for (int i = 0; i < m0; i++) {
 		if (not areSame(s0.values[i], s1.values[i])) {
@@ -268,11 +268,11 @@ bool operator!=(state s0, state s1) {
 	return false;
 }
 
-bool operator<(state s0, state s1) {
+bool operator<(State s0, State s1) {
 	size_t m0 = max(s0.values.size(), s1.values.size());
 	for (size_t i = 0; i < m0; i++) {
-		int ord = order(i < s0.values.size() ? s0.values[i] : value::U(),
-		                i < s1.values.size() ? s1.values[i] : value::U());
+		int ord = order(i < s0.values.size() ? s0.values[i] : Value::U(),
+		                i < s1.values.size() ? s1.values[i] : Value::U());
 		if (ord != 0) {
 			return ord < 0;
 		}
@@ -280,11 +280,11 @@ bool operator<(state s0, state s1) {
 	return false;
 }
 
-bool operator>(state s0, state s1) {
+bool operator>(State s0, State s1) {
 	size_t m0 = max(s0.values.size(), s1.values.size());
 	for (size_t i = 0; i < m0; i++) {
-		int ord = order(i < s0.values.size() ? s0.values[i] : value::U(),
-		                i < s1.values.size() ? s1.values[i] : value::U());
+		int ord = order(i < s0.values.size() ? s0.values[i] : Value::U(),
+		                i < s1.values.size() ? s1.values[i] : Value::U());
 		if (ord != 0) {
 			return ord > 0;
 		}
@@ -292,11 +292,11 @@ bool operator>(state s0, state s1) {
 	return false;
 }
 
-bool operator<=(state s0, state s1) {
+bool operator<=(State s0, State s1) {
 	size_t m0 = max(s0.values.size(), s1.values.size());
 	for (size_t i = 0; i < m0; i++) {
-		int ord = order(i < s0.values.size() ? s0.values[i] : value::U(),
-		                i < s1.values.size() ? s1.values[i] : value::U());
+		int ord = order(i < s0.values.size() ? s0.values[i] : Value::U(),
+		                i < s1.values.size() ? s1.values[i] : Value::U());
 		if (ord != 0) {
 			return ord < 0;
 		}
@@ -304,11 +304,11 @@ bool operator<=(state s0, state s1) {
 	return true;
 }
 
-bool operator>=(state s0, state s1) {
+bool operator>=(State s0, State s1) {
 	size_t m0 = max(s0.values.size(), s1.values.size());
 	for (size_t i = 0; i < m0; i++) {
-		int ord = order(i < s0.values.size() ? s0.values[i] : value::U(),
-		                i < s1.values.size() ? s1.values[i] : value::U());
+		int ord = order(i < s0.values.size() ? s0.values[i] : Value::U(),
+		                i < s1.values.size() ? s1.values[i] : Value::U());
 		if (ord != 0) {
 			return ord > 0;
 		}
@@ -316,8 +316,8 @@ bool operator>=(state s0, state s1) {
 	return true;
 }
 
-state operator&(state s0, state s1) {
-	state result;
+State operator&(State s0, State s1) {
+	State result;
 	result.values.reserve(max(s0.values.size(), s1.values.size()));
 	
 	int m0 = (int)min(s0.values.size(), s1.values.size());
@@ -334,46 +334,46 @@ state operator&(state s0, state s1) {
 	return result;
 }
 
-state operator|(state s0, state s1) {
+State operator|(State s0, State s1) {
 	int m0 = (int)min(s0.values.size(), s1.values.size());
 	
-	state result;
+	State result;
 	result.values.reserve(m0);
 	for (int i = 0; i < m0; i++) {
-		result.values.push_back(union_of(s0.values[i], s1.values[i]));
+		result.values.push_back(unionOf(s0.values[i], s1.values[i]));
 	}
 	return result;
 }
 
-state local_assign(state s0, state s1, bool stable)
+State localAssign(State s0, State s1, bool stable)
 {
 	if (s0.values.size() < s1.values.size()) {
-		s0.values.resize(s1.values.size(), value::U());
+		s0.values.resize(s1.values.size(), Value::U());
 	}
 
 	for (int i = 0; i < (int)s0.values.size() and i < (int)s1.values.size(); i++) {
 		if (not s1.values[i].isUnknown()) {
-			s0.values[i] = stable ? s1.values[i] : value::X();
+			s0.values[i] = stable ? s1.values[i] : Value::X();
 		}
 	}
 	return s0;
 }
 
-state remote_assign(state s0, state s1, bool stable)
+State remoteAssign(State s0, State s1, bool stable)
 {
 	if (s0.values.size() < s1.values.size()) {
-		s0.values.resize(s1.values.size(), value::U());
+		s0.values.resize(s1.values.size(), Value::U());
 	}
 
 	for (int i = 0; i < (int)s0.values.size() and i < (int)s1.values.size(); i++) {
 		if (not s1.values[i].isUnknown() and not areSame(s0.values[i], s1.values[i])) {
-			s0.values[i] = stable ? value::U() : value::X();
+			s0.values[i] = stable ? Value::U() : Value::X();
 		}
 	}
 	return s0;
 }
 
-bool vacuous_assign(const state &s0, const state &s1, bool stable) {
+bool vacuousAssign(const State &s0, const State &s1, bool stable) {
 	for (int i = 0; i < (int)s0.values.size() and i < (int)s1.values.size(); i++) {
 		if (not s1.values[i].isUnknown() and not areSame(s0.values[i], s1.values[i]) and (not stable or not s0.values[i].isUnstable())) {
 			return false;
@@ -382,7 +382,7 @@ bool vacuous_assign(const state &s0, const state &s1, bool stable) {
 	return true;
 }
 
-bool are_interfering(const state &s0, const state &s1) {
+bool areInterfering(const State &s0, const State &s1) {
 	int m0 = min(s0.values.size(), s1.values.size());
 	for (int i = 0; i < m0; i++) {
 		if (not s0.values[i].isUnknown() and not s1.values[i].isUnknown() and not areSame(s0.values[i], s1.values[i])) {
@@ -392,60 +392,60 @@ bool are_interfering(const state &s0, const state &s1) {
 	return false;
 }
 
-state interfere(state s0, const state &s1) {
+State interfere(State s0, const State &s1) {
 	int m0 = min(s0.values.size(), s1.values.size());
 	for (int i = 0; i < m0; i++) {
 		if (not s0.values[i].isUnknown() and not s1.values[i].isUnknown() and not areSame(s0.values[i], s1.values[i])) {
-			s0.values[i] = value::X();
+			s0.values[i] = Value::X();
 		}
 	}
 	return s0;
 }
 
-region::region() {
+Region::Region() {
 }
 
-region::~region() {
+Region::~Region() {
 }
 
-region region::remote(vector<vector<int> > groups) {
-	region result;
+Region Region::remote(vector<vector<int> > groups) {
+	Region result;
 	for (auto s = states.begin(); s != states.end(); s++) {
 		result.states.push_back(s->remote(groups));
 	}
 	return result;
 }
 
-bool region::is_tautology() const {
+bool Region::isTautology() const {
 	for (auto s = states.begin(); s != states.end(); s++) {
-		if (s->is_tautology()) {
+		if (s->isTautology()) {
 			return true;
 		}
 	}
 	return false;
 }
 
-state &region::operator[](int idx) {
+State &Region::operator[](int idx) {
 	return states[idx];
 }
 
-state region::operator[](int idx) const {
+State Region::operator[](int idx) const {
 	return states[idx];
 }
 
-void region::apply(vector<int> uid_map) {
-	if (uid_map.empty()) {
+void Region::apply(vector<int> uidMap) {
+	if (uidMap.empty()) {
 		return;
 	}
 
 	for (int i = 0; i < (int)states.size(); i++) {
-		states[i].apply(uid_map);
+		states[i].apply(uidMap);
 	}
 }
 
-bool vacuous_assign(const state &s0, const region &r1, bool stable) {
+bool vacuousAssign(const State &s0, const Region &r1, bool stable) {
 	for (auto s1 = r1.states.begin(); s1 != r1.states.end(); s1++) {
-		if (vacuous_assign(s0, *s1, stable)) {
+		if (vacuousAssign(s0, *s1, stable)) {
 			return true;
 		}
 	}

@@ -40,29 +40,29 @@ int Operation::BOOLEAN_XOR = -1;
 int Operation::ARRAY = -1;
 int Operation::INDEX = -1;
 
-Operand::Operand(value v) {
+Operand::Operand(Value v) {
 	type = CONST;
 	cnst = v;
 }
 
 Operand::Operand(bool bval) {
 	type = CONST;
-	cnst = value::boolOf(bval);
+	cnst = Value::boolOf(bval);
 }
 
 Operand::Operand(int64_t ival) {
 	type = CONST;
-	cnst = value::intOf(ival);
+	cnst = Value::intOf(ival);
 }
 
 Operand::Operand(int ival) {
 	type = CONST;
-	cnst = value::intOf(ival);
+	cnst = Value::intOf(ival);
 }
 
 Operand::Operand(double rval) {
 	type = CONST;
-	cnst = value::realOf(rval);
+	cnst = Value::realOf(rval);
 }
 
 Operand::~Operand() {
@@ -80,7 +80,7 @@ bool Operand::isVar() const {
 	return type == VAR;
 }
 
-value Operand::get(state values, vector<value> expressions) const {
+Value Operand::get(State values, vector<Value> expressions) const {
 	switch (type)
 	{
 	case CONST:
@@ -98,10 +98,10 @@ value Operand::get(state values, vector<value> expressions) const {
 			printf("error: expression not defined %d/%d\n", (int)index, (int)expressions.size());
 		}
 	}
-	return value::X();
+	return Value::X();
 }
 
-void Operand::set(state &values, vector<value> &expressions, value v) const {
+void Operand::set(State &values, vector<Value> &expressions, Value v) const {
 	if (isExpr()) {
 		if (index < expressions.size()) {
 			expressions[index] = v;
@@ -114,31 +114,31 @@ void Operand::set(state &values, vector<value> &expressions, value v) const {
 }
 
 Operand Operand::X() {
-	return Operand(value::X());
+	return Operand(Value::X());
 }
 
 Operand Operand::U() {
-	return Operand(value::U());
+	return Operand(Value::U());
 }
 
 Operand Operand::boolOf(bool bval) {
-	return Operand(value::boolOf(bval));
+	return Operand(Value::boolOf(bval));
 }
 
 Operand Operand::intOf(int64_t ival) {
-	return Operand(value::intOf(ival));
+	return Operand(Value::intOf(ival));
 }
 
 Operand Operand::realOf(double rval) {
-	return Operand(value::realOf(rval));
+	return Operand(Value::realOf(rval));
 }
 
-Operand Operand::arrOf(vector<value> arr) {
-	return Operand(value::arrOf(arr));
+Operand Operand::arrOf(vector<Value> arr) {
+	return Operand(Value::arrOf(arr));
 }
 
-Operand Operand::structOf(vector<value> arr) {
-	return Operand(value::structOf(arr));
+Operand Operand::structOf(vector<Value> arr) {
+	return Operand(Value::structOf(arr));
 }
 
 Operand Operand::exprOf(size_t index) {
@@ -161,33 +161,33 @@ Operand Operand::varOf(size_t index) {
 	return result;
 }
 
-void Operand::apply(vector<int> uid_map) {
-	if (uid_map.empty()) {
+void Operand::apply(vector<int> uidMap) {
+	if (uidMap.empty()) {
 		return;
 	}
 
 	if (isVar()) {
-		if (index < uid_map.size()) {
-			index = uid_map[index];
+		if (index < uidMap.size()) {
+			index = uidMap[index];
 		} else {
 			type = CONST;
-			cnst = value::X();
+			cnst = Value::X();
 		}
 	}
 }
 
-void Operand::apply(vector<Operand> uid_map) {
-	if (uid_map.empty()) {
+void Operand::apply(vector<Operand> uidMap) {
+	if (uidMap.empty()) {
 		return;
 	}
 
 	if (isVar()) {
-		if (index < uid_map.size()) {
-			type = uid_map[index].type;
-			index = uid_map[index].index;
+		if (index < uidMap.size()) {
+			type = uidMap[index].type;
+			index = uidMap[index].index;
 		} else {
 			type = CONST;
-			cnst = value::X();
+			cnst = Value::X();
 		}
 	}
 }
@@ -527,7 +527,7 @@ bool Operation::isReflexive() const {
 	return true;
 }
 
-value Operation::evaluate(int func, vector<value> args) {
+Value Operation::evaluate(int func, vector<Value> args) {
 	if (func == Operation::BITWISE_NOT) {
 		return !args[0];
 	} else if (func == Operation::IDENTITY) {
@@ -624,7 +624,7 @@ value Operation::evaluate(int func, vector<value> args) {
 		if (args.size() == 1u) {
 			return args[0];
 		} else if (args.size() == 2u) {
-			args.push_back(value::X());
+			args.push_back(Value::X());
 		}
 		return args[0] ? args[1] : args[2];
 	} else if (func == Operation::BOOLEAN_AND) { 
@@ -638,15 +638,15 @@ value Operation::evaluate(int func, vector<value> args) {
 		}
 		return args[0];
 	} else if (func == Operation::ARRAY) { // concat arrays
-		return value::arrOf(args);
+		return Value::arrOf(args);
 	} else if (func == Operation::INDEX) { // index
 		return index(args[0], args[1]);
 	}
 	return args[0];
 }
 
-value Operation::evaluate(state values, vector<value> expressions) const {
-	vector<value> args;
+Value Operation::evaluate(State values, vector<Value> expressions) const {
+	vector<Value> args;
 	args.reserve(operands.size());
 	for (int i = 0; i < (int)operands.size(); i++) {
 		args.push_back(operands[i].get(values, expressions));
@@ -655,7 +655,7 @@ value Operation::evaluate(state values, vector<value> expressions) const {
 	return Operation::evaluate(func, args);
 }
 
-void Operation::propagate(state &result, const state &global, vector<value> &expressions, const vector<value> gexpressions, value v) const
+void Operation::propagate(State &result, const State &global, vector<Value> &expressions, const vector<Value> gexpressions, Value v) const
 {
 	if (v.isValid() or v.isUnknown()) {
 		if (func >= 0 and func <= 2) {
@@ -676,17 +676,17 @@ void Operation::propagate(state &result, const state &global, vector<value> &exp
 			operands[1].set(result, expressions, operands[1].get(global, gexpressions));
 		} else if (func == 23) {
 			// a|b
-			value v0 = operands[0].get(global, gexpressions);
+			Value v0 = operands[0].get(global, gexpressions);
 			if (v0.isValid()) {
 				operands[0].set(result, expressions, v0);
 			} else {
-				operands[0].set(result, expressions, value::U());
+				operands[0].set(result, expressions, Value::U());
 			}
-			value v1 = operands[1].get(global, expressions);
+			Value v1 = operands[1].get(global, expressions);
 			if (v1.isValid()) {
 				operands[0].set(result, expressions, v1);
 			} else {
-				operands[0].set(result, expressions, value::U());
+				operands[0].set(result, expressions, Value::U());
 			}
 		} else {
 			// a
@@ -706,17 +706,17 @@ void Operation::propagate(state &result, const state &global, vector<value> &exp
 			// a+b, a-b, a*b, a/b, a%b
 			// a==b, a!=b, a<b, a>b, a<=b, a>=b
 			// a&b
-			value v0 = operands[0].get(global, gexpressions);
+			Value v0 = operands[0].get(global, gexpressions);
 			if (v0.isNeutral()) {
 				operands[0].set(result, expressions, v0);
 			} else {
-				operands[0].set(result, expressions, value::U());
+				operands[0].set(result, expressions, Value::U());
 			}
-			value v1 = operands[1].get(global, expressions);
+			Value v1 = operands[1].get(global, expressions);
 			if (v1.isNeutral()) {
 				operands[0].set(result, expressions, v1);
 			} else {
-				operands[0].set(result, expressions, value::U());
+				operands[0].set(result, expressions, Value::U());
 			}
 		} else if (func == 23) {
 			// a|b
@@ -729,38 +729,38 @@ void Operation::propagate(state &result, const state &global, vector<value> &exp
 	} else {
 		if ((func >= 0 and func <= 4) or func < 0) {
 			// !a, a, -a, ~a
-			operands[0].set(result, expressions, value::U());
+			operands[0].set(result, expressions, Value::U());
 		} else if (func >= 5 and func <= 23) {
 			// a||b, a&&b, a^b, a<<b, a>>b
 			// a+b, a-b, a*b, a/b, a%b
 			// a==b, a!=b, a<b, a>b, a<=b, a>=b
 			// a&b, a|b
-			operands[0].set(result, expressions, value::U());
-			operands[1].set(result, expressions, value::U());
+			operands[0].set(result, expressions, Value::U());
+			operands[1].set(result, expressions, Value::U());
 		} else {
 			// a
-			operands[0].set(result, expressions, value::U());
+			operands[0].set(result, expressions, Value::U());
 		}
 	} 
 }
 
-void Operation::apply(vector<int> uid_map) {
-	if (uid_map.empty()) {
+void Operation::apply(vector<int> uidMap) {
+	if (uidMap.empty()) {
 		return;
 	}
 
 	for (int i = 0; i < (int)operands.size(); i++) {
-		operands[i].apply(uid_map);
+		operands[i].apply(uidMap);
 	}
 }
 
-void Operation::apply(vector<Operand> uid_map) {
-	if (uid_map.empty()) {
+void Operation::apply(vector<Operand> uidMap) {
+	if (uidMap.empty()) {
 		return;
 	}
 
 	for (int i = 0; i < (int)operands.size(); i++) {
-		operands[i].apply(uid_map);
+		operands[i].apply(uidMap);
 	}
 }
 
@@ -998,9 +998,9 @@ void Expression::push(int func, Expression arg0) {
 	push(Operation(func, {op0, op1}));
 }
 
-value Expression::evaluate(state values) const {
+Value Expression::evaluate(State values) const {
 	// I need a value per iterator combination.
-	vector<value> expressions;
+	vector<Value> expressions;
 	for (int i = 0; i < (int)operations.size(); i++) {
 		expressions.push_back(operations[i].evaluate(values, expressions));
 	}
@@ -1008,10 +1008,10 @@ value Expression::evaluate(state values) const {
 	if (expressions.size() > 0)
 		return expressions.back();
 	else
-		return value();
+		return Value();
 }
 
-bool Expression::is_null() const {
+bool Expression::isNull() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is null after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
@@ -1027,7 +1027,7 @@ bool Expression::is_null() const {
 	return true;
 }
 
-bool Expression::is_constant() const {
+bool Expression::isConstant() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is constant after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
@@ -1041,7 +1041,7 @@ bool Expression::is_constant() const {
 	return true;
 }
 
-bool Expression::is_valid() const {
+bool Expression::isValid() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is constant after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
@@ -1055,7 +1055,7 @@ bool Expression::is_valid() const {
 	return true;
 }
 
-bool Expression::is_neutral() const {
+bool Expression::isNeutral() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is null after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
@@ -1069,7 +1069,7 @@ bool Expression::is_neutral() const {
 	return true;
 }
 
-bool Expression::is_wire() const {
+bool Expression::isWire() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is null after constant propagation using quantified element elimination
 	for (auto i = operations.begin(); i != operations.end(); i++) {
@@ -1085,18 +1085,18 @@ bool Expression::is_wire() const {
 	return false;
 }
 
-void Expression::apply(vector<int> uid_map) {
-	if (uid_map.empty()) {
+void Expression::apply(vector<int> uidMap) {
+	if (uidMap.empty()) {
 		return;
 	}
 
 	for (int i = 0; i < (int)operations.size(); i++) {
-		operations[i].apply(uid_map);
+		operations[i].apply(uidMap);
 	}
 }
 
-void Expression::apply(vector<Expression> uid_map) {
-	if (uid_map.empty()) {
+void Expression::apply(vector<Expression> uidMap) {
+	if (uidMap.empty()) {
 		return;
 	}
 
@@ -1104,12 +1104,12 @@ void Expression::apply(vector<Expression> uid_map) {
 	int offset = 0;
 
 	vector<Operation> result;
-	for (int i = 0; i < (int)uid_map.size(); i++) {
-		if (uid_map[i].operations.empty()) {
+	for (int i = 0; i < (int)uidMap.size(); i++) {
+		if (uidMap[i].operations.empty()) {
 			top.push_back(false);
 		} else {
-			for (int j = 0; j < (int)uid_map[i].operations.size(); j++) {
-				Operation op = uid_map[i].operations[j];
+			for (int j = 0; j < (int)uidMap[i].operations.size(); j++) {
+				Operation op = uidMap[i].operations[j];
 				op.offsetExpr(offset);
 				result.push_back(op);
 			}
@@ -1182,7 +1182,7 @@ void Expression::erase(vector<size_t> index, bool doSort) {
 	}
 }
 
-Expression &Expression::erase_dangling() {
+Expression &Expression::eraseDangling() {
 	std::set<int> references;
 	vector<int> toErase;
 	for (int i = (int)operations.size()-1; i >= 0; i--) {
@@ -1205,7 +1205,7 @@ Expression &Expression::erase_dangling() {
 	return *this;
 }
 
-Expression &Expression::propagate_constants() {
+Expression &Expression::propagateConstants() {
 	vector<Operand> replace(operations.size(), Operand::exprOf(-1));
 	// propagate constants up through the precedence levels
 	for (int i = 0; i < (int)operations.size(); i++) {
@@ -1263,14 +1263,16 @@ Expression &Expression::propagate_constants() {
 
 Expression &Expression::canonicalize(bool rules) {
 	vector<Operand> replace(operations.size(), Operand::varOf(0));
+	
 	// propagate constants up through the precedence levels
 	for (int i = 0; i < (int)operations.size(); i++) {
 		if (operations[i].isCommutative()) {
+			// Move constants to the left hand side for evaluation
+			// Order variables by index
 			sort(operations[i].operands.begin(), operations[i].operands.end(),
 				[](const Operand &a, const Operand &b) {
 					return a.type < b.type or (a.type == b.type
-						and ((a.isConst() and order(a.cnst, b.cnst) < 0)
-							or (not a.isConst() and a.index < b.index)));
+						and a.type == Operand::VAR and a.index < b.index);
 				});
 		}
 
@@ -1346,6 +1348,50 @@ Expression &Expression::canonicalize(bool rules) {
 	}
 
 	// TODO(edward.bingham) reorder operations into a canonical order
+
+	// for each expression, we need to know if it depends on another
+	// expression. If so, then the dependency must come first.
+	/*vector<vector<size_t> > depend(operations.size());
+	for (int i = 0; i < (int)operations.size(); i++) {
+		for (auto j = operations[i].begin(); j != operations[i].end(); j++) {
+			if (j->isExpr()) {
+				depend[i].insert(depend[i].end(), depend[j->index].begin(), depend[j->index].end());
+				depend[i].push_back(j->index);
+			}
+		}
+		sort(depend[i].begin(); depend[i].end());
+		depend[i].erase(unique(depend[i].begin(), depend[i].end()), depend[i].end());
+	}
+
+	// Remapping is an expensive operation, so lets figure out the
+	// mapping first before we start swapping indices in the actual
+	// expression.
+	vector<size_t> mapping(operations.size());
+	for (size_t i = 0; i < mapping.size(); i++) {
+		mapping[i] = i;
+	}
+
+	// One expression A is less than another B if
+	// 1. B depends on A
+	// 2. A's operation is less than B's
+	// 3. Their operations are not commutative 
+
+	for (size_t i = 1; i < mapping.size(); i++) {
+		size_t mi = mapping[i];
+		size_t j = i;
+		for (; j > 0; j--) {
+			size_t mj = mapping[j-1];
+			// If operation i depends on operation j-1, then it must be greater
+			if (find(depend[mi].begin(), depend[mi].end(), mj) != depend[mi].end()
+				or operations[mi].func > operations[mj].func) {
+				break;
+			} else if (operations[mi].func < operations[mj].func) {
+				continue;
+			}
+
+			
+		}
+	}*/
 
 	// 1. identify a mapping from expression index -> expression index
 	//   a. determine recursively if one expression should be placed before another
@@ -1862,13 +1908,13 @@ Expression operator-(Expression e)
 	return result;
 }
 
-Expression is_valid(Expression e)
+Expression isValid(Expression e)
 {
-	/*if (e.is_valid()) {
+	/*if (e.isValid()) {
 		return Operand(true);
-	} else if (e.is_neutral()) {
+	} else if (e.isNeutral()) {
 		return Operand(false);
-	} else if (e.is_wire()) {
+	} else if (e.isWire()) {
 		return e;
 	}*/
 	Expression result;
@@ -1878,9 +1924,9 @@ Expression is_valid(Expression e)
 
 Expression operator~(Expression e)
 {
-	/*if (e.is_valid()) {
+	/*if (e.isValid()) {
 		return Operand(false);
-	} else if (e.is_neutral()) {
+	} else if (e.isNeutral()) {
 		return Operand(true);
 	}*/
 	Expression result;
@@ -2009,14 +2055,14 @@ Expression operator%(Expression e0, Expression e1)
 
 Expression operator&(Expression e0, Expression e1)
 {
-	/*if (e0.is_null() or e1.is_null()) {
-		return Expression(value::X());
-	} else if (e0.is_neutral() or e1.is_neutral()) {
+	/*if (e0.isNull() or e1.isNull()) {
+		return Expression(Value::X());
+	} else if (e0.isNeutral() or e1.isNeutral()) {
 		return Operand(false);
-	} else if (e0.is_valid()) {
-		return is_valid(e1);
-	} else if (e1.is_valid()) {
-		return is_valid(e0);
+	} else if (e0.isValid()) {
+		return isValid(e1);
+	} else if (e1.isValid()) {
+		return isValid(e0);
 	}*/
 	Expression result;
 	result.set(Operation::BOOLEAN_AND, e0, e1);
@@ -2025,14 +2071,14 @@ Expression operator&(Expression e0, Expression e1)
 
 Expression operator|(Expression e0, Expression e1)
 {
-	/*if (e0.is_null() or e1.is_null()) {
-		return Expression(value::X());
-	} if (e0.is_valid() or e1.is_valid()) {
+	/*if (e0.isNull() or e1.isNull()) {
+		return Expression(Value::X());
+	} if (e0.isValid() or e1.isValid()) {
 		return Operand(true);
-	} else if (e0.is_neutral()) {
-		return is_valid(e1);
-	} else if (e1.is_neutral()) {
-		return is_valid(e0);
+	} else if (e0.isNeutral()) {
+		return isValid(e1);
+	} else if (e1.isNeutral()) {
+		return isValid(e0);
 	}*/
 	Expression result;
 	result.set(Operation::BOOLEAN_OR, e0, e1);
@@ -2540,19 +2586,19 @@ Expression mult(vector<Expression> e0) {
 	return result;
 }
 
-int passes_guard(const state &encoding, const state &global, const Expression &guard, state *total) {
-	vector<value> expressions;
-	vector<value> gexpressions;
+int passesGuard(const State &encoding, const State &global, const Expression &guard, State *total) {
+	vector<Value> expressions;
+	vector<Value> gexpressions;
 
 	for (int i = 0; i < (int)guard.operations.size(); i++) {
-		value g = guard.operations[i].evaluate(global, gexpressions);
-		value l = guard.operations[i].evaluate(encoding, expressions);
+		Value g = guard.operations[i].evaluate(global, gexpressions);
+		Value l = guard.operations[i].evaluate(encoding, expressions);
 
 		if (l.isUnstable() or g.isUnstable()
 			or (g.isNeutral() and l.isValid())
 			or (g.isValid() and l.isNeutral())
 			or (g.isValid() and l.isValid() and not areSame(g, l))) {
-			l = value::X();
+			l = Value::X();
 		}
 
 		expressions.push_back(l);
@@ -2561,7 +2607,7 @@ int passes_guard(const state &encoding, const state &global, const Expression &g
 
 	if (expressions.back().isUnknown() or expressions.back().isValid()) {
 		if (gexpressions.back().isNeutral() or gexpressions.back().isUnknown()) {
-			expressions.back() = value::X();
+			expressions.back() = Value::X();
 		} else if (gexpressions.back().isValid()) {
 			expressions.back() = gexpressions.back();
 		}
@@ -2594,7 +2640,7 @@ int passes_guard(const state &encoding, const state &global, const Expression &g
 	return 1;
 }
 
-Expression weakest_guard(const Expression &guard, const Expression &exclude) {
+Expression weakestGuard(const Expression &guard, const Expression &exclude) {
 	// TODO(edward.bingham) Remove terms from the guard until guard overlaps exclude (using cylidrical algebraic decomposition)
 	// 1. put the guard in conjunctive normal form using the boolean operations & | ~
 	// 2. for each term in the conjunctive normal form, pick a comparison and eliminate it, then check overlap. 

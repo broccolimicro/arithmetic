@@ -5,14 +5,13 @@
 namespace arithmetic
 {
 
-struct action
-{
-	action();
-	action(Expression expr);
-	action(int variable, Expression expr);
-	action(int channel, int variable, Expression expr);
-	action(int channel, Expression expr, int variable);
-	~action();
+struct Action {
+	Action();
+	Action(Expression expr);
+	Action(int variable, Expression expr);
+	Action(int channel, int variable, Expression expr);
+	Action(int channel, Expression expr, int variable);
+	~Action();
 
 	int variable;
 	int channel;
@@ -26,61 +25,59 @@ struct action
 		RECEIVE = 2
 	};
 
-	bool is_infeasible() const;
-	bool is_vacuous() const;
-	bool is_passive() const;
+	bool isInfeasible() const;
+	bool isVacuous() const;
+	bool isPassive() const;
 
-	void apply(vector<int> uid_map);
+	void apply(vector<int> uidMap);
 };
 
-struct parallel
-{
-	parallel();
-	parallel(Expression expr);
-	parallel(int variable, Expression expr);
-	parallel(int channel, int variable, Expression expr);
-	parallel(int channel, Expression expr, int variable);
-	~parallel();
+struct Parallel {
+	Parallel();
+	Parallel(Expression expr);
+	Parallel(int variable, Expression expr);
+	Parallel(int channel, int variable, Expression expr);
+	Parallel(int channel, Expression expr, int variable);
+	~Parallel();
 
-	vector<action> actions;
+	vector<Action> actions;
 
-	action &operator[](int index);
-	const action &operator[](int index) const;
+	Action &operator[](int index);
+	const Action &operator[](int index) const;
 
-	bool is_infeasible() const;
-	bool is_vacuous() const;
-	bool is_passive() const;
+	bool isInfeasible() const;
+	bool isVacuous() const;
+	bool isPassive() const;
 
-	state evaluate(const state &curr);
+	State evaluate(const State &curr);
 	Expression guard();
 
-	void apply(vector<int> uid_map);
+	void apply(vector<int> uidMap);
 };
 
-ostream &operator<<(ostream &os, const parallel &p);
+ostream &operator<<(ostream &os, const Parallel &p);
 
-struct choice
-{
-	choice();
-	choice(parallel c);
-	~choice();
+struct Choice {
+	Choice();
+	Choice(Parallel c);
+	~Choice();
 
-	vector<parallel> terms;
+	vector<Parallel> terms;
 
-	parallel &operator[](int index);
-	const parallel &operator[](int index) const;
+	Parallel &operator[](int index);
+	const Parallel &operator[](int index) const;
 
-	bool is_infeasible() const;
-	bool is_vacuous() const;
-	bool is_passive() const;
+	bool isInfeasible() const;
+	bool isVacuous() const;
+	bool isPassive() const;
 
-	region evaluate(const state &curr);
+	Region evaluate(const State &curr);
 	Expression guard();
 
-	void apply(vector<int> uid_map);
+	void apply(vector<int> uidMap);
 };
 
-ostream &operator<<(ostream &os, const choice &c);
+ostream &operator<<(ostream &os, const Choice &c);
 
 }
 

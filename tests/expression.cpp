@@ -7,7 +7,6 @@ using namespace arithmetic;
 using namespace std;
 
 TEST(Expression, OperandBitwiseOr) {
-	Operation::loadOperators();
 	Operand x = Operand::varOf(0);
 	Operand y = Operand::varOf(1);
 	
@@ -27,7 +26,6 @@ TEST(Expression, OperandBitwiseOr) {
 }
 
 TEST(Expression, OperandBitwiseAnd) {
-	Operation::loadOperators();
 	Operand x = Operand::varOf(0);
 	Operand y = Operand::varOf(1);
 	
@@ -47,7 +45,6 @@ TEST(Expression, OperandBitwiseAnd) {
 }
 
 TEST(Expression, OperandBitwiseXor) {
-	Operation::loadOperators();
 	Operand x = Operand::varOf(0);
 	Operand y = Operand::varOf(1);
 	
@@ -67,7 +64,6 @@ TEST(Expression, OperandBitwiseXor) {
 }
 
 TEST(Expression, OperandEqualTo) {
-	Operation::loadOperators();
 	int valid = Value::VALID;
 	int neutral = Value::NEUTRAL;
 	int unstable = Value::UNSTABLE;
@@ -107,7 +103,6 @@ TEST(Expression, OperandEqualTo) {
 }
 
 TEST(Expression, OperandNotEqualTo) {
-	Operation::loadOperators();
 	int valid = Value::VALID;
 	int neutral = Value::NEUTRAL;
 	int unstable = Value::UNSTABLE;
@@ -147,7 +142,6 @@ TEST(Expression, OperandNotEqualTo) {
 }
 
 TEST(Expression, OperandLessThan) {
-	Operation::loadOperators();
 	int valid = Value::VALID;
 	int neutral = Value::NEUTRAL;
 	int unstable = Value::UNSTABLE;
@@ -187,7 +181,6 @@ TEST(Expression, OperandLessThan) {
 }
 
 TEST(Expression, OperandGreaterThan) {
-	Operation::loadOperators();
 	int valid = Value::VALID;
 	int neutral = Value::NEUTRAL;
 	int unstable = Value::UNSTABLE;
@@ -227,7 +220,6 @@ TEST(Expression, OperandGreaterThan) {
 }
 
 TEST(Expression, Compound) {
-	Operation::loadOperators();
 	Operand a = Operand::varOf(0);
 	Operand b = Operand::varOf(1);
 	Operand c = Operand::varOf(2);
@@ -248,7 +240,6 @@ TEST(Expression, Compound) {
 }
 
 TEST(Expression, PropagateConstants) {
-	Operation::loadOperators();
 	Operand a = Operand::intOf(4);
 	Operand b = Operand::intOf(8);
 	Operand c = Operand::intOf(2);
@@ -264,7 +255,6 @@ TEST(Expression, PropagateConstants) {
 }
 
 TEST(Expression, Simplify) {
-	Operation::loadOperators();
 	Operand a = Operand::varOf(0);
 	Operand b = Operand::varOf(1);
 	Operand c = Operand::varOf(2);
@@ -282,7 +272,6 @@ TEST(Expression, Simplify) {
 }
 
 TEST(Expression, ChainOfAdds) {
-	Operation::loadOperators();
 	Operand a = Operand::varOf(0);
 	Operand b = Operand::varOf(1);
 	Operand c = Operand::varOf(2);
@@ -296,7 +285,6 @@ TEST(Expression, ChainOfAdds) {
 }
 
 TEST(Expression, ElasticRewrite) {
-	Operation::loadOperators();
 	Operand a = Operand::varOf(0);
 	Operand b = Operand::varOf(1);
 	Operand c = Operand::varOf(2);
@@ -312,5 +300,17 @@ TEST(Expression, ElasticRewrite) {
 	cout << ::to_string(m) << endl;
 }
 
+TEST(Expression, Boolean) {
+	Operand a = Operand::varOf(0);
+	Operand b = Operand::varOf(1);
+	Operand c = Operand::varOf(2);
+	Operand d = Operand::varOf(3);
 
+	//Expression dut = ((true&~a)&~b)|((false|c)|d);
+	//Expression dut = ((false|c)|d);
+	Expression dut = (false|c)|d;
+	cout << dut << endl;
+	dut.minimize();
+	cout << dut << endl;
+}
 

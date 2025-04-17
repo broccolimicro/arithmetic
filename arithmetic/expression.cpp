@@ -41,26 +41,31 @@ int Operation::ARRAY = -1;
 int Operation::INDEX = -1;
 
 Operand::Operand(Value v) {
+	Operation::loadOperators();
 	type = CONST;
 	cnst = v;
 }
 
 Operand::Operand(bool bval) {
+	Operation::loadOperators();
 	type = CONST;
 	cnst = Value::boolOf(bval);
 }
 
 Operand::Operand(int64_t ival) {
+	Operation::loadOperators();
 	type = CONST;
 	cnst = Value::intOf(ival);
 }
 
 Operand::Operand(int ival) {
+	Operation::loadOperators();
 	type = CONST;
 	cnst = Value::intOf(ival);
 }
 
 Operand::Operand(double rval) {
+	Operation::loadOperators();
 	type = CONST;
 	cnst = Value::realOf(rval);
 }
@@ -809,37 +814,46 @@ ostream &operator<<(ostream &os, Operation o) {
 }
 
 Expression::Expression() {
+	Operation::loadOperators();
 }
 
 Expression::Expression(Operand arg0) {
+	Operation::loadOperators();
 	set(arg0);
 }
 
 Expression::Expression(int func, Operand arg0) {
+	Operation::loadOperators();
 	set(func, arg0);
 }
 
 Expression::Expression(int func, Expression arg0) {
+	Operation::loadOperators();
 	set(func, arg0);
 }
 
 Expression::Expression(int func, Operand arg0, Operand arg1) {
+	Operation::loadOperators();
 	set(func, arg0, arg1);
 }
 
 Expression::Expression(int func, Expression arg0, Operand arg1) {
+	Operation::loadOperators();
 	set(func, arg0, arg1);
 }
 
 Expression::Expression(int func, Operand arg0, Expression arg1) {
+	Operation::loadOperators();
 	set(func, arg0, arg1);
 }
 
 Expression::Expression(int func, Expression arg0, Expression arg1) {
+	Operation::loadOperators();
 	set(func, arg0, arg1);
 }
 
 Expression::Expression(int func, vector<Expression> args) {
+	Operation::loadOperators();
 	set(func, args);
 }
 
@@ -1716,6 +1730,18 @@ void Expression::replace(const Expression &rules, Match match) {
 			top = match.expr.back();
 		}
 		//cout << "top=" << top << " expr=" << ::to_string(match.expr) << endl;
+		
+		if (match.replace.isExpr() and rules.operations[match.replace.index].func != operations[top].func and match.top.size() < operations[top].operands.size()) {
+			insert(top, 1);
+			operations[top].func = operations[top+1].func;
+			for (int i = (int)match.top.size()-1; i >= 0; i--) {
+				operations[top].operands.push_back(operations[top+1].operands[match.top[i]]);
+				if (i != 0) {
+					operations[top+1].operands.erase(operations[top+1].operands.begin()+match.top[i]);
+				}
+			}
+			operations[top+1].operands[match.top[0]] = Operand::exprOf(top);
+		}
 
 		size_t num = rules.count(match.replace);
 		if (num > match.expr.size()) {
@@ -1726,6 +1752,7 @@ void Expression::replace(const Expression &rules, Match match) {
 			}
 			top = match.expr.back();
 		}
+
 		//cout << "top=" << top << " num=" << num << " expr=" << ::to_string(match.expr) << endl;
 		//cout << "after insert: " << *this << endl;
 

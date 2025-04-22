@@ -314,3 +314,17 @@ TEST(Expression, Boolean) {
 	cout << dut << endl;
 }
 
+TEST(Expression, Function) {
+	Operand a = Operand::varOf(0);
+	Operand b = Operand::varOf(1);
+	Operand c = Operand::varOf(2);
+	Operand d = Operand::varOf(3);
+	Operand e = Operand::varOf(4);
+	Operand f = Operand::varOf(5);
+	
+	Expression dut = call(0, {a+b, c, d+e+f});
+	cout << dut << endl;
+	dut.minimize();
+	cout << dut << endl;
+}
+

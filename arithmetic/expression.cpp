@@ -96,14 +96,17 @@ Value Operand::get(State values, vector<Value> expressions) const {
 		} else {
 			printf("error: variable not defined %d/%d\n", (int)index, (int)values.size());
 		}
+		return Value::X();
 	case EXPR:
 		if (index < expressions.size()) {
 			return expressions[index];
 		} else {
 			printf("error: expression not defined %d/%d\n", (int)index, (int)expressions.size());
 		}
-	}
+		return Value::X();
+	default:
 	return Value::X();
+	}
 }
 
 void Operand::set(State &values, vector<Value> &expressions, Value v) const {
@@ -115,6 +118,8 @@ void Operand::set(State &values, vector<Value> &expressions, Value v) const {
 		}
 	} else if (isVar()) {
 		values.set(index, v);
+	} else if (isConst()) {
+		printf("error: const not writeable\n");
 	}
 }
 
@@ -277,10 +282,11 @@ bool canMap(vector<Operand> o0, Operand o1, const Expression &e0, const Expressi
 
 Operation::Operation() {
 	func = -1;
+	isCall = false;
 }
 
-Operation::Operation(int func, vector<Operand> args) {
-	set(func, args);
+Operation::Operation(int func, vector<Operand> args, bool isCall) {
+	set(func, args, isCall);
 }
 
 Operation::~Operation() {
@@ -513,20 +519,21 @@ pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
 	return {result, cost};
 }
 
-void Operation::set(int func, vector<Operand> args) {
+void Operation::set(int func, vector<Operand> args, bool isCall) {
+	this->isCall = isCall;
 	this->func = func;
 	this->operands = args;
 }
 
 bool Operation::isCommutative() const {
-	if (func >= 0 and func < (int)Operation::operators.size()) {
+	if (not isCall and func >= 0 and func < (int)Operation::operators.size()) {
 		return Operation::operators[func].commutative;
 	}
 	return false;
 }
 
 bool Operation::isReflexive() const {
-	if (func >= 0 and func < (int)Operation::operators.size()) {
+	if (not isCall and func >= 0 and func < (int)Operation::operators.size()) {
 		return Operation::operators[func].reflexive;
 	}
 	return true;
@@ -651,6 +658,10 @@ Value Operation::evaluate(int func, vector<Value> args) {
 }
 
 Value Operation::evaluate(State values, vector<Value> expressions) const {
+	if (isCall) {
+		printf("error: evaluation of function calls not implemented\n");
+		return Value::X();
+	}
 	vector<Value> args;
 	args.reserve(operands.size());
 	for (int i = 0; i < (int)operands.size(); i++) {
@@ -776,7 +787,7 @@ void Operation::offsetExpr(int off) {
 }
 
 bool areSame(Operation o0, Operation o1) {
-	if (o0.func != o1.func or 
+	if (o0.isCall != o1.isCall or o0.func != o1.func or 
 		o0.operands.size() != o1.operands.size()) {
 		return false;
 	}
@@ -790,9 +801,11 @@ bool areSame(Operation o0, Operation o1) {
 }
 
 ostream &operator<<(ostream &os, Operation o) {
-	os << "f(" << o.func << "): ";
+	os << (o.isCall ? "fn" : "op") << "(" << o.func << "): ";
 	Operator op;
-	if (o.func >= 0 and o.func < (int)Operation::operators.size()) {
+	if (o.isCall) {
+		op = Operation::operators[Operation::ARRAY];
+	} else if (o.func >= 0 and o.func < (int)Operation::operators.size()) {
 		op = Operation::operators[o.func];
 	} else {
 		op = Operation::operators[Operation::IDENTITY];
@@ -974,6 +987,30 @@ void Expression::set(int func, vector<Expression> args)
 	}
 
 	push(Operation(func, operands));
+}
+
+void Expression::call(int func, vector<Expression> args) {
+	operations.clear();
+	vector<Operand> operands;
+
+	for (int i = 0; i < (int)args.size(); i++) {
+		vector<int> offset;
+		for (auto j = args[i].operations.begin(); j != args[i].operations.end(); j++) {
+			for (auto k = j->operands.begin(); k != j->operands.end(); k++) {
+				if (k->isExpr()) {
+					k->index = offset[k->index];
+				}
+			}
+
+			offset.push_back(push(*j));
+		}
+		operands.push_back(Operand::exprOf(offset.back()));
+		while (operands.back().isExpr() and operations.back().isReflexive()) {
+			operands.back() = operations.back().operands[0];
+			operations.pop_back();
+		}
+	}
+	push(Operation(func, operands, true));
 }
 
 void Expression::push(int func) {
@@ -1484,17 +1521,21 @@ Cost Expression::cost(vector<Type> vars) const {
 	double complexity = 0.0;
 	vector<Type> expr;
 	for (int i = 0; i < (int)operations.size(); i++) {
-		vector<Type> args;
-		for (auto j = operations[i].operands.begin(); j != operations[i].operands.end(); j++) {
-			if (j->isConst()) {
-				args.push_back(j->cnst.typeOf());
-			} else if (j->isVar()) {
-				args.push_back(vars[j->index]);
-			} else if (j->isExpr()) {
-				args.push_back(expr[j->index]);
+		pair<Type, double> result(Type(0.0, 0.0, 0.0), 0.0);
+		if (not operations[i].isCall) {
+			vector<Type> args;
+			for (auto j = operations[i].operands.begin(); j != operations[i].operands.end(); j++) {
+				if (j->isConst()) {
+					args.push_back(j->cnst.typeOf());
+				} else if (j->isVar()) {
+					args.push_back(vars[j->index]);
+				} else if (j->isExpr()) {
+					args.push_back(expr[j->index]);
+				}
 			}
+			result = operations[i].funcCost(operations[i].func, args);
 		}
-		auto result = operations[i].funcCost(operations[i].func, args);
+
 		expr.push_back(result.first);
 		complexity += result.second;
 	}
@@ -2610,6 +2651,12 @@ Expression add(vector<Expression> e0) {
 Expression mult(vector<Expression> e0) {
 	Expression result;
 	result.set(Operation::MULTIPLY, e0);
+	return result;
+}
+
+Expression call(int func, vector<Expression> args) {
+	Expression result;
+	result.call(func, args);
 	return result;
 }
 

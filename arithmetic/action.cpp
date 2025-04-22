@@ -3,48 +3,21 @@
 namespace arithmetic
 {
 
-Action::Action()
-{
-	behavior = -1;
+Action::Action() {
 	variable = -1;
-	channel = -1;
 }
 
-Action::Action(Expression expr)
-{
+Action::Action(Expression expr) {
 	this->variable = -1;
-	this->channel = -1;
-	this->expr = expr;
-	this->behavior = ASSIGN;
-}
-
-Action::Action(int variable, Expression expr)
-{
-	this->channel = -1;
-	this->variable = variable;
-	this->behavior = ASSIGN;
 	this->expr = expr;
 }
 
-Action::Action(int channel, int variable, Expression expr)
-{
-	this->channel = channel;
+Action::Action(int variable, Expression expr) {
 	this->variable = variable;
 	this->expr = expr;
-	this->behavior = RECEIVE;
 }
 
-Action::Action(int channel, Expression expr, int variable)
-{
-	this->channel = channel;
-	this->variable = variable;
-	this->expr = expr;
-	this->behavior = SEND;
-}
-
-Action::~Action()
-{
-
+Action::~Action() {
 }
 
 bool Action::isInfeasible() const {
@@ -52,16 +25,12 @@ bool Action::isInfeasible() const {
 }
 
 bool Action::isVacuous() const {
-	return behavior != Action::SEND
-		and behavior != Action::RECEIVE
-		and variable < 0
+	return variable < 0
 		and expr.isConstant();
 }
 
 bool Action::isPassive() const {
-	return behavior != Action::SEND
-		and behavior != Action::RECEIVE
-		and variable < 0;
+	return variable < 0;
 }
 
 void Action::apply(vector<int> uidMap) {
@@ -75,55 +44,29 @@ void Action::apply(vector<int> uidMap) {
 		variable = -1;
 	}
 
-	if (channel >= 0 and channel < (int)uidMap.size()) {
-		channel = uidMap[channel];
-	} else {
-		channel = -1;
-	}
-
 	expr.apply(uidMap);
 }
 
 ostream &operator<<(ostream &os, const Action &a) {
-	if (a.behavior == Action::ASSIGN) {
-		os << "v" << a.variable << "=" << a.expr;
-	} else if (a.behavior == Action::SEND) {
-		os << "c" << a.channel << "!" << a.expr;
-	} else if (a.behavior == Action::RECEIVE) {
-		os << "c" << a.channel << "?v" << a.variable;
-	} else {
-		os << "skip";
+	if (a.variable >= 0) {
+		os << "v" << a.variable << "=";
 	}
+	os << a.expr;
 	return os;
 }
 
-Parallel::Parallel()
-{
-
+Parallel::Parallel() {
 }
 
-Parallel::Parallel(Expression expr)
-{
+Parallel::Parallel(Expression expr) {
 	actions.push_back(Action(expr));
 }
 
-Parallel::Parallel(int variable, Expression expr)
-{
+Parallel::Parallel(int variable, Expression expr) {
 	actions.push_back(Action(variable, expr));
 }
 
-Parallel::Parallel(int channel, int variable, Expression expr)
-{
-	actions.push_back(Action(channel, variable, expr));
-}
-
-Parallel::Parallel(int channel, Expression expr, int variable)
-{
-	actions.push_back(Action(channel, expr, variable));
-}
-
-Parallel::~Parallel()
-{
+Parallel::~Parallel() {
 
 }
 
@@ -176,12 +119,7 @@ bool Parallel::isPassive() const {
 
 /*void Parallel::getMask(vector<int> &cov) const {
 	for (auto act = actions.begin(); act != actions.end(); act++) {
-		if (act->behavior == Action::ASSIGN or act->behavior == Action::RECEIVE) {
-			cov.push_back(act->variable);
-		}
-		if (act->behavior == Action::SEND or act->behavior == Action::RECEIVE) {
-			cov.push_back(act->channel);
-		}
+		cov.push_back(act->variable);
 	}
 	sort(cov.begin(), cov.end());
 	cov.erase(unique(cov.begin(), cov.end()), cov.end());
@@ -190,38 +128,15 @@ bool Parallel::isPassive() const {
 Parallel Parallel::mask(vector<int> cov) const {
 	Parallel p0 = *this;
 	for (int i = (int)p0.actions.size()-1; i >= 0; i--) {
-		bool remove = false;
-		if (p0.actions[i].behavior == Action::ASSIGN or p0.actions[i].behavior == Action::RECEIVE) {
-			remove = find(cov.begin(), cov.end(), p0.actions[i].variable) != cov.end();
-		}
-		if (p0.actions[i].behavior == Action::SEND or p0.actions[i].behavior == Action::RECEIVE) {
-			remove = find(cov.begin(), cov.end(), p0.actions[i].channel) != cov.end();
-		}
-		if (remove) {
+		if (find(cov.begin(), cov.end(), p0.actions[i].variable) != cov.end()) {
 			p0.actions.erase(p0.actions.begin()+i);
 		}
 	}
 	return p0;
 }*/
 
-State Parallel::evaluate(const State &curr)
-{
-	map<int, Value> sent; // data sent along the requests
-	map<int, Value> recv; // data received along the enables
+State Parallel::evaluate(const State &curr) {
 	// Determine the Value for the data being sent in either the request or the acknowledge
-	for (int i = 0; i < (int)actions.size(); i++) {
-		if (actions[i].behavior == Action::SEND) {
-			auto loc = sent.insert(pair<int, Value>(actions[i].channel, actions[i].expr.evaluate(curr)));
-			if (not loc.second) {
-				loc.first->second = Value::X();
-			}
-		} else if (actions[i].behavior == Action::RECEIVE) {
-			auto loc = recv.insert(pair<int, Value>(actions[i].channel, actions[i].expr.evaluate(curr)));
-			if (not loc.second) {
-				loc.first->second = Value::X();
-			}
-		}
-	}
 
 	State result;
 	for (int i = 0; i < (int)actions.size(); i++) {
@@ -229,19 +144,7 @@ State Parallel::evaluate(const State &curr)
 			continue;
 		}
 
-		if (actions[i].behavior == Action::SEND) {
-			map<int, Value>::iterator loc = recv.find(actions[i].channel);
-			if (loc != recv.end()) {
-				result.svIntersect(actions[i].variable, loc->second);
-			}
-		} else if (actions[i].behavior == Action::RECEIVE) {
-			map<int, Value>::iterator loc = sent.find(actions[i].channel);
-			if (loc != sent.end()) {
-				result.svIntersect(actions[i].variable, loc->second);
-			}
-		} else if (actions[i].behavior == Action::ASSIGN) {
-			result.svIntersect(actions[i].variable, actions[i].expr.evaluate(curr));
-		}
+		result.svIntersect(actions[i].variable, actions[i].expr.evaluate(curr));
 	}
 
 	return result;

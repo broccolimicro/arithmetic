@@ -73,7 +73,7 @@ struct Operator {
 
 struct Operation {
 	Operation();
-	Operation(int func, vector<Operand> args);
+	Operation(int func, vector<Operand> args, bool isCall=false);
 	~Operation();
 
 	static vector<Operator> operators;
@@ -109,12 +109,13 @@ struct Operation {
 	static int push(Operator op);
 	static void loadOperators();
 
+	bool isCall;
 	int func;
 	vector<Operand> operands;
 
 	static pair<Type, double> funcCost(int func, vector<Type> args);
 
-	void set(int func, vector<Operand> args);
+	void set(int func, vector<Operand> args, bool isCall=false);
 	bool isCommutative() const;
 	bool isReflexive() const;
 
@@ -163,6 +164,7 @@ struct Expression {
 	void set(int func, Expression arg0, Operand arg1);
 	void set(int func, Operand arg0, Expression arg1);
 	void set(int func, vector<Expression> args);
+	void call(int func, vector<Expression> args);
 	void push(int func);
 	void push(int func, Operand arg0);
 	void push(int func, Expression arg0);
@@ -321,6 +323,8 @@ Expression bitwiseAnd(vector<Expression> e0);
 Expression bitwiseXor(vector<Expression> e0);
 Expression add(vector<Expression> e0);
 Expression mult(vector<Expression> e0);
+
+Expression call(int func, vector<Expression> args);
 
 int passesGuard(const State &encoding, const State &global, const Expression &guard, State *total);
 Expression weakestGuard(const Expression &guard, const Expression &exclude);

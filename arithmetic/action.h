@@ -9,21 +9,10 @@ struct Action {
 	Action();
 	Action(Expression expr);
 	Action(int variable, Expression expr);
-	Action(int channel, int variable, Expression expr);
-	Action(int channel, Expression expr, int variable);
 	~Action();
 
 	int variable;
-	int channel;
 	Expression expr;
-	int behavior;
-
-	enum
-	{
-		ASSIGN  = 0,
-		SEND    = 1,
-		RECEIVE = 2
-	};
 
 	bool isInfeasible() const;
 	bool isVacuous() const;
@@ -36,8 +25,6 @@ struct Parallel {
 	Parallel();
 	Parallel(Expression expr);
 	Parallel(int variable, Expression expr);
-	Parallel(int channel, int variable, Expression expr);
-	Parallel(int channel, Expression expr, int variable);
 	~Parallel();
 
 	vector<Action> actions;

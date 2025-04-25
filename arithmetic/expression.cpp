@@ -831,6 +831,9 @@ ostream &operator<<(ostream &os, Operation o) {
 		}
 		os << o.operands[i];
 	}
+	if (o.func == Operation::CALL and o.operands.size() == 1u) {
+		os << op.infix[0];
+	}
 	os << op.postfix;
 	return os;
 }

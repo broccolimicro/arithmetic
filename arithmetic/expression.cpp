@@ -39,6 +39,7 @@ int Operation::BOOLEAN_AND = -1;
 int Operation::BOOLEAN_XOR = -1;
 int Operation::ARRAY = -1;
 int Operation::INDEX = -1;
+int Operation::CALL = -1;
 
 Operand::Operand(Value v) {
 	Operation::loadOperators();
@@ -83,6 +84,10 @@ bool Operand::isExpr() const {
 
 bool Operand::isVar() const {
 	return type == VAR;
+}
+
+bool Operand::isType() const {
+	return type == TYPE;
 }
 
 Value Operand::get(State values, vector<Value> expressions) const {
@@ -158,10 +163,11 @@ Operand Operand::exprOf(size_t index) {
 	return result;
 }
 
-void Operand::offsetExpr(int off) {
+Operand &Operand::offsetExpr(int off) {
 	if (isExpr()) {
 		index += off;
 	}
+	return *this;
 }
 
 Operand Operand::varOf(size_t index) {
@@ -202,6 +208,13 @@ void Operand::apply(vector<Operand> uidMap) {
 	}
 }
 
+Operand Operand::typeOf(int type) {
+	Operand result;
+	result.type = TYPE;
+	result.index = type;
+	return result;
+}
+
 ostream &operator<<(ostream &os, Operand o) {
 	if (o.isConst()) {
 		os << o.cnst;
@@ -209,6 +222,8 @@ ostream &operator<<(ostream &os, Operand o) {
 		os << "v" << o.index;
 	} else if (o.isExpr()) {
 		os << "e" << o.index;
+	} else if (o.isType()) {
+		os << "f" << o.index;
 	} else {
 		os << "error(" << o.type << ")";
 	}
@@ -282,11 +297,10 @@ bool canMap(vector<Operand> o0, Operand o1, const Expression &e0, const Expressi
 
 Operation::Operation() {
 	func = -1;
-	isCall = false;
 }
 
-Operation::Operation(int func, vector<Operand> args, bool isCall) {
-	set(func, args, isCall);
+Operation::Operation(int func, vector<Operand> args) {
+	set(func, args);
 }
 
 Operation::~Operation() {
@@ -339,6 +353,7 @@ void Operation::loadOperators() {
 		BOOLEAN_XOR   = push(Operator({"^"}, "", "", true));
 		ARRAY         = push(Operator({","}, "[", "]"));
 		INDEX         = push(Operator({"[", "]["}, "", "]"));
+		CALL          = push(Operator({"(", ","}, "", ")"));
 
 		printf("loaded %d operators\n", (int)Operation::operators.size());
 	} 
@@ -519,21 +534,20 @@ pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
 	return {result, cost};
 }
 
-void Operation::set(int func, vector<Operand> args, bool isCall) {
-	this->isCall = isCall;
+void Operation::set(int func, vector<Operand> args) {
 	this->func = func;
 	this->operands = args;
 }
 
 bool Operation::isCommutative() const {
-	if (not isCall and func >= 0 and func < (int)Operation::operators.size()) {
+	if (func >= 0 and func < (int)Operation::operators.size()) {
 		return Operation::operators[func].commutative;
 	}
 	return false;
 }
 
 bool Operation::isReflexive() const {
-	if (not isCall and func >= 0 and func < (int)Operation::operators.size()) {
+	if (func >= 0 and func < (int)Operation::operators.size()) {
 		return Operation::operators[func].reflexive;
 	}
 	return true;
@@ -658,10 +672,6 @@ Value Operation::evaluate(int func, vector<Value> args) {
 }
 
 Value Operation::evaluate(State values, vector<Value> expressions) const {
-	if (isCall) {
-		printf("error: evaluation of function calls not implemented\n");
-		return Value::X();
-	}
 	vector<Value> args;
 	args.reserve(operands.size());
 	for (int i = 0; i < (int)operands.size(); i++) {
@@ -780,14 +790,15 @@ void Operation::apply(vector<Operand> uidMap) {
 	}
 }
 
-void Operation::offsetExpr(int off) {
+Operation &Operation::offsetExpr(int off) {
 	for (int i = 0; i < (int)operands.size(); i++) {
 		operands[i].offsetExpr(off);
 	}
+	return *this;
 }
 
 bool areSame(Operation o0, Operation o1) {
-	if (o0.isCall != o1.isCall or o0.func != o1.func or 
+	if (o0.func != o1.func or 
 		o0.operands.size() != o1.operands.size()) {
 		return false;
 	}
@@ -801,11 +812,9 @@ bool areSame(Operation o0, Operation o1) {
 }
 
 ostream &operator<<(ostream &os, Operation o) {
-	os << (o.isCall ? "fn" : "op") << "(" << o.func << "): ";
+	os << "op(" << o.func << "): ";
 	Operator op;
-	if (o.isCall) {
-		op = Operation::operators[Operation::ARRAY];
-	} else if (o.func >= 0 and o.func < (int)Operation::operators.size()) {
+	if (o.func >= 0 and o.func < (int)Operation::operators.size()) {
 		op = Operation::operators[o.func];
 	} else {
 		op = Operation::operators[Operation::IDENTITY];
@@ -873,7 +882,20 @@ Expression::Expression(int func, vector<Expression> args) {
 Expression::~Expression() {
 }
 
-int Expression::push(Operation arg) {
+Operand Expression::popReflexive(size_t index) {
+	if (index >= operations.size()) {
+		index = operations.size()-1;
+	}
+	Operand op = Operand::exprOf(index);
+	while (op.isExpr() and operations[op.index].isReflexive()) {
+		size_t i = op.index;
+		op = operations[i].operands[0];
+		erase(i);
+	}
+	return op; 
+}
+
+Operand Expression::push(Operation arg) {
 	// add to operations list if doesn't exist
 	int pos = -1;
 	for (int i = 0; i < (int)operations.size() and pos < 0; i++) {
@@ -885,168 +907,83 @@ int Expression::push(Operation arg) {
 		pos = operations.size();
 		operations.push_back(arg);
 	}
-	return pos;
+	return Operand::exprOf(pos);
 }
 
-void Expression::set(Operand arg0) {
+Operand Expression::push(Expression arg) {
+	size_t offset = operations.size();
+	for (auto i = arg.operations.begin(); i != arg.operations.end(); i++) {
+		operations.push_back(i->offsetExpr(offset));
+	}
+	return popReflexive();
+}
+
+Operand Expression::set(Operand arg0) {
 	operations.clear();
 	operations.push_back(Operation(Operation::IDENTITY, {arg0}));
+	return Operand::exprOf(operations.size()-1);
 }
 
-void Expression::set(int func, Operand arg0) {
+Operand Expression::set(int func, Operand arg0) {
 	operations.clear();
 	operations.push_back(Operation(func, {arg0}));
+	return Operand::exprOf(operations.size()-1);
 }
 
-void Expression::set(int func, Expression arg0) {
-	operations = arg0.operations;
-	Operand op0 = Operand::exprOf(operations.size()-1);
-	while (op0.isExpr() and operations.back().isReflexive()) {
-		op0 = operations.back().operands[0];
-		operations.pop_back();
-	}
-	push(Operation(func, {op0}));
+Operand Expression::set(int func, Expression arg0) {
+	operations.clear();
+	Operand op0 = push(arg0);
+	return push(Operation(func, {op0}));
 }
 
-void Expression::set(int func, Operand arg0, Operand arg1) {
+Operand Expression::set(int func, Operand arg0, Operand arg1) {
 	operations.clear();
 	operations.push_back(Operation(func, {arg0, arg1}));
+	return Operand::exprOf(operations.size()-1);
 }
 
-void Expression::set(int func, Expression arg0, Expression arg1) {
+Operand Expression::set(int func, Expression arg0, Expression arg1) {
+	operations.clear();
+	Operand op0 = push(arg0);
+	Operand op1 = push(arg1);
+	return push(Operation(func, {op0, op1}));
+}
+
+Operand Expression::set(int func, Expression arg0, Operand arg1) {
 	operations = arg0.operations;
-	Operand op0 = Operand::exprOf(operations.size()-1);
-	while (op0.isExpr() and operations.back().isReflexive()) {
-		op0 = operations.back().operands[0];
-		operations.pop_back();
-	}
-
-	vector<int> offset;
-	for (auto j = arg1.operations.begin(); j != arg1.operations.end(); j++) {
-		for (auto k = j->operands.begin(); k != j->operands.end(); k++) {
-			if (k->isExpr()) {
-				k->index = offset[k->index];
-			}
-		}
-
-		offset.push_back(push(*j));
-	}
-
-	Operand op1 = Operand::exprOf(offset.back());
-	while (op1.isExpr() and operations.back().isReflexive()) {
-		op1 = operations.back().operands[0];
-		operations.pop_back();
-	}
-
-	push(Operation(func, {op0, op1}));
+	Operand op0 = popReflexive();
+	return push(Operation(func, {op0, arg1}));
 }
 
-void Expression::set(int func, Expression arg0, Operand arg1)
-{
-	operations = arg0.operations;
-	Operand op0 = Operand::exprOf(operations.size()-1);
-	while (op0.isExpr() and operations.back().isReflexive()) {
-		op0 = operations.back().operands[0];
-		operations.pop_back();
-	}
-	push(Operation(func, {op0, arg1}));
-}
-
-void Expression::set(int func, Operand arg0, Expression arg1)
-{
+Operand Expression::set(int func, Operand arg0, Expression arg1) {
 	operations = arg1.operations;
-	Operand op1 = Operand::exprOf(operations.size()-1);
-	while (op1.isExpr() and operations.back().isReflexive()) {
-		op1 = operations.back().operands[0];
-		operations.pop_back();
-	}
-	push(Operation(func, {arg0, op1}));
+	Operand op1 = popReflexive();
+	return push(Operation(func, {arg0, op1}));
 }
 
-void Expression::set(int func, vector<Expression> args)
-{
+Operand Expression::set(int func, vector<Expression> args) {
 	operations.clear();
 	vector<Operand> operands;
-
-	for (int i = 0; i < (int)args.size(); i++) {
-		vector<int> offset;
-		for (auto j = args[i].operations.begin(); j != args[i].operations.end(); j++) {
-			for (auto k = j->operands.begin(); k != j->operands.end(); k++) {
-				if (k->isExpr()) {
-					k->index = offset[k->index];
-				}
-			}
-
-			offset.push_back(push(*j));
-		}
-		operands.push_back(Operand::exprOf(offset.back()));
-		while (operands.back().isExpr() and operations.back().isReflexive()) {
-			operands.back() = operations.back().operands[0];
-			operations.pop_back();
-		}
+	for (auto i = args.begin(); i != args.end(); i++) {
+		operands.push_back(push(*i));
 	}
-
-	push(Operation(func, operands));
+	return push(Operation(func, operands));
 }
 
-void Expression::call(int func, vector<Expression> args) {
-	operations.clear();
-	vector<Operand> operands;
-
-	for (int i = 0; i < (int)args.size(); i++) {
-		vector<int> offset;
-		for (auto j = args[i].operations.begin(); j != args[i].operations.end(); j++) {
-			for (auto k = j->operands.begin(); k != j->operands.end(); k++) {
-				if (k->isExpr()) {
-					k->index = offset[k->index];
-				}
-			}
-
-			offset.push_back(push(*j));
-		}
-		operands.push_back(Operand::exprOf(offset.back()));
-		while (operands.back().isExpr() and operations.back().isReflexive()) {
-			operands.back() = operations.back().operands[0];
-			operations.pop_back();
-		}
-	}
-	push(Operation(func, operands, true));
-}
-
-void Expression::push(int func) {
+Operand Expression::push(int func) {
 	Operand op0 = Operand::exprOf(operations.size()-1);
-	push(Operation(func, {op0}));
+	return push(Operation(func, {op0}));
 }
 
-void Expression::push(int func, Operand arg0) {
+Operand Expression::push(int func, Operand arg0) {
 	Operand op0 = Operand::exprOf(operations.size()-1);
-	push(Operation(func, {op0, arg0}));
+	return push(Operation(func, {op0, arg0}));
 }
 
-void Expression::push(int func, Expression arg0) {
-	Operand op0 = Operand::exprOf(operations.size()-1);
-	while (op0.isExpr() and operations.back().isReflexive()) {
-		op0 = operations.back().operands[0];
-		operations.pop_back();
-	}
-
-	vector<int> offset;
-	for (auto j = arg0.operations.begin(); j != arg0.operations.end(); j++) {
-		for (auto k = j->operands.begin(); k != j->operands.end(); k++) {
-			if (k->isExpr()) {
-				k->index = offset[k->index];
-			}
-		}
-
-		offset.push_back(push(*j));
-	}
-
-	Operand op1 = Operand::exprOf(offset.back());
-	while (op1.isExpr() and operations.back().isReflexive()) {
-		op1 = operations.back().operands[0];
-		operations.pop_back();
-	}
-	push(Operation(func, {op0, op1}));
+Operand Expression::push(int func, Expression arg0) {
+	Operand op0 = popReflexive();
+	Operand op1 = push(arg0);
+	return push(Operation(func, {op0, op1}));
 }
 
 Value Expression::evaluate(State values) const {
@@ -1522,20 +1459,17 @@ Cost Expression::cost(vector<Type> vars) const {
 	vector<Type> expr;
 	for (int i = 0; i < (int)operations.size(); i++) {
 		pair<Type, double> result(Type(0.0, 0.0, 0.0), 0.0);
-		if (not operations[i].isCall) {
-			vector<Type> args;
-			for (auto j = operations[i].operands.begin(); j != operations[i].operands.end(); j++) {
-				if (j->isConst()) {
-					args.push_back(j->cnst.typeOf());
-				} else if (j->isVar()) {
-					args.push_back(vars[j->index]);
-				} else if (j->isExpr()) {
-					args.push_back(expr[j->index]);
-				}
+		vector<Type> args;
+		for (auto j = operations[i].operands.begin(); j != operations[i].operands.end(); j++) {
+			if (j->isConst()) {
+				args.push_back(j->cnst.typeOf());
+			} else if (j->isVar()) {
+				args.push_back(vars[j->index]);
+			} else if (j->isExpr()) {
+				args.push_back(expr[j->index]);
 			}
-			result = operations[i].funcCost(operations[i].func, args);
 		}
-
+		result = operations[i].funcCost(operations[i].func, args);
 		expr.push_back(result.first);
 		complexity += result.second;
 	}
@@ -2656,7 +2590,8 @@ Expression mult(vector<Expression> e0) {
 
 Expression call(int func, vector<Expression> args) {
 	Expression result;
-	result.call(func, args);
+	args.insert(args.begin(), Operand::typeOf(func));
+	result.set(Operation::CALL, args);
 	return result;
 }
 

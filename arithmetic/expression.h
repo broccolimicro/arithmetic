@@ -20,6 +20,7 @@ struct Operand {
 		CONST  = 0,
 		VAR    = 1,
 		EXPR   = 2,
+		TYPE   = 3,
 	};
 
 	int type;
@@ -33,6 +34,7 @@ struct Operand {
 	bool isConst() const;
 	bool isExpr() const;
 	bool isVar() const;
+	bool isType() const;
 
 	Value get(State values=State(), vector<Value> expressions=vector<Value>()) const;
 	void set(State &values, vector<Value> &expressions, Value v) const;
@@ -47,11 +49,13 @@ struct Operand {
 	static Operand structOf(vector<Value> arr);
 
 	static Operand exprOf(size_t index);
-	void offsetExpr(int off);
+	Operand &offsetExpr(int off);
 
 	static Operand varOf(size_t index);
 	void apply(vector<int> uidMap);
 	void apply(vector<Operand> uidMap);
+	
+	static Operand typeOf(int type);
 };
 
 ostream &operator<<(ostream &os, Operand o);
@@ -73,7 +77,7 @@ struct Operator {
 
 struct Operation {
 	Operation();
-	Operation(int func, vector<Operand> args, bool isCall=false);
+	Operation(int func, vector<Operand> args);
 	~Operation();
 
 	static vector<Operator> operators;
@@ -105,17 +109,17 @@ struct Operation {
 	static int BOOLEAN_XOR;
 	static int ARRAY;
 	static int INDEX;
+	static int CALL;
 
 	static int push(Operator op);
 	static void loadOperators();
 
-	bool isCall;
 	int func;
 	vector<Operand> operands;
 
 	static pair<Type, double> funcCost(int func, vector<Type> args);
 
-	void set(int func, vector<Operand> args, bool isCall=false);
+	void set(int func, vector<Operand> args);
 	bool isCommutative() const;
 	bool isReflexive() const;
 
@@ -124,7 +128,7 @@ struct Operation {
 	void propagate(State &result, const State &global, vector<Value> &expressions, const vector<Value> gexpressions, Value v) const;
 	void apply(vector<int> uidMap);
 	void apply(vector<Operand> uidMap);
-	void offsetExpr(int off);
+	Operation &offsetExpr(int off);
 };
 
 bool areSame(Operation o0, Operation o1);
@@ -154,20 +158,22 @@ struct Expression {
 	// final Value for the Expression.
 	vector<Operation> operations;
 
-	int push(Operation arg);
+	Operand popReflexive(size_t index=std::numeric_limits<size_t>::max());
+	Operand push(Operation arg);
+	Operand push(Expression arg);
 
-	void set(Operand arg0);
-	void set(int func, Operand arg0);
-	void set(int func, Expression arg0);
-	void set(int func, Operand arg0, Operand arg1);
-	void set(int func, Expression arg0, Expression arg1);
-	void set(int func, Expression arg0, Operand arg1);
-	void set(int func, Operand arg0, Expression arg1);
-	void set(int func, vector<Expression> args);
-	void call(int func, vector<Expression> args);
-	void push(int func);
-	void push(int func, Operand arg0);
-	void push(int func, Expression arg0);
+	Operand set(Operand arg0);
+	Operand set(int func, Operand arg0);
+	Operand set(int func, Expression arg0);
+	Operand set(int func, Operand arg0, Operand arg1);
+	Operand set(int func, Expression arg0, Expression arg1);
+	Operand set(int func, Expression arg0, Operand arg1);
+	Operand set(int func, Operand arg0, Expression arg1);
+	Operand set(int func, vector<Expression> args);
+	Operand call(int func, vector<Expression> args);
+	Operand push(int func);
+	Operand push(int func, Operand arg0);
+	Operand push(int func, Expression arg0);
 	Value evaluate(State values) const;
 	bool isNull() const;
 	bool isConstant() const;

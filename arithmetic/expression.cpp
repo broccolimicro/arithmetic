@@ -323,7 +323,7 @@ void Operation::loadOperators() {
 	// appropriate protocols while expanding the CHP.
 
 	if (Operation::operators.empty()) {
-		printf("loading operators\n");
+		//printf("loading operators\n");
 
 		BITWISE_NOT   = push(Operator({}, "!"));
 		IDENTITY      = push(Operator({}, "+", "", false, true));
@@ -355,7 +355,7 @@ void Operation::loadOperators() {
 		INDEX         = push(Operator({"[", "]["}, "", "]"));
 		CALL          = push(Operator({"(", ","}, "", ")"));
 
-		printf("loaded %d operators\n", (int)Operation::operators.size());
+		//printf("loaded %d operators\n", (int)Operation::operators.size());
 	} 
 }
 

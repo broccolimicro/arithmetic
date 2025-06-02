@@ -265,6 +265,8 @@ TEST(Expression, Simplify) {
 	Cost cost = dut.cost(vars);
 	cout << "Before: cost=" << cost.complexity << " del=" << cost.critical << endl << dut << endl;
 	dut.minimize();
+	EXPECT_TRUE(areSame(dut, Expression(b)));
+
 	Cost cost2 = dut.cost(vars);
 	cout << "After: cost=" << cost2.complexity << " del=" << cost2.critical << endl << dut << endl;
 	EXPECT_LE(cost2.complexity, cost.complexity);
@@ -328,3 +330,12 @@ TEST(Expression, Function) {
 	cout << dut << endl;
 }
 
+TEST(Expression, Identity) {
+	Operand a = Operand::varOf(0);
+
+	Expression dut = a;
+	dut.push(Operation::BOOLEAN_NOT);
+	cout << dut << endl;
+	dut.minimize();
+	cout << dut << endl;
+}

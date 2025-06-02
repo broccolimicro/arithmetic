@@ -63,12 +63,10 @@ Expression rewriteBasic() {
 		(~(a*b)) > (~a|~b),
 		(a * mult(b)) > (a * b),
 	
-		(a < b) > (a-b < 0),
 		(a > b) > (b < a),
-		(a <= b) > (a-b-1 < 0),
 		(a >= b) > (b <= a),
-		(a > b) > (a-b > 0),
-		(a != b) > (a-b != 0),
+		(a < b) > isNegative(a-b),
+		(a <= b) > ~isNegative(b-a),
 
 		(a ^ a) > (0),
 		(a && a) > (a),

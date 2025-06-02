@@ -47,6 +47,10 @@ void Action::apply(vector<int> uidMap) {
 	expr.apply(uidMap);
 }
 
+bool areSame(Action a0, Action a1) {
+	return a0.variable == a1.variable and areSame(a0.expr, a1.expr);
+}
+
 ostream &operator<<(ostream &os, const Action &a) {
 	if (a.variable >= 0) {
 		os << "v" << a.variable << "=";
@@ -170,6 +174,19 @@ void Parallel::apply(vector<int> uidMap) {
 	}
 }
 
+bool areSame(Parallel p0, Parallel p1) {
+	if (p0.actions.size() != p1.actions.size()) {
+		return false;
+	}
+
+	for (int i = 0; i < (int)p0.actions.size(); i++) {
+		if (not areSame(p0.actions[i], p1.actions[i])) {
+			return false;
+		}
+	}
+	return true;
+}
+
 ostream &operator<<(ostream &os, const Parallel &p) {
 	for (int i = 0; i < (int)p.actions.size(); i++) {
 		if (i != 0) {
@@ -273,6 +290,19 @@ void Choice::apply(vector<int> uidMap) {
 	for (int i = 0; i < (int)terms.size(); i++) {
 		terms[i].apply(uidMap);
 	}
+}
+
+bool areSame(Choice c0, Choice c1) {
+	if (c0.terms.size() != c1.terms.size()) {
+		return false;
+	}
+
+	for (int i = 0; i < (int)c0.terms.size(); i++) {
+		if (not areSame(c0.terms[i], c1.terms[i])) {
+			return false;
+		}
+	}
+	return true;
 }
 
 ostream &operator<<(ostream &os, const Choice &c) {

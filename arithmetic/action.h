@@ -21,6 +21,10 @@ struct Action {
 	void apply(vector<int> uidMap);
 };
 
+bool areSame(Action a0, Action a1);
+
+ostream &operator<<(ostream &os, const Action &a);
+
 struct Parallel {
 	Parallel();
 	Parallel(Expression expr);
@@ -41,6 +45,8 @@ struct Parallel {
 
 	void apply(vector<int> uidMap);
 };
+
+bool areSame(Parallel p0, Parallel p1);
 
 ostream &operator<<(ostream &os, const Parallel &p);
 
@@ -63,6 +69,8 @@ struct Choice {
 
 	void apply(vector<int> uidMap);
 };
+
+bool areSame(Choice c0, Choice c1);
 
 ostream &operator<<(ostream &os, const Choice &c);
 

@@ -14,6 +14,7 @@ vector<Operator> Operation::operators;
 int Operation::BITWISE_NOT = -1;
 int Operation::IDENTITY = -1;
 int Operation::NEGATION = -1;
+int Operation::NEGATIVE = -1;
 int Operation::VALIDITY = -1;
 int Operation::BOOLEAN_NOT = -1;
 int Operation::INVERSE = -1;
@@ -74,6 +75,10 @@ Operand::Operand(double rval) {
 Operand::~Operand() {
 }
 
+bool Operand::isUndef() const {
+	return type < 0;
+}
+
 bool Operand::isConst() const {
 	return type == CONST;
 }
@@ -126,6 +131,13 @@ void Operand::set(State &values, vector<Value> &expressions, Value v) const {
 	} else if (isConst()) {
 		printf("error: const not writeable\n");
 	}
+}
+
+Operand Operand::undef() {
+	Operand result;
+	result.type = UNDEF;
+	result.index = 0;
+	return result;
 }
 
 Operand Operand::X() {
@@ -225,7 +237,7 @@ ostream &operator<<(ostream &os, Operand o) {
 	} else if (o.isType()) {
 		os << "f" << o.index;
 	} else {
-		os << "error(" << o.type << ")";
+		os << "undef";
 	}
 	return os;
 }
@@ -328,14 +340,15 @@ void Operation::loadOperators() {
 		BITWISE_NOT   = push(Operator({}, "!"));
 		IDENTITY      = push(Operator({}, "+", "", false, true));
 		NEGATION      = push(Operator({}, "-"));
-		VALIDITY      = push(Operator({}, "(bool)"));
+		NEGATIVE      = push(Operator({}, "ltz(", ")"));
+		VALIDITY      = push(Operator({}, "val(", ")"));
 		BOOLEAN_NOT   = push(Operator({}, "~"));
-		INVERSE       = push(Operator({}, "$"));
+		INVERSE       = push(Operator({}, "inv(", ")"));
 		BITWISE_OR    = push(Operator({"||"}, "", "", true));
 		BITWISE_AND   = push(Operator({"&&"}, "", "", true));
 		BITWISE_XOR   = push(Operator({"^^"}, "", "", true));
 		EQUAL         = push(Operator({"=="}));
-		NOT_EQUAL     = push(Operator({"!="}));
+		NOT_EQUAL     = push(Operator({"~="}));
 		LESS          = push(Operator({"<"}));
 		GREATER       = push(Operator({">"}));
 		LESS_EQUAL    = push(Operator({"<="}));
@@ -382,6 +395,10 @@ pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
 		result = args[0];
 		result.delay += args[0].width;
 		cost = args[0].width;
+		return {result, cost};
+	} else if (func == Operation::NEGATIVE) {
+		result = Type(0.0, 0.0, 0.0);
+		cost = 0.0;
 		return {result, cost};
 	} else if (func == Operation::INVERSE) { // 1/x
 		// TODO(edward.bingham) I'm really not sure about this
@@ -560,6 +577,8 @@ Value Operation::evaluate(int func, vector<Value> args) {
 		return args[0];
 	} else if (func == Operation::NEGATION) {
 		return -args[0];
+	} else if (func == Operation::NEGATIVE) {
+		return args[0] < Value(0);
 	} else if (func == Operation::VALIDITY) {
 		return valid(args[0]);
 	} else if (func == Operation::BOOLEAN_NOT) {
@@ -1253,7 +1272,7 @@ Expression &Expression::propagateConstants() {
 }
 
 Expression &Expression::canonicalize(bool rules) {
-	vector<Operand> replace(operations.size(), Operand::varOf(0));
+	vector<Operand> replace(operations.size(), Operand::undef());
 	
 	// propagate constants up through the precedence levels
 	for (int i = 0; i < (int)operations.size(); i++) {
@@ -1263,19 +1282,19 @@ Expression &Expression::canonicalize(bool rules) {
 			sort(operations[i].operands.begin(), operations[i].operands.end(),
 				[](const Operand &a, const Operand &b) {
 					return a.type < b.type or (a.type == b.type
-						and a.type == Operand::VAR and a.index < b.index);
+						and a.isVar() and a.index < b.index);
 				});
 		}
 
 		// merge adjacent constants from left to right as a result of operator precedence
 		auto j = operations[i].operands.begin();
-		if (j->isExpr() and not replace[j->index].isVar()) {
+		if (j->isExpr() and not replace[j->index].isUndef()) {
 			*j = replace[j->index];
 		}
 
 		while (j != operations[i].operands.end() and next(j) != operations[i].operands.end()) {
 			auto k = next(j);
-			if (k->isExpr() and not replace[k->index].isVar()) {
+			if (k->isExpr() and not replace[k->index].isUndef()) {
 				*k = replace[k->index];
 			}
 
@@ -1296,7 +1315,7 @@ Expression &Expression::canonicalize(bool rules) {
 		} else {
 			// look for identical operations
 			for (int k = i-1; k >= 0; k--) {
-				if (replace[k].isVar() and areSame(operations[i], operations[k])) {
+				if (replace[k].isUndef() and areSame(operations[i], operations[k])) {
 					replace[i] = Operand::exprOf(k);
 					break;
 				}
@@ -1305,7 +1324,7 @@ Expression &Expression::canonicalize(bool rules) {
 	}
 
 	// eliminate dangling expressions
-	if (replace.back().isConst()) {
+	if (replace.back().isConst() or replace.back().isVar()) {
 		operations.clear();
 		set(Operation::IDENTITY, replace.back());
 		return *this;
@@ -1317,7 +1336,7 @@ Expression &Expression::canonicalize(bool rules) {
 
 	std::set<int> references;
 	for (int i = (int)operations.size()-1; i >= 0; i--) {
-		if (not replace[i].isVar() and i != (int)operations.size()-1) {
+		if (not replace[i].isUndef() and i != (int)operations.size()-1) {
 			continue;
 		}
 
@@ -1333,7 +1352,7 @@ Expression &Expression::canonicalize(bool rules) {
 	}
 
 	for (int i = (int)replace.size()-1; i >= 0; i--) {
-		if (not replace[i].isVar()) {
+		if (not replace[i].isUndef()) {
 			erase(i);
 		}
 	}
@@ -1466,10 +1485,13 @@ Cost Expression::cost(vector<Type> vars) const {
 		for (auto j = operations[i].operands.begin(); j != operations[i].operands.end(); j++) {
 			if (j->isConst()) {
 				args.push_back(j->cnst.typeOf());
-			} else if (j->isVar()) {
+			} else if (j->isVar() and j->index < vars.size()) {
 				args.push_back(vars[j->index]);
-			} else if (j->isExpr()) {
+			} else if (j->isExpr() and j->index < expr.size()) {
 				args.push_back(expr[j->index]);
+			} else {
+				printf("error: variable not defined for expression\n");
+				args.push_back(Type());
 			}
 		}
 		result = operations[i].funcCost(operations[i].func, args);
@@ -1825,6 +1847,19 @@ Expression &Expression::minimize(Expression directed) {
 	return *this;
 }
 
+bool areSame(Expression e0, Expression e1) {
+	if (e0.operations.size() != e1.operations.size()) {
+		return false;
+	}
+
+	for (int i = 0; i < (int)e0.operations.size(); i++) {
+		if (not areSame(e0.operations[i], e1.operations[i])) {
+			return false;
+		}
+	}
+	return true;
+}
+
 Expression espresso(Expression expr, vector<Type> vars, Expression directed, Expression undirected) {
 	static const Expression rules = rewriteUndirected();
 	if (undirected.operations.empty()) {
@@ -1842,11 +1877,11 @@ Expression espresso(Expression expr, vector<Type> vars, Expression directed, Exp
 	// TODO(edward.bingham) Tie this all together into an easy-to-use
 	// minimization system.
 
-	Expression result;
-	Cost best(1e20, 1e20);
+	//Expression result;
+	//Cost best(1e20, 1e20);
 	expr.minimize(directed);
 
-	vector<pair<Cost, Expression> > stack;
+	/*vector<pair<Cost, Expression> > stack;
 	stack.push_back({expr.cost(vars), expr});
 	while (not stack.empty()) {
 		pair<Cost, Expression> curr = stack.back();
@@ -1859,9 +1894,9 @@ Expression espresso(Expression expr, vector<Type> vars, Expression directed, Exp
 			Cost cost = next.cost(vars);
 			stack.push_back({cost, next});
 		}
-	}
+	}*/
 
-	return result;
+	return expr;
 }
 
 Expression &Expression::operator=(Operand e)
@@ -1892,17 +1927,15 @@ ostream &operator<<(ostream &os, Expression::Match m) {
 	return os;
 }
 
-Expression operator!(Expression e)
+Expression operator~(Expression e)
 {
+	/*if (e.isValid()) {
+		return Operand(false);
+	} else if (e.isNeutral()) {
+		return Operand(true);
+	}*/
 	Expression result;
-	result.set(Operation::BITWISE_NOT, e);
-	return result;
-}
-
-Expression inv(Expression e)
-{
-	Expression result;
-	result.set(Operation::INVERSE, e);
+	result.set(Operation::BOOLEAN_NOT, e);
 	return result;
 }
 
@@ -1913,8 +1946,13 @@ Expression operator-(Expression e)
 	return result;
 }
 
-Expression isValid(Expression e)
-{
+Expression ident(Expression e) {
+	Expression result;
+	result.set(Operation::IDENTITY, e);
+	return result;
+}
+
+Expression isValid(Expression e) {
 	/*if (e.isValid()) {
 		return Operand(true);
 	} else if (e.isNeutral()) {
@@ -1927,15 +1965,21 @@ Expression isValid(Expression e)
 	return result;
 }
 
-Expression operator~(Expression e)
-{
-	/*if (e.isValid()) {
-		return Operand(false);
-	} else if (e.isNeutral()) {
-		return Operand(true);
-	}*/
+Expression isNegative(Expression e) {
 	Expression result;
-	result.set(Operation::BOOLEAN_NOT, e);
+	result.set(Operation::NEGATIVE, e);
+	return result;
+}
+
+Expression operator!(Expression e) {
+	Expression result;
+	result.set(Operation::BITWISE_NOT, e);
+	return result;
+}
+
+Expression inv(Expression e) {
+	Expression result;
+	result.set(Operation::INVERSE, e);
 	return result;
 }
 

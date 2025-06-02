@@ -17,6 +17,7 @@ struct Operand {
 
 	// Used by "type"
 	enum {
+		UNDEF  = -1,
 		CONST  = 0,
 		VAR    = 1,
 		EXPR   = 2,
@@ -31,6 +32,7 @@ struct Operand {
 	// used for VAR and EXPR
 	size_t index;
 
+	bool isUndef() const;
 	bool isConst() const;
 	bool isExpr() const;
 	bool isVar() const;
@@ -38,6 +40,9 @@ struct Operand {
 
 	Value get(State values=State(), vector<Value> expressions=vector<Value>()) const;
 	void set(State &values, vector<Value> &expressions, Value v) const;
+
+	// Undefined
+	static Operand undef();
 
 	// Constants
 	static Operand X();
@@ -84,6 +89,7 @@ struct Operation {
 	static int BITWISE_NOT;
 	static int IDENTITY;
 	static int NEGATION;
+	static int NEGATIVE;
 	static int VALIDITY;
 	static int BOOLEAN_NOT;
 	static int INVERSE;
@@ -217,6 +223,8 @@ struct Expression {
 	string to_string();
 };
 
+bool areSame(Expression e0, Expression e1);
+
 Expression espresso(Expression expr, vector<Type> vars=vector<Type>(), Expression directed=Expression(), Expression undirected=Expression());
 
 bool canMap(vector<Operand> search, Operand rule, const Expression &e0, const Expression &e1, bool init, map<size_t, vector<Operand> > *vars=nullptr);
@@ -226,7 +234,9 @@ ostream &operator<<(ostream &os, Expression::Match m);
 
 Expression operator~(Expression e);
 Expression operator-(Expression e);
+Expression ident(Expression e);
 Expression isValid(Expression e);
+Expression isNegative(Expression e);
 Expression operator!(Expression e);
 Expression inv(Expression e);
 Expression operator|(Expression e0, Expression e1);

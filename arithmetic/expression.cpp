@@ -40,7 +40,6 @@ int Operation::BOOLEAN_AND = -1;
 int Operation::BOOLEAN_XOR = -1;
 int Operation::ARRAY = -1;
 int Operation::INDEX = -1;
-int Operation::CALL = -1;
 
 Operand::Operand(Value v) {
 	Operation::loadOperators();
@@ -253,8 +252,9 @@ Operator::Operator() {
 	reflexive = true;
 }
 
-Operator::Operator(vector<string> infix, string prefix, string postfix, bool commutative, bool reflexive) {
+Operator::Operator(string prefix, string trigger, string infix, string postfix, bool commutative, bool reflexive) {
 	this->prefix = prefix;
+	this->trigger = trigger;
 	this->infix = infix;
 	this->postfix = postfix;
 	this->commutative = commutative;
@@ -337,36 +337,35 @@ void Operation::loadOperators() {
 	if (Operation::operators.empty()) {
 		//printf("loading operators\n");
 
-		BITWISE_NOT   = push(Operator({}, "!"));
-		IDENTITY      = push(Operator({}, "+", "", false, true));
-		NEGATION      = push(Operator({}, "-"));
-		NEGATIVE      = push(Operator({}, "ltz(", ")"));
-		VALIDITY      = push(Operator({}, "val(", ")"));
-		BOOLEAN_NOT   = push(Operator({}, "~"));
-		INVERSE       = push(Operator({}, "inv(", ")"));
-		BITWISE_OR    = push(Operator({"||"}, "", "", true));
-		BITWISE_AND   = push(Operator({"&&"}, "", "", true));
-		BITWISE_XOR   = push(Operator({"^^"}, "", "", true));
-		EQUAL         = push(Operator({"=="}));
-		NOT_EQUAL     = push(Operator({"~="}));
-		LESS          = push(Operator({"<"}));
-		GREATER       = push(Operator({">"}));
-		LESS_EQUAL    = push(Operator({"<="}));
-		GREATER_EQUAL = push(Operator({">="}));
-		SHIFT_LEFT    = push(Operator({"<<"}));
-		SHIFT_RIGHT   = push(Operator({">>"}));
-		ADD           = push(Operator({"+"}, "", "", true));
-		SUBTRACT      = push(Operator({"-"}));
-		MULTIPLY      = push(Operator({"*"}, "", "", true));
-		DIVIDE        = push(Operator({"/"}));
-		MOD           = push(Operator({"%"}));
-		TERNARY       = push(Operator({"?", ":"}));
-		BOOLEAN_OR    = push(Operator({"|"}, "", "", true));
-		BOOLEAN_AND   = push(Operator({"&"}, "", "", true));
-		BOOLEAN_XOR   = push(Operator({"^"}, "", "", true));
-		ARRAY         = push(Operator({","}, "[", "]"));
-		INDEX         = push(Operator({"[", "]["}, "", "]"));
-		CALL          = push(Operator({"(", ","}, "", ")"));
+		BITWISE_NOT   = push(Operator("!", "", "", ""));
+		IDENTITY      = push(Operator("+", "", "", "", false, true));
+		NEGATION      = push(Operator("-", "", "", ""));
+		NEGATIVE      = push(Operator("ltz(", "", "", ")"));
+		VALIDITY      = push(Operator("val(", "", "", ")"));
+		BOOLEAN_NOT   = push(Operator("~", "", "", ""));
+		INVERSE       = push(Operator("inv(", "", "", ")"));
+		BITWISE_OR    = push(Operator("", "", "||", "", true));
+		BITWISE_AND   = push(Operator("", "", "&&", "", true));
+		BITWISE_XOR   = push(Operator("", "", "^^", "", true));
+		EQUAL         = push(Operator("", "", "==", ""));
+		NOT_EQUAL     = push(Operator("", "", "~=", ""));
+		LESS          = push(Operator("", "", "<", ""));
+		GREATER       = push(Operator("", "", ">", ""));
+		LESS_EQUAL    = push(Operator("", "", "<=", ""));
+		GREATER_EQUAL = push(Operator("", "", ">=", ""));
+		SHIFT_LEFT    = push(Operator("", "", "<<", ""));
+		SHIFT_RIGHT   = push(Operator("", "", ">>", ""));
+		ADD           = push(Operator("", "", "+", "", true));
+		SUBTRACT      = push(Operator("", "", "-", ""));
+		MULTIPLY      = push(Operator("", "", "*", "", true));
+		DIVIDE        = push(Operator("", "", "/", ""));
+		MOD           = push(Operator("", "", "%", ""));
+		TERNARY       = push(Operator("", "?", ":", ""));
+		BOOLEAN_OR    = push(Operator("", "", "|", "", true));
+		BOOLEAN_AND   = push(Operator("", "", "&", "", true));
+		BOOLEAN_XOR   = push(Operator("", "", "^", "", true));
+		ARRAY         = push(Operator("[", "", ",", "]"));
+		INDEX         = push(Operator("", "[", ":", "]"));
 
 		//printf("loaded %d operators\n", (int)Operation::operators.size());
 	} 
@@ -841,17 +840,21 @@ ostream &operator<<(ostream &os, Operation o) {
 	}
 
 	os << op.prefix;
+	if (not o.operands.empty()) {
+		os << o.operands[0];
+	}
 
-	for (int i = 0; i < (int)o.operands.size(); i++) {
-		if (i != 0 and i-1 < (int)op.infix.size()) {
-			os << op.infix[i-1];
-		} else if (i != 0 and not op.infix.empty()) {
-			os << op.infix.back();
+	if (not op.trigger.empty()) {
+		os << op.trigger;
+	} else if (o.operands.size() > 1u) {
+		os << op.infix;
+	}
+
+	for (int i = 1; i < (int)o.operands.size(); i++) {
+		if (i != 1) {
+			os << op.infix;
 		}
 		os << o.operands[i];
-	}
-	if (o.func == Operation::CALL and o.operands.size() == 1u) {
-		os << op.infix[0];
 	}
 	os << op.postfix;
 	return os;
@@ -2632,13 +2635,6 @@ Expression add(vector<Expression> e0) {
 Expression mult(vector<Expression> e0) {
 	Expression result;
 	result.set(Operation::MULTIPLY, e0);
-	return result;
-}
-
-Expression call(int func, vector<Expression> args) {
-	Expression result;
-	args.insert(args.begin(), Operand::typeOf(func));
-	result.set(Operation::CALL, args);
 	return result;
 }
 

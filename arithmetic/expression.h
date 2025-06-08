@@ -69,11 +69,12 @@ bool areSame(Operand o0, Operand o1);
 
 struct Operator {
 	Operator();
-	Operator(vector<string> infix, string prefix="", string postfix="", bool commutative=false, bool reflexive=false);
+	Operator(string prefix, string trigger, string infix, string postfix, bool commutative=false, bool reflexive=false);
 	~Operator();
 
 	string prefix;
-	vector<string> infix;
+	string trigger;
+	string infix;
 	string postfix;
 
 	bool commutative;
@@ -115,7 +116,6 @@ struct Operation {
 	static int BOOLEAN_XOR;
 	static int ARRAY;
 	static int INDEX;
-	static int CALL;
 
 	static int push(Operator op);
 	static void loadOperators();
@@ -176,7 +176,6 @@ struct Expression {
 	Operand set(int func, Expression arg0, Operand arg1);
 	Operand set(int func, Operand arg0, Expression arg1);
 	Operand set(int func, vector<Expression> args);
-	Operand call(int func, vector<Expression> args);
 	Operand push(int func);
 	Operand push(int func, Operand arg0);
 	Operand push(int func, Expression arg0);
@@ -339,8 +338,6 @@ Expression bitwiseAnd(vector<Expression> e0);
 Expression bitwiseXor(vector<Expression> e0);
 Expression add(vector<Expression> e0);
 Expression mult(vector<Expression> e0);
-
-Expression call(int func, vector<Expression> args);
 
 int passesGuard(const State &encoding, const State &global, const Expression &guard, State *total);
 Expression weakestGuard(const Expression &guard, const Expression &exclude);

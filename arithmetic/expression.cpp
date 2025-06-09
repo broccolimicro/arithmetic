@@ -267,7 +267,10 @@ Operator::~Operator() {
 bool canMap(vector<Operand> o0, Operand o1, const Expression &e0, const Expression &e1, bool init, map<size_t, vector<Operand> > *vars) {
 	if (o1.isConst()) {
 		for (auto i = o0.begin(); i != o0.end(); i++) {
-			if (not i->isConst() or not areSame(i->cnst, o1.cnst)) {
+			if (not i->isConst() or not (areSame(i->cnst, o1.cnst)
+				or (o1.cnst.type == Value::BOOL
+					and ((o1.cnst.bval == Value::VALID and i->cnst.isValid())
+						or (o1.cnst.bval == Value::NEUTRAL and i->cnst.isNeutral()))))) {
 				return false;
 			}
 		}

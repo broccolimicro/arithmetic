@@ -6,6 +6,7 @@ namespace arithmetic {
 
 // load basic simplifcation rules into rewrite vector
 Expression rewriteBasic();
+Expression rewriteHuman();
 Expression rewriteUndirected();
 
 }

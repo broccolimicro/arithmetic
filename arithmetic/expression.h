@@ -116,6 +116,7 @@ struct Operation {
 	static int BOOLEAN_XOR;
 	static int ARRAY;
 	static int INDEX;
+	static int CALL;
 
 	static int push(Operator op);
 	static void loadOperators();
@@ -338,6 +339,8 @@ Expression bitwiseAnd(vector<Expression> e0);
 Expression bitwiseXor(vector<Expression> e0);
 Expression add(vector<Expression> e0);
 Expression mult(vector<Expression> e0);
+
+Expression call(int func, vector<Expression> args);
 
 int passesGuard(const State &encoding, const State &global, const Expression &guard, State *total);
 Expression weakestGuard(const Expression &guard, const Expression &exclude);

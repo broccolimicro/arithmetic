@@ -40,6 +40,7 @@ int Operation::BOOLEAN_AND = -1;
 int Operation::BOOLEAN_XOR = -1;
 int Operation::ARRAY = -1;
 int Operation::INDEX = -1;
+int Operation::CALL = -1;
 
 Operand::Operand(Value v) {
 	Operation::loadOperators();
@@ -369,6 +370,7 @@ void Operation::loadOperators() {
 		BOOLEAN_XOR   = push(Operator("", "", "^", "", true));
 		ARRAY         = push(Operator("[", "", ",", "]"));
 		INDEX         = push(Operator("", "[", ":", "]"));
+		CALL          = push(Operator("", "(", ",", ")"));
 
 		//printf("loaded %d operators\n", (int)Operation::operators.size());
 	} 
@@ -2638,6 +2640,13 @@ Expression add(vector<Expression> e0) {
 Expression mult(vector<Expression> e0) {
 	Expression result;
 	result.set(Operation::MULTIPLY, e0);
+	return result;
+}
+
+Expression call(int func, vector<Expression> args) {
+	Expression result;
+	args.insert(args.begin(), Operand::typeOf(func));
+	result.set(Operation::CALL, args);
 	return result;
 }
 

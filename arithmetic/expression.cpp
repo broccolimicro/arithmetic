@@ -41,6 +41,7 @@ int Operation::BOOLEAN_XOR = -1;
 int Operation::ARRAY = -1;
 int Operation::INDEX = -1;
 int Operation::CALL = -1;
+int Operation::MEMBER = -1;
 
 Operand::Operand(Value v) {
 	Operation::loadOperators();
@@ -371,6 +372,7 @@ void Operation::loadOperators() {
 		ARRAY         = push(Operator("[", "", ",", "]"));
 		INDEX         = push(Operator("", "[", ":", "]"));
 		CALL          = push(Operator("", "(", ",", ")"));
+		MEMBER        = push(Operator("", ".", "", ""));
 
 		//printf("loaded %d operators\n", (int)Operation::operators.size());
 	} 
@@ -691,7 +693,15 @@ Value Operation::evaluate(int func, vector<Value> args) {
 	} else if (func == Operation::INDEX) { // index
 		return index(args[0], args[1]);
 	}
+	printf("internal: function %d not implemented\n", func);
 	return args[0];
+}
+
+Value Operation::evaluate(int func, vector<Value> args, TypeSet types) {
+	if (func == Operation::MEMBER) {
+		return member(args[0], args[1], types);
+	}
+	return evaluate(func, args);
 }
 
 Value Operation::evaluate(State values, vector<Value> expressions) const {
@@ -702,6 +712,16 @@ Value Operation::evaluate(State values, vector<Value> expressions) const {
 	}
 
 	return Operation::evaluate(func, args);
+}
+
+Value Operation::evaluate(State values, vector<Value> expressions, TypeSet types) const {
+	vector<Value> args;
+	args.reserve(operands.size());
+	for (int i = 0; i < (int)operands.size(); i++) {
+		args.push_back(operands[i].get(values, expressions));
+	}
+
+	return Operation::evaluate(func, args, types);
 }
 
 void Operation::propagate(State &result, const State &global, vector<Value> &expressions, const vector<Value> gexpressions, Value v) const

@@ -30,6 +30,11 @@ Value::Value(double rval) {
 	this->rval = rval;
 }
 
+Value::Value(string sval) {
+	this->type = STRING;
+	this->sval = sval;
+}
+
 Value::~Value() {
 }
 
@@ -44,7 +49,7 @@ bool Value::isNeutral() const {
 }
 
 bool Value::isUnstable() const {
-	return type == Value::BOOL and bval == Value::UNSTABLE;
+	return (type == Value::BOOL and bval == Value::UNSTABLE) or type == Value::STRING;
 }
 
 bool Value::isUnknown() const {
@@ -52,7 +57,9 @@ bool Value::isUnknown() const {
 }
 
 const char *Value::ctypeName() const {
-	if (type == BOOL) {
+	if (type == STRING) {
+		return "string";
+	} else if (type == BOOL) {
 		return "bool";
 	} else if (type == INT) {
 		return "int";
@@ -81,6 +88,13 @@ Value Value::U() {
 	Value v;
 	v.type = BOOL;
 	v.bval = UNKNOWN;
+	return v;
+}
+
+Value Value::stringOf(string sval) {
+	Value v;
+	v.type = STRING;
+	v.sval = sval;
 	return v;
 }
 
@@ -160,7 +174,9 @@ bool Value::isSubsetOf(Value v) const {
 bool areSame(Value v0, Value v1) {
 	if ((v0.type == Value::BOOL and v1.type == Value::BOOL and v0.bval == v1.bval)
 		or (v0.type == Value::INT and v1.type == Value::INT and v0.ival == v1.ival)
-		or (v0.type == Value::REAL and v1.type == Value::REAL and v0.rval == v1.rval)) {
+		or (v0.type == Value::REAL and v1.type == Value::REAL and v0.rval == v1.rval)
+		or (v0.type == Value::STRING and v1.type == Value::STRING and v0.sval == v1.sval)
+	) {
 		return true;
 	}
 
@@ -187,11 +203,15 @@ int order(Value v0, Value v1) {
 
 	if ((v0.type == Value::BOOL and v1.type == Value::BOOL and v0.bval < v1.bval)
 		or (v0.type == Value::INT and v1.type == Value::INT and v0.ival < v1.ival)
-		or (v0.type == Value::REAL and v1.type == Value::REAL and v0.rval < v1.rval)) {
+		or (v0.type == Value::REAL and v1.type == Value::REAL and v0.rval < v1.rval)
+		or (v0.type == Value::STRING and v1.type == Value::STRING and v0.sval < v1.sval)
+	) {
 		return -1;
 	} else if ((v0.type == Value::BOOL and v1.type == Value::BOOL and v0.bval > v1.bval)
 		or (v0.type == Value::INT and v1.type == Value::INT and v0.ival > v1.ival)
-		or (v0.type == Value::REAL and v1.type == Value::REAL and v0.rval > v1.rval)) {
+		or (v0.type == Value::REAL and v1.type == Value::REAL and v0.rval > v1.rval)
+		or (v0.type == Value::STRING and v1.type == Value::STRING and v0.sval > v1.sval)
+	) {
 		return 1;
 	}
 
@@ -215,7 +235,9 @@ int order(Value v0, Value v1) {
 }
 
 ostream &operator<<(ostream &os, Value v) {
-	if (v.type == Value::BOOL) {
+	if (v.type == Value::STRING) {
+		os << "\"" << v.sval << "\"";
+	} else if (v.type == Value::BOOL) {
 		if (v.bval == Value::UNSTABLE) {
 			os << "X";
 		} else if (v.bval == Value::NEUTRAL) {
@@ -260,7 +282,7 @@ Value::operator bool() const {
 }
 
 Type Value::typeOf() const {
-	if (type == Value::BOOL) {
+	if (type == Value::BOOL or type == Value::STRING) {
 		return Type(0.0, 0.0, 0.0);
 	} else if (type == Value::INT) {
 		return Type((double)ival, 0.0, 0.0);
@@ -273,7 +295,7 @@ Type Value::typeOf() const {
 }
 
 Value operator~(Value v) {
-	if (v.type == Value::Value::ARRAY or v.type >= Value::Value::STRUCT) {
+	if (v.type == Value::ARRAY or v.type >= Value::STRUCT) {
 		Value result = Value::boolOf(false);
 		for (auto i = v.arr.begin(); i != v.arr.end(); i++) {
 			result = result | ~(*i);
@@ -288,12 +310,12 @@ Value operator~(Value v) {
 }
 
 Value operator-(Value v) {
-	if (v.type == Value::Value::BOOL) {
+	if (v.type == Value::BOOL) {
 		return v;
-	} else if (v.type == Value::Value::INT) {
+	} else if (v.type == Value::INT) {
 		v.ival = -v.ival;
 		return v;
-	} else if (v.type == Value::Value::REAL) {
+	} else if (v.type == Value::REAL) {
 		v.rval = -v.rval;
 		return v;
 	}
@@ -318,9 +340,9 @@ Value valid(Value v) {
 
 // Bitwise NOT
 Value operator!(Value v) {
-	if (v.type == Value::Value::BOOL) {
+	if (v.type == Value::BOOL) {
 		return v;
-	} else if (v.type == Value::Value::INT) {
+	} else if (v.type == Value::INT) {
 		v.ival = ~v.ival;
 		return v;
 	}
@@ -330,12 +352,12 @@ Value operator!(Value v) {
 
 // Inverse
 Value inv(Value v) {
-	if (v.type == Value::Value::BOOL) {
+	if (v.type == Value::BOOL) {
 		return v;
-	} else if (v.type == Value::Value::INT) {
+	} else if (v.type == Value::INT) {
 		v.ival = 0;
 		return v;
-	} else if (v.type == Value::Value::REAL) {
+	} else if (v.type == Value::REAL) {
 		v.rval = 1.0/v.rval;
 		return v;
 	}
@@ -352,7 +374,7 @@ Value operator||(Value v0, Value v1) {
 		return Value::boolOf(false);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U();
-	} else if (v0.type == Value::Value::INT and v1.type == Value::Value::INT) {
+	} else if (v0.type == Value::INT and v1.type == Value::INT) {
 		return Value::intOf(v0.ival | v1.ival);
 	}
 	printf("error: 'operator||' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
@@ -366,7 +388,7 @@ Value operator&&(Value v0, Value v1) {
 		return Value::boolOf(false);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U();
-	} else if (v0.type == Value::Value::INT and v1.type == Value::Value::INT) {
+	} else if (v0.type == Value::INT and v1.type == Value::INT) {
 		return Value::intOf(v0.ival & v1.ival);
 	}
 	printf("error: 'operator&&' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
@@ -380,7 +402,7 @@ Value operator^(Value v0, Value v1) {
 		return Value::boolOf(false);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U();
-	} else if (v0.type == Value::Value::INT and v1.type == Value::Value::INT) {
+	} else if (v0.type == Value::INT and v1.type == Value::INT) {
 		return Value::intOf(v0.ival ^ v1.ival);
 	}
 	printf("error: 'operator^' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
@@ -394,7 +416,7 @@ Value operator<<(Value v0, Value v1) {
 		return Value::boolOf(false);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U();
-	} else if (v0.type == Value::Value::INT and v1.type == Value::Value::INT) {
+	} else if (v0.type == Value::INT and v1.type == Value::INT) {
 		return Value::intOf(v0.ival << v1.ival);
 	}
 	printf("error: 'operator<<' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
@@ -408,7 +430,7 @@ Value operator>>(Value v0, Value v1) {
 		return Value::boolOf(false);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U();
-	} else if (v0.type == Value::Value::INT and v1.type == Value::Value::INT) {
+	} else if (v0.type == Value::INT and v1.type == Value::INT) {
 		return Value::intOf(v0.ival >> v1.ival);
 	}
 	printf("error: 'operator>>' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
@@ -416,17 +438,19 @@ Value operator>>(Value v0, Value v1) {
 }
 
 Value operator+(Value v0, Value v1) {
-	if (v0.isUnstable() or v1.isUnstable()) {
+	if (v0.type == Value::STRING and v1.type == Value::STRING) {
+		return Value::stringOf(v0.sval + v1.sval);
+	} else if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X();
 	} else if (v0.isNeutral() or v1.isNeutral()) {
 		return Value::boolOf(false);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U();
-	} else if (v0.type == Value::Value::INT and v1.type == Value::Value::INT) {
+	} else if (v0.type == Value::INT and v1.type == Value::INT) {
 		return Value::intOf(v0.ival + v1.ival);
-	} else if (v0.type == Value::Value::REAL and v1.type == Value::Value::REAL) {
+	} else if (v0.type == Value::REAL and v1.type == Value::REAL) {
 		return Value::realOf(v0.rval + v1.rval);
-	} else if (v0.type == Value::Value::ARRAY and v1.type == Value::Value::ARRAY) {
+	} else if (v0.type == Value::ARRAY and v1.type == Value::ARRAY) {
 		// concatination
 		v0.arr.insert(v0.arr.end(), v1.arr.begin(), v1.arr.end());
 		return v0;
@@ -442,9 +466,9 @@ Value operator-(Value v0, Value v1) {
 		return Value::boolOf(false);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U();
-	} else if (v0.type == Value::Value::INT and v1.type == Value::Value::INT) {
+	} else if (v0.type == Value::INT and v1.type == Value::INT) {
 		return Value::intOf(v0.ival - v1.ival);
-	} else if (v0.type == Value::Value::REAL and v1.type == Value::Value::REAL) {
+	} else if (v0.type == Value::REAL and v1.type == Value::REAL) {
 		return Value::realOf(v0.rval - v1.rval);
 	}
 	printf("error: 'operator-' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
@@ -458,9 +482,9 @@ Value operator*(Value v0, Value v1) {
 		return Value::boolOf(false);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U();
-	} else if (v0.type == Value::Value::INT and v1.type == Value::Value::INT) {
+	} else if (v0.type == Value::INT and v1.type == Value::INT) {
 		return Value::intOf(v0.ival * v1.ival);
-	} else if (v0.type == Value::Value::REAL and v1.type == Value::Value::REAL) {
+	} else if (v0.type == Value::REAL and v1.type == Value::REAL) {
 		return Value::realOf(v0.rval * v1.rval);
 	}
 	printf("error: 'operator*' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
@@ -474,9 +498,9 @@ Value operator/(Value v0, Value v1) {
 		return Value::boolOf(false);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U();
-	} else if (v0.type == Value::Value::INT and v1.type == Value::Value::INT) {
+	} else if (v0.type == Value::INT and v1.type == Value::INT) {
 		return Value::intOf(v0.ival / v1.ival);
-	} else if (v0.type == Value::Value::REAL and v1.type == Value::Value::REAL) {
+	} else if (v0.type == Value::REAL and v1.type == Value::REAL) {
 		return Value::realOf(v0.rval / v1.rval);
 	}
 	printf("error: 'operator/' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
@@ -490,7 +514,7 @@ Value operator%(Value v0, Value v1) {
 		return Value::boolOf(false);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U();
-	} else if (v0.type == Value::Value::INT and v1.type == Value::Value::INT) {
+	} else if (v0.type == Value::INT and v1.type == Value::INT) {
 		return Value::intOf(v0.ival % v1.ival);
 	}
 	printf("error: 'operator%%' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
@@ -498,15 +522,17 @@ Value operator%(Value v0, Value v1) {
 }
 
 Value operator==(Value v0, Value v1) {
-	if (v0.isUnstable() or v1.isUnstable()) {
+	if (v0.type == Value::STRING and v1.type == Value::STRING) {
+		return Value::boolOf(v0.sval == v1.sval);
+	} else if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X();
 	} else if (v0.isNeutral() or v1.isNeutral()) {
 		return Value::boolOf(false);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U();
-	} else if (v0.type == Value::Value::INT and v1.type == Value::Value::INT) {
+	} else if (v0.type == Value::INT and v1.type == Value::INT) {
 		return Value::boolOf(v0.ival == v1.ival);
-	} else if (v0.type == Value::Value::REAL and v1.type == Value::Value::REAL) {
+	} else if (v0.type == Value::REAL and v1.type == Value::REAL) {
 		return Value::boolOf(v0.rval == v1.rval);
 	}
 	printf("error: 'operator==' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
@@ -514,15 +540,17 @@ Value operator==(Value v0, Value v1) {
 }
 
 Value operator!=(Value v0, Value v1) {
-	if (v0.isUnstable() or v1.isUnstable()) {
+	if (v0.type == Value::STRING and v1.type == Value::STRING) {
+		return Value::boolOf(v0.sval != v1.sval);
+	} else if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X();
 	} else if (v0.isNeutral() or v1.isNeutral()) {
 		return Value::boolOf(false);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U();
-	} else if (v0.type == Value::Value::INT and v1.type == Value::Value::INT) {
+	} else if (v0.type == Value::INT and v1.type == Value::INT) {
 		return Value::boolOf(v0.ival != v1.ival);
-	} else if (v0.type == Value::Value::REAL and v1.type == Value::Value::REAL) {
+	} else if (v0.type == Value::REAL and v1.type == Value::REAL) {
 		return Value::boolOf(v0.rval != v1.rval);
 	}
 	printf("error: 'operator!=' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
@@ -530,15 +558,17 @@ Value operator!=(Value v0, Value v1) {
 }
 
 Value operator<(Value v0, Value v1) {
-	if (v0.isUnstable() or v1.isUnstable()) {
+	if (v0.type == Value::STRING and v1.type == Value::STRING) {
+		return Value::boolOf(v0.sval < v1.sval);
+	} else if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X();
 	} else if (v0.isNeutral() or v1.isNeutral()) {
 		return Value::boolOf(false);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U();
-	} else if (v0.type == Value::Value::INT and v1.type == Value::Value::INT) {
+	} else if (v0.type == Value::INT and v1.type == Value::INT) {
 		return Value::boolOf(v0.ival < v1.ival);
-	} else if (v0.type == Value::Value::REAL and v1.type == Value::Value::REAL) {
+	} else if (v0.type == Value::REAL and v1.type == Value::REAL) {
 		return Value::boolOf(v0.rval < v1.rval);
 	}
 	printf("error: 'operator<' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
@@ -546,15 +576,17 @@ Value operator<(Value v0, Value v1) {
 }
 
 Value operator>(Value v0, Value v1) {
-	if (v0.isUnstable() or v1.isUnstable()) {
+	if (v0.type == Value::STRING and v1.type == Value::STRING) {
+		return Value::boolOf(v0.sval > v1.sval);
+	} else if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X();
 	} else if (v0.isNeutral() or v1.isNeutral()) {
 		return Value::boolOf(false);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U();
-	} else if (v0.type == Value::Value::INT and v1.type == Value::Value::INT) {
+	} else if (v0.type == Value::INT and v1.type == Value::INT) {
 		return Value::boolOf(v0.ival > v1.ival);
-	} else if (v0.type == Value::Value::REAL and v1.type == Value::Value::REAL) {
+	} else if (v0.type == Value::REAL and v1.type == Value::REAL) {
 		return Value::boolOf(v0.rval > v1.rval);
 	}
 	printf("error: 'operator>' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
@@ -562,15 +594,17 @@ Value operator>(Value v0, Value v1) {
 }
 
 Value operator<=(Value v0, Value v1) {
-	if (v0.isUnstable() or v1.isUnstable()) {
+	if (v0.type == Value::STRING and v1.type == Value::STRING) {
+		return Value::boolOf(v0.sval <= v1.sval);
+	} else if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X();
 	} else if (v0.isNeutral() or v1.isNeutral()) {
 		return Value::boolOf(false);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U();
-	} else if (v0.type == Value::Value::INT and v1.type == Value::Value::INT) {
+	} else if (v0.type == Value::INT and v1.type == Value::INT) {
 		return Value::boolOf(v0.ival <= v1.ival);
-	} else if (v0.type == Value::Value::REAL and v1.type == Value::Value::REAL) {
+	} else if (v0.type == Value::REAL and v1.type == Value::REAL) {
 		return Value::boolOf(v0.rval <= v1.rval);
 	}
 	printf("error: 'operator<=' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
@@ -578,15 +612,17 @@ Value operator<=(Value v0, Value v1) {
 }
 
 Value operator>=(Value v0, Value v1) {
-	if (v0.isUnstable() or v1.isUnstable()) {
+	if (v0.type == Value::STRING and v1.type == Value::STRING) {
+		return Value::boolOf(v0.sval >= v1.sval);
+	} else if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X();
 	} else if (v0.isNeutral() or v1.isNeutral()) {
 		return Value::boolOf(false);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U();
-	} else if (v0.type == Value::Value::INT and v1.type == Value::Value::INT) {
+	} else if (v0.type == Value::INT and v1.type == Value::INT) {
 		return Value::boolOf(v0.ival >= v1.ival);
-	} else if (v0.type == Value::Value::REAL and v1.type == Value::Value::REAL) {
+	} else if (v0.type == Value::REAL and v1.type == Value::REAL) {
 		return Value::boolOf(v0.rval >= v1.rval);
 	}
 	printf("error: 'operator>=' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
@@ -621,16 +657,22 @@ Value operator|(Value v0, Value v1) {
 	return Value::X();
 }
 
+Value stringOf(Value v) {
+	stringstream os;
+	os << v;
+	return Value::stringOf(os.str());
+}
+
 Value boolOf(Value v) {
 	return valid(v);
 }
 
 Value realOf(Value v) {
-	if (v.isUnstable() or v.isUnknown() or v.isNeutral() or v.type == Value::Value::REAL) {
+	if (v.isUnstable() or v.isUnknown() or v.isNeutral() or v.type == Value::REAL) {
 		return v;
-	} else if (v.type == Value::Value::BOOL) {
+	} else if (v.type == Value::BOOL) {
 		return Value::realOf(0.0);
-	} else if (v.type == Value::Value::INT) {
+	} else if (v.type == Value::INT) {
 		return Value::realOf((double)v.ival);
 	}
 	printf("error: cast to 'real' not defined for '%s'\n", v.ctypeName());
@@ -638,11 +680,11 @@ Value realOf(Value v) {
 }
 
 Value intOf(Value v) {
-	if (v.isUnstable() or v.isUnknown() or v.isNeutral() or v.type == Value::Value::INT) {
+	if (v.isUnstable() or v.isUnknown() or v.isNeutral() or v.type == Value::INT) {
 		return v;
-	} else if (v.type == Value::Value::BOOL) {
+	} else if (v.type == Value::BOOL) {
 		return Value::intOf(0);
-	} else if (v.type == Value::Value::REAL) {
+	} else if (v.type == Value::REAL) {
 		return Value::intOf((int64_t)v.rval);
 	}
 	printf("error: cast to 'int' not defined for '%s'\n", v.ctypeName());
@@ -656,7 +698,7 @@ Value index(Value v, Value i) {
 		return Value::boolOf(false);
 	} else if (v.isUnknown() or i.isUnknown()) {
 		return Value::U();
-	} else if (v.type == Value::Value::ARRAY and i.type == Value::Value::INT) {
+	} else if (v.type == Value::ARRAY and i.type == Value::INT) {
 		if (i.ival >= 0 and i.ival < (int)v.arr.size()) {
 			return v.arr[i.ival];
 		}
@@ -664,6 +706,19 @@ Value index(Value v, Value i) {
 		return Value::X();
 	}
 	printf("error: 'operator[]' not defined for '%s' and '%s'\n", v.ctypeName(), i.ctypeName());
+	return Value::X();
+}
+
+Value member(Value v0, Value v1, TypeSet types) {
+	if (v0.type >= Value::STRUCT and v1.type == Value::STRING) {
+		int idx = types.memberIndex(v0.type, v1.sval);
+		if (idx >= 0 and idx < (int)v0.arr.size()) {
+			return v0.arr[idx];
+		}
+		printf("internal: member %s(%d) out of bounds for structure of size %d\n", v1.sval.c_str(), idx, (int)v0.arr.size());
+		return Value::X();
+	}
+	printf("error: 'operator.' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
 	return Value::X();
 }
 

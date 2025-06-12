@@ -117,6 +117,7 @@ struct Operation {
 	static int ARRAY;
 	static int INDEX;
 	static int CALL;
+	static int MEMBER;
 
 	static int push(Operator op);
 	static void loadOperators();
@@ -131,7 +132,9 @@ struct Operation {
 	bool isReflexive() const;
 
 	static Value evaluate(int func, vector<Value> args);
+	static Value evaluate(int func, vector<Value> args, TypeSet types);
 	Value evaluate(State values, vector<Value> expressions) const;
+	Value evaluate(State values, vector<Value> expressions, TypeSet types) const;
 	void propagate(State &result, const State &global, vector<Value> &expressions, const vector<Value> gexpressions, Value v) const;
 	void apply(vector<int> uidMap);
 	void apply(vector<Operand> uidMap);

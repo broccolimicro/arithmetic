@@ -1,10 +1,14 @@
 #pragma once
 
 #include <common/standard.h>
+#include <common/interface.h>
 #include "type.h"
 
 namespace arithmetic
 {
+
+_CONST_INTERFACE_ARG(TypeSet,
+	(int, memberIndex, (int type, string name) const));
 
 // This structure represents a delay insensitive encoded integer
 // value with a single neutral state. This is purposefully limited
@@ -17,10 +21,13 @@ struct Value
 	Value(int64_t ival);
 	Value(int ival);
 	Value(double rval);
+	Value(string sval);
 	~Value();
 
 	// used by "type"
 	enum {
+		// can only be used to dereference a member of a structure
+		STRING = -5,
 		BOOL = -4,
 		// INT and REAL are both considered "VALID"
 		INT = -3,
@@ -28,6 +35,8 @@ struct Value
 		// ARRAY and STRUCT have separate validities for each value
 		ARRAY = -1,
 		// By default, all operators on STRUCTs behave like operators on ARRAYs
+		// anything with a type >= 0 is a struct and the type stores the ID of
+		// the struct type in the type system
 		STRUCT = 0
 	};
 
@@ -54,6 +63,7 @@ struct Value
 		int64_t ival;
 		double rval;
 	};
+	string sval;
 
 	vector<Value> arr;
 
@@ -66,6 +76,7 @@ struct Value
 
 	static Value X();
 	static Value U();
+	static Value stringOf(string sval);
 	static Value boolOf(bool valid);
 	static Value intOf(int64_t ival);
 	static Value realOf(double rval);
@@ -116,10 +127,12 @@ Value operator>=(Value v0, Value v1);
 Value operator&(Value v0, Value v1);
 Value operator|(Value v0, Value v1);
 
+Value stringOf(Value v);
 Value boolOf(Value v);
 Value realOf(Value v);
 Value intOf(Value v);
 Value index(Value v, Value i);
+Value member(Value v0, Value v1, TypeSet types);
 
 // set operators of the lattice documented in Value::isSubsetOf()
 Value intersect(Value v0, Value v1);

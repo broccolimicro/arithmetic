@@ -702,7 +702,7 @@ Value index(Value v, Value i) {
 		if (i.ival >= 0 and i.ival < (int)v.arr.size()) {
 			return v.arr[i.ival];
 		}
-		printf("error: index %d out of bounds for array of size %ld\n", (int)v.arr.size(), i.ival);
+		printf("error: index %d out of bounds for array of size %lld\n", (int)v.arr.size(), i.ival);
 		return Value::X();
 	}
 	printf("error: 'operator[]' not defined for '%s' and '%s'\n", v.ctypeName(), i.ctypeName());

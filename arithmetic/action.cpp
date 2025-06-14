@@ -70,8 +70,27 @@ Parallel::Parallel(int variable, Expression expr) {
 	actions.push_back(Action(variable, expr));
 }
 
+Parallel::Parallel(std::initializer_list<Action> exprs) : actions(exprs) {
+}
+
 Parallel::~Parallel() {
 
+}
+
+vector<Action>::iterator Parallel::begin() {
+	return actions.begin();
+}
+
+vector<Action>::iterator Parallel::end() {
+	return actions.end();
+}
+
+vector<Action>::const_iterator Parallel::begin() const {
+	return actions.begin();
+}
+
+vector<Action>::const_iterator Parallel::end() const {
+	return actions.end();
 }
 
 Action &Parallel::operator[](int index) {
@@ -166,6 +185,16 @@ void Parallel::apply(vector<int> uidMap) {
 	}
 }
 
+Parallel &Parallel::operator&=(const Action &c0) {
+	actions.push_back(c0);
+	return *this;
+}
+
+Parallel &Parallel::operator&=(const Parallel &c0) {
+	actions.insert(actions.end(), c0.actions.begin(), c0.actions.end());
+	return *this;
+}
+
 bool areSame(Parallel p0, Parallel p1) {
 	if (p0.actions.size() != p1.actions.size()) {
 		return false;
@@ -194,14 +223,34 @@ Choice::Choice()
 
 }
 
-Choice::Choice(Parallel c)
-{
-	terms.push_back(c);
+Choice::Choice(bool skip) {
+	if (skip) {
+		terms.push_back(Parallel());
+	}
+}
+
+Choice::Choice(std::initializer_list<Parallel> exprs) : terms(exprs) {
 }
 
 Choice::~Choice()
 {
 
+}
+
+vector<Parallel>::iterator Choice::begin() {
+	return terms.begin();
+}
+
+vector<Parallel>::iterator Choice::end() {
+	return terms.end();
+}
+
+vector<Parallel>::const_iterator Choice::begin() const {
+	return terms.begin();
+}
+
+vector<Parallel>::const_iterator Choice::end() const {
+	return terms.end();
 }
 
 Parallel &Choice::operator[](int index) {
@@ -276,6 +325,39 @@ void Choice::apply(vector<int> uidMap) {
 	}
 }
 
+Choice &Choice::operator&=(const Action &c0) {
+	for (auto i = terms.begin(); i != terms.end(); i++) {
+		*i &= c0;
+	}
+	return *this;
+}
+
+Choice &Choice::operator&=(const Parallel &c0) {
+	for (auto i = terms.begin(); i != terms.end(); i++) {
+		*i &= c0;
+	}
+	return *this;
+}
+
+Choice &Choice::operator&=(const Choice &c0) {
+	return (*this = *this & c0);
+}
+
+Choice &Choice::operator|=(const Action &c0) {
+	terms.push_back({c0});
+	return *this;
+}
+
+Choice &Choice::operator|=(const Parallel &c0) {
+	terms.push_back(c0);
+	return *this;
+}
+
+Choice &Choice::operator|=(const Choice &c0) {
+	terms.insert(terms.end(), c0.terms.begin(), c0.terms.end());
+	return *this;
+}
+
 bool areSame(Choice c0, Choice c1) {
 	if (c0.terms.size() != c1.terms.size()) {
 		return false;
@@ -297,6 +379,109 @@ ostream &operator<<(ostream &os, const Choice &c) {
 		os << c.terms[i];
 	}
 	return os;
+}
+
+Parallel operator&(const Action &c0, const Action &c1) {
+	return Parallel({c0, c1});
+}
+
+Parallel operator&(const Action &c0, const Parallel &c1) {
+	Parallel result({c0});
+	result &= c1;
+	return result;
+}
+
+Parallel operator&(Parallel c0, const Action &c1) {
+	c0 &= c1;
+	return c0;
+}
+
+Parallel operator&(Parallel c0, const Parallel &c1) {
+	c0 &= c1;
+	return c0;
+}
+
+Choice operator|(const Action &c0, const Action &c1) {
+	return Choice({{c0}, {c1}});
+}
+
+Choice operator|(const Action &c0, const Parallel &c1) {
+	return Choice({{c0}, c1});
+}
+
+Choice operator|(const Parallel &c0, const Action &c1) {
+	return Choice({c0, {c1}});
+}
+
+Choice operator|(const Parallel &c0, const Parallel &c1) {
+	return Choice({c0, c1});
+}
+
+Choice operator&(const Action &c0, const Choice &c1) {
+	Choice result;
+	for (auto i = c1.begin(); i != c1.end(); i++) {
+		result.terms.push_back(c0 & *i);
+	}
+	return result;
+}
+
+Choice operator&(Choice c0, const Action &c1) {
+	for (auto i = c0.begin(); i != c0.end(); i++) {
+		*i &= c1;
+	}
+	return c0;
+}
+
+Choice operator&(const Parallel &c0, const Choice &c1) {
+	Choice result;
+	for (auto i = c1.begin(); i != c1.end(); i++) {
+		result.terms.push_back(c0 & *i);
+	}
+	return result;
+}
+
+Choice operator&(Choice c0, const Parallel &c1) {
+	for (auto i = c0.begin(); i != c0.end(); i++) {
+		*i &= c1;
+	}
+	return c0;
+}
+
+Choice operator&(const Choice &c0, const Choice &c1) {
+	Choice result;
+	for (auto i = c0.begin(); i != c0.end(); i++) {
+		for (auto j = c1.begin(); j != c1.end(); j++) {
+			result.terms.push_back(*i & *j);
+		}
+	}
+	return result;
+}
+
+Choice operator|(const Action &c0, const Choice &c1) {
+	Choice result({{c0}});
+	result |= c1;
+	return result;
+}
+
+Choice operator|(Choice c0, const Action &c1) {
+	c0 |= c1;
+	return c0;
+}
+
+Choice operator|(const Parallel &c0, const Choice &c1) {
+	Choice result({c0});
+	result |= c1;
+	return result;
+}
+
+Choice operator|(Choice c0, const Parallel &c1) {
+	c0 |= c1;
+	return c0;
+}
+
+Choice operator|(Choice c0, const Choice &c1) {
+	c0 |= c1;
+	return c0;
 }
 
 }

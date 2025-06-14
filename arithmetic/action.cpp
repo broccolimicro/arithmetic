@@ -96,10 +96,6 @@ bool Parallel::isInfeasible() const {
 }
 
 bool Parallel::isVacuous() const {
-	if (actions.empty()) {
-		return true;
-	}
-
 	for (auto i = actions.begin(); i != actions.end(); i++) {
 		if (not i->isVacuous()) {
 			return false;
@@ -109,10 +105,6 @@ bool Parallel::isVacuous() const {
 }
 
 bool Parallel::isPassive() const {
-	if (actions.empty()) {
-		return true;
-	}
-
 	for (auto i = actions.begin(); i != actions.end(); i++) {
 		if (not i->isPassive()) {
 			return false;
@@ -221,10 +213,6 @@ const Parallel &Choice::operator[](int index) const {
 }
 
 bool Choice::isInfeasible() const {
-	if (terms.empty()) {
-		return true;
-	}
-
 	for (auto i = terms.begin(); i != terms.end(); i++) {
 		if (not i->isInfeasible()) {
 			return false;
@@ -235,10 +223,6 @@ bool Choice::isInfeasible() const {
 }
 
 bool Choice::isVacuous() const {
-	if (terms.empty()) {
-		return false;
-	}
-
 	for (auto i = terms.begin(); i != terms.end(); i++) {
 		if (i->isVacuous()) {
 			return true;

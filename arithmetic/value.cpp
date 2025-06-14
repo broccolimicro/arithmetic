@@ -241,9 +241,9 @@ ostream &operator<<(ostream &os, Value v) {
 		if (v.bval == Value::UNSTABLE) {
 			os << "X";
 		} else if (v.bval == Value::NEUTRAL) {
-			os << "gnd";
+			os << "false";
 		} else if (v.bval == Value::VALID) {
-			os << "vdd";
+			os << "true";
 		} else if (v.bval == Value::UNKNOWN) {
 			os << "U";
 		} else {

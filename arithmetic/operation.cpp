@@ -73,6 +73,12 @@ Operand::Operand(double rval) {
 	cnst = Value::realOf(rval);
 }
 
+Operand::Operand(string sval) {
+	Operation::loadOperators();
+	type = CONST;
+	cnst = Value::stringOf(sval);
+}
+
 Operand::~Operand() {
 }
 
@@ -167,6 +173,10 @@ Operand Operand::arrOf(vector<Value> arr) {
 
 Operand Operand::structOf(vector<Value> arr) {
 	return Operand(Value::structOf(arr));
+}
+
+Operand Operand::stringOf(string sval) {
+	return Operand(Value::stringOf(sval));
 }
 
 Operand Operand::exprOf(size_t index) {

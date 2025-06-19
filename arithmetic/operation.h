@@ -21,6 +21,7 @@ struct Operand {
 	Operand(int64_t ival);
 	Operand(int ival);
 	Operand(double rval);
+	Operand(string sval);
 	~Operand();
 
 	// Used by "type"
@@ -60,6 +61,7 @@ struct Operand {
 	static Operand realOf(double rval);
 	static Operand arrOf(vector<Value> arr);
 	static Operand structOf(vector<Value> arr);
+	static Operand stringOf(string sval);
 
 	static Operand exprOf(size_t index);
 	Operand &offsetExpr(int off);

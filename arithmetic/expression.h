@@ -90,7 +90,7 @@ struct Expression {
 
 	Expression &operator=(Operand e);
 
-	string to_string();
+	string to_string() const;
 };
 
 bool areSame(Expression e0, Expression e1);

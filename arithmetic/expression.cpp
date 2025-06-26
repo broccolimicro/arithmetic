@@ -1066,16 +1066,17 @@ Expression &Expression::operator=(Operand e)
 	return *this;
 }
 
-string Expression::to_string() {
+string Expression::to_string() const {
 	if (operations.empty()) {
-		return "(gnd)\n";
+		return "(gnd)";
 	}
 
-	stringstream os;
-	for (int i = (int)operations.size()-1; i >= 0; i--) {
-		os << i << ": " << operations[i] << endl;
+	ostringstream oss;
+	for (int i = (int)operations.size()-1; i > 0; i--) {
+		oss << i << ": " << operations[i] << endl;
 	}
-	return os.str();
+	oss << 0 << ": " << operations[0];
+	return oss.str();
 }
 
 ostream &operator<<(ostream &os, Expression e) {

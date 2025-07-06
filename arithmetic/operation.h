@@ -10,10 +10,10 @@ namespace arithmetic {
 struct Operation;
 
 _INTERFACE_ARG(OperationSet,
-	(Operation *, operationAt, (size_t index)));
+	(Operation *, at, (size_t index)));
 
 _CONST_INTERFACE_ARG(ConstOperationSet,
-	(const Operation *, operationAt, (size_t index) const));
+	(const Operation *, at, (size_t index) const));
 
 struct Operand {
 	Operand(Value v = Value());
@@ -93,7 +93,7 @@ struct Operator {
 
 struct Operation {
 	Operation();
-	Operation(int func, vector<Operand> args);
+	Operation(int func, vector<Operand> args, size_t exprIndex=std::numeric_limits<size_t>::max());
 	~Operation();
 
 	static vector<Operator> operators;
@@ -132,10 +132,11 @@ struct Operation {
 	static int push(Operator op);
 	static void loadOperators();
 
-	int lvalue;
-
 	int func;
 	vector<Operand> operands;
+
+	// The expression index to map this operation to
+	size_t exprIndex;
 
 	static pair<Type, double> funcCost(int func, vector<Type> args);
 

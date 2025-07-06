@@ -11,6 +11,7 @@ TEST(Expression, OperandBitwiseOr) {
 	Operand y = Operand::varOf(1);
 	
 	Expression e = x||y;
+	cout << e << endl;
 
 	State s;
 	int xval = rand()%100;
@@ -30,6 +31,7 @@ TEST(Expression, OperandBitwiseAnd) {
 	Operand y = Operand::varOf(1);
 	
 	Expression e = x&&y;
+	cout << e << endl;
 
 	State s;
 	int xval = rand()%100;
@@ -49,6 +51,7 @@ TEST(Expression, OperandBitwiseXor) {
 	Operand y = Operand::varOf(1);
 	
 	Expression e = x^y;
+	cout << e << endl;
 
 	State s;
 	int xval = rand()%100;
@@ -72,6 +75,7 @@ TEST(Expression, OperandEqualTo) {
 	Operand y = Operand::varOf(1);
 	
 	Expression e = x==y;
+	cout << e << endl;
 
 	State s;
 	s.push_back(5);
@@ -111,6 +115,7 @@ TEST(Expression, OperandNotEqualTo) {
 	Operand y = Operand::varOf(1);
 	
 	Expression e = x!=y;
+	cout << e << endl;
 
 	State s;
 	s.push_back(5);
@@ -150,6 +155,7 @@ TEST(Expression, OperandLessThan) {
 	Operand y = Operand::varOf(1);
 	
 	Expression e = x<y;
+	cout << e << endl;
 
 	State s;
 	s.push_back(5);
@@ -189,6 +195,7 @@ TEST(Expression, OperandGreaterThan) {
 	Operand y = Operand::varOf(1);
 	
 	Expression e = x>y;
+	cout << e << endl;
 
 	State s;
 	s.push_back(5);
@@ -227,6 +234,7 @@ TEST(Expression, Compound) {
 	Operand f = Operand::varOf(4);
 	
 	Expression e = (a+b)*c-d%f;
+	cout << e << endl;
 
 	State s;
 	s.push_back(5);
@@ -239,22 +247,41 @@ TEST(Expression, Compound) {
 	EXPECT_EQ(result.ival, 27);
 }
 
-TEST(Expression, PropagateConstants) {
+TEST(Expression, TidyConstants) {
 	Operand a = Operand::intOf(4);
 	Operand b = Operand::intOf(8);
 	Operand c = Operand::intOf(2);
 	Operand d = Operand::intOf(12);
 	
 	Expression e = (a+b)*c-d;
-	e.propagateConstants();
-	ASSERT_EQ(e.operations.size(), 1u);
-	ASSERT_EQ(e.operations[0].operands.size(), 1u);
-	EXPECT_EQ(e.operations[0].operands[0].type, Operand::CONST);
-	EXPECT_EQ(e.operations[0].operands[0].cnst.type, Value::INT);
-	EXPECT_EQ(e.operations[0].operands[0].cnst.ival, 12);
+	cout << e << endl;
+	e.tidy();
+	cout << e << endl;
+	ASSERT_EQ(e.operations.size(), 0u);
+	EXPECT_EQ(e.top.type, Operand::CONST);
+	EXPECT_EQ(e.top.cnst.type, Value::INT);
+	EXPECT_EQ(e.top.cnst.ival, 12);
 }
 
-TEST(Expression, Simplify) {
+TEST(Expression, TidyCommutative) {
+	Operand a = Operand::varOf(0);
+	Operand b = Operand::varOf(1);
+	Operand c = Operand::varOf(2);
+	Operand d = Operand::varOf(3);
+	
+	Expression e = (a+b)+(c+d);
+	ASSERT_EQ(e.operations.size(), 3u);
+	cout << e << endl;
+	e.tidy();
+	cout << e << endl;
+	ASSERT_EQ(e.operations.size(), 1u);
+	EXPECT_EQ(e.top.type, Operand::CONST);
+	EXPECT_EQ(e.top.cnst.type, Value::INT);
+	EXPECT_EQ(e.top.cnst.ival, 12);
+}
+
+
+/*TEST(Expression, Simplify) {
 	Operand a = Operand::varOf(0);
 	Operand b = Operand::varOf(1);
 	Operand c = Operand::varOf(2);
@@ -338,4 +365,4 @@ TEST(Expression, Function) {
 	cout << dut << endl;
 	dut.minimize();
 	cout << dut << endl;
-}
+}*/

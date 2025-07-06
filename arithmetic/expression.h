@@ -31,11 +31,16 @@ struct Expression {
 	// Therefore the final Operation stored is the Operation that produces the
 	// final Value for the Expression.
 	vector<Operation> operations;
+	Operand top;
 
-	Operation *operationAt(size_t index);
-	const Operation *operationAt(size_t index) const;
+	// next available index to be assigned as an exprIndex for an expression
+	size_t nextExprIndex;
 
-	Operand popReflexive(size_t index=std::numeric_limits<size_t>::max());
+	vector<Operation>::iterator at(size_t index);
+	vector<Operation>::const_iterator at(size_t index) const;
+
+	void clear();
+
 	Operand push(Operation arg);
 	Operand push(Expression arg);
 
@@ -60,21 +65,26 @@ struct Expression {
 	void apply(vector<int> uidMap);
 	void apply(vector<Expression> uidMap);
 
-	// operating on the Expression
-	void insert(size_t index, size_t num);
-	void erase(size_t index);
-	void erase(vector<size_t> index, bool doSort=false);
+	// exprIndex -> index into operations
+	vector<int> createMapping() const;
 
+	// TODO(edward.bingham) All of these functions need to be moved out of
+	// Expression and operate on an interface that represents any
+	// random-access container of Operations
+	Operand eraseReflexive();
 	Expression &eraseDangling();
-	Expression &propagateConstants();
-	Expression &canonicalize(bool rules=false);
+	Expression &tidy(bool rules=false);
 
 	struct Match {
 		// what to replace this match with from the rules
 		Operand replace;
-		// index into operations
+		// exprIndex of matched operations. These are things we can replace.
 		vector<size_t> expr;
-		// index into operands for expr.back()
+		// index into operands for expr.back(). Some operations are commutative and
+		// commutative operations are rolled up into a single operation with more
+		// than two operands to help deal with the search space. top is the index
+		// of the operands that were matched. In most cases it will be every
+		// operand, but in the commutative cases, it'll only be specific operands.
 		vector<size_t> top;
 
 		// map variable index to Operand in this
@@ -82,11 +92,11 @@ struct Expression {
 	};
 
 	Cost cost(vector<Type> vars) const;
-	vector<Match> search(const Expression &rules, size_t count=0, bool fwd=true, bool bwd=true);
+	/*vector<Match> search(const Expression &rules, size_t count=0, bool fwd=true, bool bwd=true);
 	void replace(Operand o0, Operand o1);
 	void replace(const Expression &rules, Match token);
 	size_t count(Operand start) const;
-	Expression &minimize(Expression directed=Expression());
+	Expression &minimize(Expression directed=Expression());*/
 
 	Expression &operator=(Operand e);
 

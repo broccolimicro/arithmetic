@@ -103,7 +103,7 @@ Expression rewriteBasic() {
 		(!!a) > (a)
 	}));
 
-	return rules.canonicalize(true);
+	return rules.tidy(true);
 }
 
 Expression rewriteHuman() {
@@ -212,7 +212,7 @@ Expression rewriteHuman() {
 		(!!a) > (a)
 	}));
 
-	return rules.canonicalize(true);
+	return rules.tidy(true);
 }
 
 Expression rewriteUndirected() {
@@ -238,7 +238,7 @@ Expression rewriteUndirected() {
 		bitwiseXor(a, b) == ((a && (!b)) || ((!a) && b)),
 	}));
 
-	rules.canonicalize(true);
+	rules.tidy(true);
 	
 	return rules;
 }

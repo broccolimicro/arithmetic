@@ -308,8 +308,8 @@ bool canMap(vector<Operand> o0, Operand o1, ConstOperationSet e0, ConstOperation
 			if (not i->isExpr()) {
 				return false;
 			}
-			auto op0 = e0.operationAt(i->index);
-			auto op1 = e1.operationAt(o1.index);
+			auto op0 = e0.at(i->index);
+			auto op1 = e1.at(o1.index);
 			if (not (op0->func == op1->func
 				and (op0->operands.size() == op1->operands.size()
 					or ((op1->isCommutative() or init)
@@ -323,12 +323,12 @@ bool canMap(vector<Operand> o0, Operand o1, ConstOperationSet e0, ConstOperation
 }
 
 Operation::Operation() {
-	lvalue = -1;
+	exprIndex = std::numeric_limits<size_t>::max();
 	func = -1;
 }
 
-Operation::Operation(int func, vector<Operand> args) {
-	lvalue = -1;
+Operation::Operation(int func, vector<Operand> args, size_t exprIndex) {
+	this->exprIndex = exprIndex;
 	set(func, args);
 }
 
@@ -846,6 +846,7 @@ void Operation::apply(vector<Operand> uidMap) {
 }
 
 Operation &Operation::offsetExpr(int off) {
+	exprIndex += off;
 	for (int i = 0; i < (int)operands.size(); i++) {
 		operands[i].offsetExpr(off);
 	}
@@ -867,7 +868,7 @@ bool areSame(Operation o0, Operation o1) {
 }
 
 ostream &operator<<(ostream &os, Operation o) {
-	os << "op(" << o.func << "): ";
+	os << "expr[" << o.exprIndex << "] = ";
 	Operator op;
 	if (o.func >= 0 and o.func < (int)Operation::operators.size()) {
 		op = Operation::operators[o.func];
@@ -894,6 +895,7 @@ ostream &operator<<(ostream &os, Operation o) {
 		os << o.operands[i];
 	}
 	os << op.postfix;
+	os << "  (" << o.func << ")";
 	return os;
 }
 

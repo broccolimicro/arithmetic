@@ -320,59 +320,56 @@ vector<int> Expression::createMapping() const {
 	return result;
 }
 
-Operand Expression::eraseReflexive() {
-	vector<Operand> refl;
-	for (int i = (int)operations.size()-1; i >= 0; i--) {
-		auto j = operations.begin()+i;
-		if (j->isReflexive()) {
-			if (j->exprIndex >= refl.size()) {
-				refl.resize(j->exprIndex+1, Operand::undef());
-			}
-			refl[j->exprIndex] = j->operands[0];
-			operations.erase(j);
-		}
-	}
-
-	for (auto i = operations.begin(); i != operations.end(); i++) {
-		for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
-			if (j->isExpr() and j->index < refl.size() and not refl[j->index].isUndef()) {
-				*j = refl[j->index];
-			}
-		}
-	}
-	if (top.isExpr() and top.index < refl.size() and not refl[top.index].isUndef()) {
-		top = refl[top.index];
-	}
-	return top;
-}
-
 Expression &Expression::eraseDangling() {
 	cout << "entering eraseDangling(): " << *this << endl;
-	vector<pair<int, int> > refs;
-	for (int i = 0; i < (int)operations.size(); i++) {
-		auto j = operations.begin()+i;
-		if (j->exprIndex >= refs.size()) {
-			refs.resize(j->exprIndex+1, {-1,0});
-		}
-		refs[j->exprIndex].first = i;
+	// exprIndex -> index into operations or -1 if not found
+	vector<int> mapping = createMapping();
 
-		for (auto k = j->operands.begin(); k != j->operands.end(); k++) {
-			if (k->isExpr()) {
-				if (k->index >= refs.size()) {
-					refs.resize(k->index+1, {-1,0});
+	// vector<bool> is a bitset in a c++
+	vector<bool> found(operations.size(), false);
+
+	// current exprIndex
+	vector<size_t> stack;
+	if (top.isExpr()) {
+		if (top.index >= mapping.size()) {
+			printf("internal:%s:%d: expression index not found in mapping\n", __FILE__, __LINE__);
+			return *this;
+		}
+		int idx = mapping[top.index];
+		if (idx < 0 or idx >= (int)operations.size()) {
+			printf("internal:%s:%d: operation not found in expression\n", __FILE__, __LINE__);
+			return *this;
+		}
+		stack.push_back(idx);
+		found[idx] = true;
+	}
+	while (not stack.empty()) {
+		auto curr = operations.begin() + stack.back();
+		stack.pop_back();
+
+		// expand expression into stack
+		for (auto i = curr->operands.begin(); i != curr->operands.end(); i++) {
+			if (i->isExpr()) {
+				if (i->index >= mapping.size()) {
+					printf("internal:%s:%d: expression index not found in mapping\n", __FILE__, __LINE__);
+					continue;
 				}
-				refs[k->index].second++;
+				int idx = mapping[i->index];
+				if (idx < 0 or idx >= (int)operations.size()) {
+					printf("internal:%s:%d: operation not found in expression\n", __FILE__, __LINE__);
+					continue;
+				}
+				if (not found[idx]) {
+					stack.push_back(idx);
+					found[idx] = true;
+				}
 			}
 		}
 	}
 
-	sort(refs.begin(), refs.end());
-	
-	for (int i = (int)refs.size()-1; i >= 0; i--) {
-		if (refs[i].second == 0
-			and refs[i].first >= 0
-			and refs[i].first < (int)operations.size()) {
-			operations.erase(operations.begin()+refs[i].first);
+	for (int i = (int)operations.size()-1; i >= 0; i--) {
+		if (not found[i]) {
+			operations.erase(operations.begin()+i);
 		}
 	}
 	

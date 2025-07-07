@@ -71,7 +71,6 @@ struct Expression {
 	// TODO(edward.bingham) All of these functions need to be moved out of
 	// Expression and operate on an interface that represents any
 	// random-access container of Operations
-	Operand eraseReflexive();
 	Expression &eraseDangling();
 	Expression &tidy(bool rules=false);
 

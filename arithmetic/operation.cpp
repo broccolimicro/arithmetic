@@ -868,7 +868,7 @@ bool areSame(Operation o0, Operation o1) {
 }
 
 ostream &operator<<(ostream &os, Operation o) {
-	os << "expr[" << o.exprIndex << "] = ";
+	os << "e" << o.exprIndex << " = ";
 	Operator op;
 	if (o.func >= 0 and o.func < (int)Operation::operators.size()) {
 		op = Operation::operators[o.func];

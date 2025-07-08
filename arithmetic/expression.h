@@ -10,6 +10,26 @@
 namespace arithmetic {
 
 struct Expression {
+	struct Iterator {
+		Expression *root;
+		// prefer multiple vector<bool> instead of vector<pair<bool, bool>
+		// > because vector<bool> is a bitset in a c++
+		vector<bool> expand;
+		vector<bool> seen;
+		// exprIndex -> index into operations or -1 if not found
+		vector<int> mapping;
+		vector<size_t> stack;
+
+		size_t index();
+		Operation &get();
+		vector<Operation>::iterator at();
+		vector<Operation>::iterator operator->();
+		bool next();
+		bool done();
+	};
+
+	Iterator begin(Operand start=Operand::undef());
+
 	Expression();
 	Expression(Operand arg0);
 	Expression(int func, Operand arg0);

@@ -200,14 +200,14 @@ Operand Operand::varOf(size_t index) {
 	return result;
 }
 
-void Operand::apply(vector<int> uidMap) {
-	if (uidMap.empty()) {
+void Operand::apply(vector<int> varMap) {
+	if (varMap.empty()) {
 		return;
 	}
 
 	if (isVar()) {
-		if (index < uidMap.size()) {
-			index = uidMap[index];
+		if (index < varMap.size()) {
+			index = varMap[index];
 		} else {
 			type = CONST;
 			cnst = Value::X();
@@ -215,19 +215,29 @@ void Operand::apply(vector<int> uidMap) {
 	}
 }
 
-void Operand::apply(vector<Operand> uidMap) {
-	if (uidMap.empty()) {
+void Operand::apply(vector<Operand> varMap) {
+	if (varMap.empty()) {
 		return;
 	}
 
 	if (isVar()) {
-		if (index < uidMap.size()) {
-			type = uidMap[index].type;
-			index = uidMap[index].index;
+		if (index < varMap.size()) {
+			type = varMap[index].type;
+			index = varMap[index].index;
 		} else {
 			type = CONST;
 			cnst = Value::X();
 		}
+	}
+}
+
+void Operand::replace(vector<Operand> exprMap) {
+	if (exprMap.empty()) {
+		return;
+	}
+
+	if (isExpr() and index < exprMap.size() and not exprMap[index].isUndef()) {
+		*this = exprMap[index];
 	}
 }
 
@@ -825,23 +835,33 @@ void Operation::propagate(State &result, const State &global, vector<Value> &exp
 	} 
 }
 
-void Operation::apply(vector<int> uidMap) {
-	if (uidMap.empty()) {
+void Operation::apply(vector<int> varMap) {
+	if (varMap.empty()) {
 		return;
 	}
 
 	for (int i = 0; i < (int)operands.size(); i++) {
-		operands[i].apply(uidMap);
+		operands[i].apply(varMap);
 	}
 }
 
-void Operation::apply(vector<Operand> uidMap) {
-	if (uidMap.empty()) {
+void Operation::apply(vector<Operand> varMap) {
+	if (varMap.empty()) {
 		return;
 	}
 
 	for (int i = 0; i < (int)operands.size(); i++) {
-		operands[i].apply(uidMap);
+		operands[i].apply(varMap);
+	}
+}
+
+void Operation::replace(vector<Operand> exprMap) {
+	if (exprMap.empty()) {
+		return;
+	}
+
+	for (int i = 0; i < (int)operands.size(); i++) {
+		operands[i].replace(exprMap);
 	}
 }
 
@@ -851,6 +871,30 @@ Operation &Operation::offsetExpr(int off) {
 		operands[i].offsetExpr(off);
 	}
 	return *this;
+}
+
+void Operation::tidy() {
+	if (isCommutative()) {
+		// Move constants to the left hand side for evaluation
+		// Order variables by index
+		sort(operands.begin(), operands.end(),
+			[](const Operand &a, const Operand &b) {
+				return a.type < b.type or (a.type == b.type
+					and a.isVar() and a.index < b.index);
+			});
+	}
+
+	// merge adjacent constants from left to right as a result of operator precedence
+	auto i = operands.begin();
+	while (i != operands.end() and next(i) != operands.end()) {
+		auto j = next(i);
+		if (i->isConst() and j->isConst()) {
+			*i = evaluate(func, {i->get(), j->get()});
+			operands.erase(j);
+		} else {
+			i++;
+		}
+	}
 }
 
 bool areSame(Operation o0, Operation o1) {

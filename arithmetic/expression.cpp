@@ -11,6 +11,92 @@
 namespace arithmetic
 {
 
+size_t Expression::Iterator::index() {
+	return stack.back();
+}
+
+Operation &Expression::Iterator::get() {
+	return root->operations[stack.back()];
+}
+
+vector<Operation>::iterator Expression::Iterator::at() {
+	return root->operations.begin() + stack.back();
+}
+
+vector<Operation>::iterator Expression::Iterator::operator->() {
+	return root->operations.begin() + stack.back();
+}
+
+bool Expression::Iterator::next() {
+	if (not stack.empty()) {
+		if (seen[stack.back()]) {
+			stack.pop_back();
+		} else {
+			seen[stack.back()] = true;
+		}
+	}
+	while (not stack.empty()) {
+		auto curr = root->operations.begin() + stack.back();
+		cout << "operator " << stack.back() << endl;
+		if (not expand[stack.back()]) {
+			cout << "expanding" << endl;
+			expand[stack.back()] = true;
+			// expand expression into stack
+			for (auto i = curr->operands.begin(); i != curr->operands.end(); i++) {
+				if (i->isExpr()) {
+					if (i->index >= mapping.size()) {
+						printf("internal:%s:%d: expression index not found in mapping\n", __FILE__, __LINE__);
+						continue;
+					}
+					int idx = mapping[i->index];
+					if (idx < 0 or idx >= (int)root->operations.size()) {
+						printf("internal:%s:%d: operation not found in expression\n", __FILE__, __LINE__);
+						continue;
+					}
+					if (not seen[idx]) {
+						stack.push_back(idx);
+						seen[idx] = true;
+					}
+				}
+			}
+		} else {
+			cout << "processing" << endl;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool Expression::Iterator::done() {
+	return stack.empty();
+}
+
+Expression::Iterator Expression::begin(Operand start) {
+	if (start.isUndef()) {
+		start = top;
+	}
+	Iterator result;
+	result.root = this;
+	result.mapping = createMapping();
+	result.expand = vector<bool>(operations.size(), false);
+	result.seen = vector<bool>(operations.size(), false);
+
+	if (start.isExpr()) {
+		if (start.index >= result.mapping.size()) {
+			printf("internal:%s:%d: expression index not found in mapping\n", __FILE__, __LINE__);
+			return result;
+		}
+		int idx = result.mapping[start.index];
+		if (idx < 0 or idx >= (int)operations.size()) {
+			printf("internal:%s:%d: operation not found in expression\n", __FILE__, __LINE__);
+			return result;
+		}
+		result.stack.push_back(idx);
+	}
+	return result;
+}
+
 Expression::Expression() {
 	Operation::loadOperators();
 	nextExprIndex = 0;
@@ -378,6 +464,13 @@ Expression &Expression::eraseDangling() {
 	return *this;
 }
 
+// tidy() does a few things:
+// 1. propagate constants
+// 2. remove reflexive operations
+// 3. remove unitary commutative operations (if not rules)
+// 4. remove dangling operations
+// 5. merge successive commutative operations
+// 6. sort operands into a canonical order for commutative operations
 Expression &Expression::tidy(bool rules) {
 	// Start from the top and do depth first search. That zips up the graph for
 	// us. First, we need a mapping of index in operations to exprIndex so we
@@ -389,118 +482,52 @@ Expression &Expression::tidy(bool rules) {
 	// propagate all constants. The end result should still be functionally
 	// equivalent.
 
-	if (not top.isExpr()) {
-		return *this;
-	}
 
-	// exprIndex -> index into operations or -1 if not found
-	vector<int> mapping = createMapping();
-	// nextExprIndex represents the upper bound of possible exprIndex values. So if this is violated then that is an internal failure.
-	// TODO(edward.bingham) we may want to add something for debug builds that verifies this invariant at runtime.
-
-	// prefer multiple vector<bool> instead of vector<pair<bool, bool> > because vector<bool> is a bitset in a c++
-	vector<bool> found(nextExprIndex, false);
-	vector<bool> expanded(nextExprIndex, false);
 	vector<Operand> replace(nextExprIndex, Operand::undef());
 
-	// current exprIndex
-	vector<size_t> stack(1, top.index);
-	found[top.index] = true;
-	// propagate constants up through the precedence levels
-	// depth first search from top to create directed acyclic graph ordering
-	// expand out until we reach the leaves, then zip up the constants until we empty the stack.
-	cout << "mapping: " << ::to_string(mapping) << endl;
-	while (not stack.empty()) {
-		size_t curr = stack.back();
-		if (curr >= mapping.size()
-			or mapping[curr] < 0
-			or mapping[curr] >= (int)operations.size()) {
-			printf("internal:%s:%d: expression index not found in mapping\n", __FILE__, __LINE__);
-			stack.pop_back();
-			continue;
-		}
+	Iterator curr = begin();
+	while (curr.next()) {
+		cout << "start: " << curr.get() << endl;
+		curr->replace(replace);
+		curr->tidy();
+		cout << "replaced: " << curr.get() << endl;
 
-		auto i = operations.begin() + mapping[curr];
-
-		if (not expanded[curr]) {
-			cout << "expanding: " << curr << " " << ::to_string(stack) << endl;
-			// expand expression into stack
-			for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
-				if (j->isExpr() and not found[j->index]) {
-					found[j->index] = true;
-					stack.push_back(j->index);
-				}
-			}
-			expanded[curr] = true;
+		if (curr->operands.size() == 1u and curr->operands[0].isConst()) {
+			Operand v = Operation::evaluate(curr->func, {curr->operands[0].get()});
+			replace[curr->exprIndex] = v;
+			cout << "found const expr[" << curr->exprIndex << "] = " << v << endl;
+		}	else if (curr->operands.size() == 1u and (curr->isReflexive()
+			or (not rules and curr->isCommutative()))) {
+			// replace reflexive expressions
+			replace[curr->exprIndex] = curr->operands[0];
+			cout << "found reflex expr[" << curr->exprIndex << "] = " << curr->operands[0] << endl;
 		} else {
-			cout << "compressing: " << curr << " " << ::to_string(stack) << endl;
-			cout << "start: " << *i << endl;
-			if (i->isCommutative()) {
-				// Move constants to the left hand side for evaluation
-				// Order variables by index
-				sort(i->operands.begin(), i->operands.end(),
-					[](const Operand &a, const Operand &b) {
-						return a.type < b.type or (a.type == b.type
-							and a.isVar() and a.index < b.index);
-					});
-				cout << "sorted: " << *i << endl;
-			}
-
-			// merge adjacent constants from left to right as a result of operator precedence
-			auto j = i->operands.begin();
-			if (j->isExpr() and not replace[j->index].isUndef()) {
-				*j = replace[j->index];
-			}
-
-			while (j != i->operands.end() and next(j) != i->operands.end()) {
-				auto k = next(j);
-				if (k->isExpr() and not replace[k->index].isUndef()) {
-					*k = replace[k->index];
-				}
-
-				if (j->isConst() and k->isConst()) {
-					*j = Operation::evaluate(i->func, {j->get(), k->get()});
-					i->operands.erase(k);
-				} else {
-					j++;
+			// replace identical operations
+			for (auto k = operations.begin(); k != operations.end(); k++) {
+				if (curr.expand[k->exprIndex] and k != curr.at() and replace[k->exprIndex].isUndef() and areSame(curr.get(), *k)) {
+					replace[curr->exprIndex] = Operand::exprOf(k->exprIndex);
+					cout << "found duplicate expr[" << curr->exprIndex << "] = " << Operand::exprOf(k->exprIndex) << endl;
+					break;
 				}
 			}
-
-			cout << "replaced: " << *i << endl;
-
-			if (i->operands.size() == 1u and i->operands[0].isConst()) {
-				Operand v = Operation::evaluate(i->func, {i->operands[0].get()});
-				replace[curr] = v;
-				cout << "found const expr[" << curr << "] = " << v << endl;
-			}	else if (i->operands.size() == 1u and (i->isReflexive()
-				or (not rules and i->isCommutative()))) {
-				// replace reflexive expressions
-				replace[curr] = i->operands[0];
-				cout << "found reflex expr[" << curr << "] = " << i->operands[0] << endl;
-			} else {
-				// replace identical operations
-				for (auto k = operations.begin(); k != operations.end(); k++) {
-					if (expanded[k->exprIndex] and k != i and replace[k->exprIndex].isUndef() and areSame(*i, *k)) {
-						replace[curr] = Operand::exprOf(k->exprIndex);
-						cout << "found duplicate expr[" << curr << "] = " << Operand::exprOf(k->exprIndex) << endl;
-						break;
-					}
-				}
-			}
-
-			cout << *this << endl;
-			// zip up constants
-			stack.pop_back();
 		}
+
+		cout << *this << endl;
 	}
 
 	if (top.isExpr() and not replace[top.index].isUndef()) {
 		top = replace[top.index];
 	}
 
+	for (int i = (int)operations.size()-1; i >= 0; i--) {
+		if (not curr.seen[i] or not replace[operations[i].exprIndex].isUndef()) {
+			operations.erase(operations.begin()+i);
+		}
+	}
+
 	cout << "done: " << *this << endl;
 
-	return eraseDangling();
+	return *this;
 
 	// TODO(edward.bingham) reorder operations into a canonical order
 

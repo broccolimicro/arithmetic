@@ -67,8 +67,9 @@ struct Operand {
 	Operand &offsetExpr(int off);
 
 	static Operand varOf(size_t index);
-	void apply(vector<int> uidMap);
-	void apply(vector<Operand> uidMap);
+	void apply(vector<int> varMap);
+	void apply(vector<Operand> varMap);
+	void replace(vector<Operand> exprMap);
 	
 	static Operand typeOf(int type);
 };
@@ -149,9 +150,12 @@ struct Operation {
 	Value evaluate(State values, vector<Value> expressions) const;
 	Value evaluate(State values, vector<Value> expressions, TypeSet types) const;
 	void propagate(State &result, const State &global, vector<Value> &expressions, const vector<Value> gexpressions, Value v) const;
-	void apply(vector<int> uidMap);
-	void apply(vector<Operand> uidMap);
+	void apply(vector<int> varMap);
+	void apply(vector<Operand> varMap);
+	void replace(vector<Operand> exprMap);
 	Operation &offsetExpr(int off);
+
+	void tidy();
 };
 
 bool areSame(Operation o0, Operation o1);

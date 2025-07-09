@@ -46,31 +46,6 @@ struct Expression {
 		const_iterator &operator++();
 	};
 
-	iterator at(Operand op);
-	iterator begin();
-	iterator end();
-
-	const_iterator at(Operand op) const;
-	const_iterator begin() const;
-	const_iterator end() const;
-
-	// DESIGN(edward.bingham) this is not stricly necessary, but this is a nice
-	// optimization for mapping exprIndex to the index into the operations
-	// vector.
-
-	// exprIndex -> index into operations or -1 if not found
-	mutable vector<int> exprMap;
-	mutable bool exprMapIsDirty;
-
-	void breakMap() const;
-	void fixMap() const;
-	void setExpr(size_t exprIndex, size_t index) const;
-	int lookup(size_t exprIndex) const;
-
-	Expression(Operand arg0 = Operand::undef());
-	Expression(int func, vector<Operand> args);
-	~Expression();
-
 	// The Expression consists entirely of a tree of operations stored in an
 	// array. operations are stored in the array in order of precedence. So if
 	// the Expression is (a+b)*3 + x*y, then they'll be stored in the following order:
@@ -85,6 +60,31 @@ struct Expression {
 
 	// next available index to be assigned as an exprIndex for an expression
 	size_t nextExprIndex;
+
+	// DESIGN(edward.bingham) this is not stricly necessary, but this is a nice
+	// optimization for mapping exprIndex to the index into the operations
+	// vector.
+
+	// exprIndex -> index into operations or -1 if not found
+	mutable vector<int> exprMap;
+	mutable bool exprMapIsDirty;
+
+	iterator at(Operand op);
+	iterator begin();
+	iterator end();
+
+	const_iterator at(Operand op) const;
+	const_iterator begin() const;
+	const_iterator end() const;
+
+	void breakMap() const;
+	void fixMap() const;
+	void setExpr(size_t exprIndex, size_t index) const;
+	int lookup(size_t exprIndex) const;
+
+	Expression(Operand arg0 = Operand::undef());
+	Expression(int func, vector<Operand> args);
+	~Expression();
 
 	vector<Operation>::iterator at(size_t index);
 	vector<Operation>::const_iterator at(size_t index) const;

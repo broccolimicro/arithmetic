@@ -131,8 +131,8 @@ struct Expression {
 
 	Cost cost(vector<Type> vars) const;
 	vector<Match> search(const Expression &rules, size_t count=0, bool fwd=true, bool bwd=true);
-	/*void replace(Operand o0, Operand o1);
-	void replace(const Expression &rules, Match token);
+	void replace(Operand o0, Operand o1);
+	/*void replace(const Expression &rules, Match token);
 	size_t count(Operand start) const;
 	Expression &minimize(Expression directed=Expression());*/
 

@@ -311,7 +311,7 @@ TEST(Expression, ChainOfAdds) {
 	
 	Expression dut = a+b+c+d+e+f+g;
 	dut.minimize();
-}
+}*/
 
 TEST(Expression, ElasticRewrite) {
 	Operand a = Operand::varOf(0);
@@ -320,16 +320,16 @@ TEST(Expression, ElasticRewrite) {
 	Operand d = Operand::varOf(3);
 	Operand e = Operand::varOf(4);
 	
-	Expression dut = e*add({a,b,c,d});
 	Expression rules = arithmetic::array({
 		a*add(b) > add(a*b),
 	});
 
+	Expression dut = e*add({a,b,c,d});
 	auto m = dut.search(rules);
 	cout << ::to_string(m) << endl;
 }
 
-TEST(Expression, Boolean) {
+/*TEST(Expression, Boolean) {
 	Operand a = Operand::varOf(0);
 	Operand b = Operand::varOf(1);
 	Operand c = Operand::varOf(2);

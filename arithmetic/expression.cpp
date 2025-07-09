@@ -547,7 +547,8 @@ bool Expression::verifyRuleFormat(Operand i, bool msg) const {
 		return false;
 	}
 	auto j = at(i.index);
-	if (j->operands.size() != 2u
+	if (j == nullptr
+		or j->operands.size() != 2u
 		or (j->func != Operation::EQUAL
 		and j->func != Operation::LESS
 		and j->func != Operation::GREATER)) {
@@ -637,7 +638,7 @@ vector<Expression::Match> Expression::search(const Expression &rules, size_t cou
 
 		// search through the "rules" rules and add all of the matching starts
 		for (auto j = ruleTop->operands.begin(); j != ruleTop->operands.end(); j++) {
-			if (not verifyRuleFormat(*j, false)) {
+			if (not rules.verifyRuleFormat(*j, false)) {
 				continue;
 			}
 
@@ -774,13 +775,13 @@ vector<Expression::Match> Expression::search(const Expression &rules, size_t cou
 		}
 	}
 	return result;
-}
+}*/
 
 void Expression::replace(Operand from, Operand to) {
-	for (int i = operations.size()-1; i >= 0; i--) {
-		for (int j = (int)operations[i].operands.size()-1; j >= 0; j--) {
-			if (areSame(operations[i].operands[j], from)) {
-				operations[i].operands[j] = to;
+	for (auto i = operations.begin(); i != operations.end(); i++) {
+		for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
+			if (areSame(*j, from)) {
+				*j = to;
 			}
 		}
 	}
@@ -788,7 +789,7 @@ void Expression::replace(Operand from, Operand to) {
 
 // TODO(edward.bingham) I am currently decoupling the expression ids from the index in the operations vector. This is the next function I have to do.
 
-void Expression::replace(const Expression &rules, Match match) {
+/*void Expression::replace(const Expression &rules, Match match) {
 	if (not match.replace.isExpr()) {
 		size_t ins = 0;
 		size_t slot = match.expr.back();

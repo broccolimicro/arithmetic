@@ -305,7 +305,7 @@ Region Choice::evaluate(const State &curr) {
 
 Expression Choice::guard() {
 	if (terms.empty()) {
-		return Expression(true);
+		return Operand(true);
 	}
 
 	Expression result(false);

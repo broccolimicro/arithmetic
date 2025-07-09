@@ -10,35 +10,65 @@
 namespace arithmetic {
 
 struct Expression {
-	struct Iterator {
+	struct iterator {
+		iterator(Expression *root = nullptr);
+		~iterator();
+
 		Expression *root;
 		// prefer multiple vector<bool> instead of vector<pair<bool, bool>
 		// > because vector<bool> is a bitset in a c++
 		vector<bool> expand;
 		vector<bool> seen;
-		// exprIndex -> index into operations or -1 if not found
-		vector<int> mapping;
 		vector<size_t> stack;
 
-		size_t index();
 		Operation &get();
 		vector<Operation>::iterator at();
+		Operation &operator*();
 		vector<Operation>::iterator operator->();
-		bool next();
-		bool done();
+		iterator &operator++();
 	};
 
-	Iterator begin(Operand start=Operand::undef());
+	struct const_iterator {
+		const_iterator(const Expression *root = nullptr);
+		~const_iterator();
+
+		const Expression *root;
+		// prefer multiple vector<bool> instead of vector<pair<bool, bool>
+		// > because vector<bool> is a bitset in a c++
+		vector<bool> expand;
+		vector<bool> seen;
+		vector<size_t> stack;
+
+		const Operation &get();
+		vector<Operation>::const_iterator at();
+		const Operation &operator*();
+		vector<Operation>::const_iterator operator->();
+		const_iterator &operator++();
+	};
+
+	iterator at(Operand op);
+	iterator begin();
+	iterator end();
+
+	const_iterator at(Operand op) const;
+	const_iterator begin() const;
+	const_iterator end() const;
+
+	// DESIGN(edward.bingham) this is not stricly necessary, but this is a nice
+	// optimization for mapping exprIndex to the index into the operations
+	// vector.
+
+	// exprIndex -> index into operations or -1 if not found
+	mutable vector<int> exprMap;
+	mutable bool exprMapIsDirty;
+
+	void breakMap() const;
+	void fixMap() const;
+	void setExpr(size_t exprIndex, size_t index) const;
+	int lookup(size_t exprIndex) const;
 
 	Expression();
 	Expression(Operand arg0);
-	Expression(int func, Operand arg0);
-	Expression(int func, Expression arg0);
-	Expression(int func, Operand arg0, Operand arg1);
-	Expression(int func, Expression arg0, Operand arg1);
-	Expression(int func, Operand arg0, Expression arg1);
-	Expression(int func, Expression arg0, Expression arg1);
-	Expression(int func, vector<Expression> args);
 	~Expression();
 
 	// The Expression consists entirely of a tree of operations stored in an
@@ -72,9 +102,6 @@ struct Expression {
 	Operand set(int func, Expression arg0, Operand arg1);
 	Operand set(int func, Operand arg0, Expression arg1);
 	Operand set(int func, vector<Expression> args);
-	Operand push(int func);
-	Operand push(int func, Operand arg0);
-	Operand push(int func, Expression arg0);
 	Value evaluate(State values) const;
 	bool isNull() const;
 	bool isConstant() const;
@@ -85,13 +112,9 @@ struct Expression {
 	void apply(vector<int> uidMap);
 	void apply(vector<Expression> uidMap);
 
-	// exprIndex -> index into operations
-	vector<int> createMapping() const;
-
 	// TODO(edward.bingham) All of these functions need to be moved out of
 	// Expression and operate on an interface that represents any
 	// random-access container of Operations
-	Expression &eraseDangling();
 	Expression &tidy(bool rules=false);
 
 	struct Match {
@@ -121,6 +144,11 @@ struct Expression {
 
 	string to_string() const;
 };
+
+bool operator==(const Expression::iterator &i0, const Expression::iterator &i1);
+bool operator!=(const Expression::iterator &i0, const Expression::iterator &i1);
+bool operator==(const Expression::const_iterator &i0, const Expression::const_iterator &i1);
+bool operator!=(const Expression::const_iterator &i0, const Expression::const_iterator &i1);
 
 bool areSame(Expression e0, Expression e1);
 

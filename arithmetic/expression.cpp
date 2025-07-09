@@ -244,20 +244,20 @@ Expression::Expression(int func, vector<Operand> args) {
 Expression::~Expression() {
 }
 
-vector<Operation>::iterator Expression::at(size_t index) {
+Operation *Expression::at(size_t index) {
 	int i = lookup(index);
 	if (i < 0) {
-		return operations.end();
+		return nullptr;
 	}
-	return operations.begin() + i;
+	return &operations[i];
 }
 
-vector<Operation>::const_iterator Expression::at(size_t index) const {
+const Operation *Expression::at(size_t index) const {
 	int i = lookup(index);
 	if (i < 0) {
-		return operations.end();
+		return nullptr;
 	}
-	return operations.begin() + i;
+	return &operations[i];
 }
 
 void Expression::clear() {
@@ -540,6 +540,41 @@ Expression &Expression::tidy(bool rules) {
 	// TODO(edward.bingham) create hash function on expression for insertion into hash map
 }
 
+bool Expression::verifyRuleFormat(Operand i, bool msg) const {
+	// ==, <, >
+	if (not i.isExpr()) {
+		if (msg) printf("internal:%s:%d: invalid format for rule\n", __FILE__, __LINE__);
+		return false;
+	}
+	auto j = at(i.index);
+	if (j->operands.size() != 2u
+		or (j->func != Operation::EQUAL
+		and j->func != Operation::LESS
+		and j->func != Operation::GREATER)) {
+		if (msg) printf("internal:%s:%d: invalid format for rule\n", __FILE__, __LINE__);
+		return false;
+	}
+	return true;
+}
+
+bool Expression::verifyRulesFormat(bool msg) const {
+	if (not top.isExpr() or operations.empty()) {
+		if (msg) printf("error: no replacement rules found\n");
+		return false;
+	}
+	auto ruleTop = at(top.index);
+	if (ruleTop->func != Operation::ARRAY) {
+		if (msg) printf("error: invalid format for replacement rules\n");
+		return false;
+	}
+	bool result = true;
+	for (auto i = ruleTop->operands.begin(); i != ruleTop->operands.end(); i++) {
+		result = verifyRuleFormat(*i, msg) and result;
+	}
+	return result;
+}
+
+
 Cost Expression::cost(vector<Type> vars) const {
 	if (not top.isExpr()) {
 		return Cost();
@@ -578,70 +613,44 @@ Cost Expression::cost(vector<Type> vars) const {
 	return Cost(complexity, delay);
 }
 
-/*vector<Expression::Match> Expression::search(const Expression &rules, size_t count, bool fwd, bool bwd) {
+// TODO(edward.bingham) I need a way to canonicalize expressions and hash
+// them so that I can do the state search algorithm.
+//
+// TODO(edward.bingham) rules aren't currently able to match with a variable
+// number of operands. I need to create a comprehension functionality to
+// support those more complex matches.
+//
+// TODO(edward.bingham) look into "tree automata" and "regular tree grammar"
+// as a form of regex for trees instead of sequences.
+vector<Expression::Match> Expression::search(const Expression &rules, size_t count, bool fwd, bool bwd) {
+	if (not rules.verifyRulesFormat(true)) {
+		return vector<Expression::Match>();
+	}
+
 	using Leaf = pair<Operand, Operand>;
 	vector<pair<vector<Leaf>, Match> > stack;
 
-	// TODO(edward.bingham) I need a way to canonicalize expressions and hash
-	// them so that I can do the state search algorithm.
-
-	// TODO(edward.bingham) rules aren't currently able to match with a variable
-	// number of operands. I need to create a comprehension functionality to
-	// support those more complex matches.
-
-	// TODO(edward.bingham) look into "tree automata" and "regular tree grammar"
-	// as a form of regex for trees instead of sequences.
-
-	if (not rules.top.isExpr() or rules.operations.empty()) {
-		printf("error: no replacement rules found\n");
-		return vector<Expression::Match>();
-	}
-
-	auto ruleTop = rules.operations.begin() + ruleMap[rules.top.index];
-	if (ruleTop->func != Operation::ARRAY) {
-		printf("error: invalid format for replacement rules\n");
-		return vector<Expression::Match>();
-	}
-	auto rulesBegin = ruleTop->operands.begin();
-	auto rulesEnd = ruleTop->operands.end();
-	for (auto i = rulesBegin; i != rulesEnd; i++) {
-		// ==, <, >
-		if (not i->isExpr()) {
-			printf("internal:%s:%d: invalid format for rule\n", __FILE__, __LINE__);
-			continue;
-		}
-		auto j = rules.operations.begin() + ruleMap[i->index];
-		if (j->func != Operation::EQUAL
-			and j->func != Operation::LESS
-			and j->func != Operation::GREATER) {
-			printf("internal:%s:%d: invalid format for rule\n", __FILE__, __LINE__);
-		}
-	}
-
 	// initialize the initial matches
+	auto ruleTop = rules.at(rules.top.index);
 	for (int i = 0; i < (int)operations.size(); i++) {
+		Operand op = Operand::exprOf(operations[i].exprIndex);
+
 		// search through the "rules" rules and add all of the matching starts
-		for (auto j = rulesBegin; j != rulesEnd; j++) {
-			if (not j->isExpr()) {
+		for (auto j = ruleTop->operands.begin(); j != ruleTop->operands.end(); j++) {
+			if (not verifyRuleFormat(*j, false)) {
 				continue;
 			}
-			auto rule = rules.operations.begin() + ruleMap[j->index];
-			// ==, <, >
-			if (rule->operands.size() != 2u
-				or (rule->func != Operation::EQUAL
-					and rule->func != Operation::LESS
-					and rule->func != Operation::GREATER)) {
-				continue;
-			}
+
+			auto rule = rules.at(j->index);
 			auto lhs = rule->operands.begin();
 			auto rhs = std::next(lhs);
 			// map left to right
 			if (rule->func == Operation::GREATER or (fwd and rule->func == Operation::EQUAL)) {
 				Match match;
 				vector<Leaf> leaves;
-				if (canMap({Operand::exprOf(i)}, *lhs, *this, rules, true, &match.vars)) {
+				if (canMap({op}, *lhs, *this, rules, true, &match.vars)) {
 					match.replace = *rhs;
-					leaves.push_back({Operand::exprOf(i), *lhs});
+					leaves.push_back({op, *lhs});
 					stack.push_back({leaves, match});
 				}
 			}
@@ -650,9 +659,9 @@ Cost Expression::cost(vector<Type> vars) const {
 			if (rule->func == Operation::LESS or (bwd and rule->func == Operation::EQUAL)) {
 				Match match;
 				vector<Leaf> leaves;
-				if (canMap({Operand::exprOf(i)}, *rhs, *this, rules, true, &match.vars)) {
+				if (canMap({op}, *rhs, *this, rules, true, &match.vars)) {
 					match.replace = *lhs;
-					leaves.push_back({Operand::exprOf(i), *rhs});
+					leaves.push_back({op, *rhs});
 					stack.push_back({leaves, match});
 				}
 			}
@@ -681,8 +690,8 @@ Cost Expression::cost(vector<Type> vars) const {
 		//cout << "Leaves: " << ::to_string(leaves) << endl;
 
 		if (to.isExpr()) {
-			auto fOp = operations.begin() + mapping[from.index];
-			auto tOp = rules.operations.begin() + ruleMap[to.index];
+			auto fOp = at(from.index);
+			auto tOp = rules.at(to.index);
 
 			bool commute = tOp->isCommutative();
 			if (commute and tOp->operands.size() == 1u) {
@@ -744,7 +753,7 @@ Cost Expression::cost(vector<Type> vars) const {
 	return result;
 }
 
-size_t Expression::count(Operand start) const {
+/*size_t Expression::count(Operand start) const {
 	if (not start.isExpr()) {
 		return 1u;
 	}

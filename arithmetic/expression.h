@@ -86,8 +86,8 @@ struct Expression {
 	Expression(int func, vector<Operand> args);
 	~Expression();
 
-	vector<Operation>::iterator at(size_t index);
-	vector<Operation>::const_iterator at(size_t index) const;
+	Operation *at(size_t index);
+	const Operation *at(size_t index) const;
 
 	void clear();
 
@@ -126,9 +126,12 @@ struct Expression {
 		map<size_t, vector<Operand> > vars;
 	};
 
+	bool verifyRuleFormat(Operand i, bool msg) const;
+	bool verifyRulesFormat(bool msg) const;
+
 	Cost cost(vector<Type> vars) const;
-	/*vector<Match> search(const Expression &rules, size_t count=0, bool fwd=true, bool bwd=true);
-	void replace(Operand o0, Operand o1);
+	vector<Match> search(const Expression &rules, size_t count=0, bool fwd=true, bool bwd=true);
+	/*void replace(Operand o0, Operand o1);
 	void replace(const Expression &rules, Match token);
 	size_t count(Operand start) const;
 	Expression &minimize(Expression directed=Expression());*/

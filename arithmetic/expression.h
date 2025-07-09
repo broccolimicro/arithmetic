@@ -67,8 +67,8 @@ struct Expression {
 	void setExpr(size_t exprIndex, size_t index) const;
 	int lookup(size_t exprIndex) const;
 
-	Expression();
-	Expression(Operand arg0);
+	Expression(Operand arg0 = Operand::undef());
+	Expression(int func, vector<Operand> args);
 	~Expression();
 
 	// The Expression consists entirely of a tree of operations stored in an
@@ -91,17 +91,10 @@ struct Expression {
 
 	void clear();
 
-	Operand push(Operation arg);
-	Operand push(Expression arg);
+	Operand append(Expression arg);
+	vector<Operand> append(vector<Expression> arg);
+	Expression &push(int func, vector<Operand> args);
 
-	Operand set(Operand arg0);
-	Operand set(int func, Operand arg0);
-	Operand set(int func, Expression arg0);
-	Operand set(int func, Operand arg0, Operand arg1);
-	Operand set(int func, Expression arg0, Expression arg1);
-	Operand set(int func, Expression arg0, Operand arg1);
-	Operand set(int func, Operand arg0, Expression arg1);
-	Operand set(int func, vector<Expression> args);
 	Value evaluate(State values) const;
 	bool isNull() const;
 	bool isConstant() const;
@@ -246,8 +239,6 @@ Expression operator%(Operand e0, Operand e1);
 Expression operator&&(Operand e0, Operand e1);
 Expression operator||(Operand e0, Operand e1);
 
-Expression array(vector<Expression> e);
-
 // Used to create elastic rewrite rules for commutative operators
 Expression booleanOr(Expression e0);
 Expression booleanAnd(Expression e0);
@@ -258,6 +249,7 @@ Expression bitwiseXor(Expression e0);
 Expression add(Expression e0);
 Expression mult(Expression e0);
 
+Expression array(vector<Expression> e);
 Expression booleanOr(vector<Expression> e0);
 Expression booleanAnd(vector<Expression> e0);
 Expression booleanXor(vector<Expression> e0);

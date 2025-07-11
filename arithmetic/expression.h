@@ -6,55 +6,16 @@
 #include "type.h"
 
 #include "operation.h"
+#include "iterator.h"
 
 namespace arithmetic {
 
+// The Expression is a tree of operations stored in an array.
+// 0. a+b
+// 1. operations[0]*3
+// 2. x*y
+// 3. operations[1]+operations[2]
 struct Expression {
-	struct iterator {
-		iterator(Expression *root = nullptr);
-		~iterator();
-
-		Expression *root;
-		// prefer multiple vector<bool> instead of vector<pair<bool, bool>
-		// > because vector<bool> is a bitset in a c++
-		vector<bool> expand;
-		vector<bool> seen;
-		vector<size_t> stack;
-
-		Operation &get();
-		vector<Operation>::iterator at();
-		Operation &operator*();
-		vector<Operation>::iterator operator->();
-		iterator &operator++();
-	};
-
-	struct const_iterator {
-		const_iterator(const Expression *root = nullptr);
-		~const_iterator();
-
-		const Expression *root;
-		// prefer multiple vector<bool> instead of vector<pair<bool, bool>
-		// > because vector<bool> is a bitset in a c++
-		vector<bool> expand;
-		vector<bool> seen;
-		vector<size_t> stack;
-
-		const Operation &get();
-		vector<Operation>::const_iterator at();
-		const Operation &operator*();
-		vector<Operation>::const_iterator operator->();
-		const_iterator &operator++();
-	};
-
-	// The Expression consists entirely of a tree of operations stored in an
-	// array. operations are stored in the array in order of precedence. So if
-	// the Expression is (a+b)*3 + x*y, then they'll be stored in the following order:
-	// 0. a+b
-	// 1. operations[0]*3
-	// 2. x*y
-	// 3. operations[1]+operations[2]
-	// Therefore the final Operation stored is the Operation that produces the
-	// final Value for the Expression.
 	vector<Operation> operations;
 	Operand top;
 
@@ -69,14 +30,6 @@ struct Expression {
 	mutable vector<int> exprMap;
 	mutable bool exprMapIsDirty;
 
-	iterator at(Operand op);
-	iterator begin();
-	iterator end();
-
-	const_iterator at(Operand op) const;
-	const_iterator begin() const;
-	const_iterator end() const;
-
 	void breakMap() const;
 	void fixMap() const;
 	void setExpr(size_t exprIndex, size_t index) const;
@@ -86,8 +39,17 @@ struct Expression {
 	Expression(int func, vector<Operand> args);
 	~Expression();
 
-	Operation *at(size_t index);
-	const Operation *at(size_t index) const;
+	Operation *exprAt(size_t index);
+	const Operation *exprAt(size_t index) const;
+
+	Iterator begin(size_t exprIndex = std::numeric_limits<size_t>::max());
+	Iterator end();
+	ConstIterator begin(size_t exprIndex = std::numeric_limits<size_t>::max()) const;
+	ConstIterator end() const;
+	ReverseIterator rbegin(size_t exprIndex = std::numeric_limits<size_t>::max());
+	ReverseIterator rend();
+	ConstReverseIterator rbegin(size_t exprIndex = std::numeric_limits<size_t>::max()) const;
+	ConstReverseIterator rend() const;
 
 	void clear();
 
@@ -129,22 +91,17 @@ struct Expression {
 	bool verifyRuleFormat(Operand i, bool msg) const;
 	bool verifyRulesFormat(bool msg) const;
 
+	Operand extract(size_t exprIndex, vector<size_t> operands);
 	Cost cost(vector<Type> vars) const;
 	vector<Match> search(const Expression &rules, size_t count=0, bool fwd=true, bool bwd=true);
 	void replace(Operand o0, Operand o1);
-	/*void replace(const Expression &rules, Match token);
-	size_t count(Operand start) const;
-	Expression &minimize(Expression directed=Expression());*/
+	void replace(const Expression &rules, Match token);
+	Expression &minimize(Expression directed=Expression());
 
 	Expression &operator=(Operand e);
 
 	string to_string() const;
 };
-
-bool operator==(const Expression::iterator &i0, const Expression::iterator &i1);
-bool operator!=(const Expression::iterator &i0, const Expression::iterator &i1);
-bool operator==(const Expression::const_iterator &i0, const Expression::const_iterator &i1);
-bool operator!=(const Expression::const_iterator &i0, const Expression::const_iterator &i1);
 
 bool areSame(Expression e0, Expression e1);
 

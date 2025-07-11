@@ -7,14 +7,6 @@
 
 namespace arithmetic {
 
-struct Operation;
-
-_INTERFACE_ARG(OperationSet,
-	(Operation *, at, (size_t index)));
-
-_CONST_INTERFACE_ARG(ConstOperationSet,
-	(const Operation *, at, (size_t index) const));
-
 struct Operand {
 	Operand(Value v = Value());
 	Operand(bool bval);
@@ -153,6 +145,7 @@ struct Operation {
 	void apply(vector<int> varMap);
 	void apply(vector<Operand> varMap);
 	void replace(vector<Operand> exprMap);
+	Operation extract(vector<size_t> idx, size_t exprIndex);
 	Operation &offsetExpr(int off);
 
 	void tidy();

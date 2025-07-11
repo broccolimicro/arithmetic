@@ -280,8 +280,7 @@ TEST(Expression, TidyCommutative) {
 	EXPECT_EQ(e.top.cnst.ival, 12);
 }
 
-
-/*TEST(Expression, Simplify) {
+TEST(Expression, Simplify) {
 	Operand a = Operand::varOf(0);
 	Operand b = Operand::varOf(1);
 	Operand c = Operand::varOf(2);
@@ -311,7 +310,7 @@ TEST(Expression, ChainOfAdds) {
 	
 	Expression dut = a+b+c+d+e+f+g;
 	dut.minimize();
-}*/
+}
 
 TEST(Expression, ElasticRewrite) {
 	Operand a = Operand::varOf(0);
@@ -329,7 +328,7 @@ TEST(Expression, ElasticRewrite) {
 	cout << ::to_string(m) << endl;
 }
 
-/*TEST(Expression, Boolean) {
+TEST(Expression, Boolean) {
 	Operand a = Operand::varOf(0);
 	Operand b = Operand::varOf(1);
 	Operand c = Operand::varOf(2);
@@ -347,7 +346,7 @@ TEST(Expression, Identity) {
 	Operand a = Operand::varOf(0);
 
 	Expression dut = a;
-	dut.push(Operation::BOOLEAN_NOT);
+	dut.push(Operation::BOOLEAN_NOT, {dut.top});
 	cout << dut << endl;
 	dut.minimize();
 	cout << dut << endl;
@@ -365,4 +364,4 @@ TEST(Expression, Function) {
 	cout << dut << endl;
 	dut.minimize();
 	cout << dut << endl;
-}*/
+}

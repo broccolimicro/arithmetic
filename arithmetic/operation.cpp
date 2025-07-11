@@ -318,8 +318,8 @@ bool canMap(vector<Operand> o0, Operand o1, ConstOperationSet e0, ConstOperation
 			if (not i->isExpr()) {
 				return false;
 			}
-			auto op0 = e0.at(i->index);
-			auto op1 = e1.at(o1.index);
+			auto op0 = e0.exprAt(i->index);
+			auto op1 = e1.exprAt(o1.index);
 			if (not (op0->func == op1->func
 				and (op0->operands.size() == op1->operands.size()
 					or ((op1->isCommutative() or init)
@@ -863,6 +863,18 @@ void Operation::replace(vector<Operand> exprMap) {
 	for (int i = 0; i < (int)operands.size(); i++) {
 		operands[i].replace(exprMap);
 	}
+}
+
+Operation Operation::extract(vector<size_t> idx, size_t exprIndex) {
+	Operation result(func, {}, exprIndex);
+	for (int i = (int)idx.size()-1; i >= 0; i--) {
+		result.operands.push_back(operands[idx[i]]);
+		if (i != 0) {
+			operands.erase(operands.begin()+idx[i]);
+		}
+	}
+	operands[idx[0]] = Operand::exprOf(exprIndex);
+	return result;
 }
 
 Operation &Operation::offsetExpr(int off) {

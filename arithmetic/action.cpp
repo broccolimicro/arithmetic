@@ -1,4 +1,5 @@
 #include "action.h"
+#include "algorithm.h"
 
 namespace arithmetic
 {
@@ -159,7 +160,7 @@ State Parallel::evaluate(const State &curr) {
 			continue;
 		}
 
-		result.svIntersect(actions[i].variable, actions[i].expr.evaluate(curr));
+		result.svIntersect(actions[i].variable, arithmetic::evaluate(actions[i].expr, curr));
 	}
 
 	return result;

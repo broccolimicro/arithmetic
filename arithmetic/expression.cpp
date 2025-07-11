@@ -180,16 +180,6 @@ Expression &Expression::push(int func, vector<Operand> args) {
 	return *this;
 }
 
-Value Expression::evaluate(State values) const {
-	// I need a value per iterator combination.
-	vector<Value> result;
-	for (auto i = operations.begin(); i != operations.end(); i++) {
-		result.push_back(i->evaluate(values, result));
-	}
-
-	return result.empty() ? Value() : result.back();
-}
-
 bool Expression::isNull() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is null after constant propagation using quantified element elimination

@@ -57,7 +57,6 @@ struct Expression {
 	vector<Operand> append(vector<Expression> arg);
 	Expression &push(int func, vector<Operand> args);
 
-	Value evaluate(State values) const;
 	bool isNull() const;
 	bool isConstant() const;
 	bool isValid() const;

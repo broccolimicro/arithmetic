@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <arithmetic/expression.h>
+#include <arithmetic/algorithm.h>
 #include <common/text.h>
 
 using namespace arithmetic;
@@ -20,7 +21,7 @@ TEST(Expression, OperandBitwiseOr) {
 	s.push_back(xval);
 	s.push_back(yval);
 
-	Value result = e.evaluate(s);
+	Value result = evaluate(e, s);
 
 	EXPECT_EQ(result.type, Value::INT);
 	EXPECT_EQ(result.ival, xval | yval);
@@ -40,7 +41,7 @@ TEST(Expression, OperandBitwiseAnd) {
 	s.push_back(xval);
 	s.push_back(yval);
 
-	Value result = e.evaluate(s);
+	Value result = evaluate(e, s);
 
 	EXPECT_EQ(result.type, Value::INT);
 	EXPECT_EQ(result.ival, xval & yval);
@@ -60,7 +61,7 @@ TEST(Expression, OperandBitwiseXor) {
 	s.push_back(xval);
 	s.push_back(yval);
 
-	Value result = e.evaluate(s);
+	Value result = evaluate(e, s);
 
 	EXPECT_EQ(result.type, Value::INT);
 	EXPECT_EQ(result.ival, xval ^ yval);
@@ -80,28 +81,28 @@ TEST(Expression, OperandEqualTo) {
 	State s;
 	s.push_back(5);
 	s.push_back(4);
-	Value result = e.evaluate(s);
+	Value result = evaluate(e, s);
 	EXPECT_EQ(result.type, Value::BOOL);
 	EXPECT_EQ(result.bval, neutral);
 
 	s.clear();
 	s.push_back(5);
 	s.push_back(5);
-	result = e.evaluate(s);
+	result = evaluate(e, s);
 	EXPECT_EQ(result.type, Value::BOOL);
 	EXPECT_EQ(result.bval, valid);
 
 	s.clear();
 	s.push_back(Value::X());
 	s.push_back(4);
-	result = e.evaluate(s);
+	result = evaluate(e, s);
 	EXPECT_EQ(result.type, Value::BOOL);
 	EXPECT_EQ(result.bval, unstable);
 
 	s.clear();
 	s.push_back(false);
 	s.push_back(4);
-	result = e.evaluate(s);
+	result = evaluate(e, s);
 	EXPECT_EQ(result.type, Value::BOOL);
 	EXPECT_EQ(result.bval, neutral);
 }
@@ -120,28 +121,28 @@ TEST(Expression, OperandNotEqualTo) {
 	State s;
 	s.push_back(5);
 	s.push_back(4);
-	Value result = e.evaluate(s);
+	Value result = evaluate(e, s);
 	EXPECT_EQ(result.type, Value::BOOL);
 	EXPECT_EQ(result.bval, valid);
 
 	s.clear();	
 	s.push_back(5);
 	s.push_back(5);
-	result = e.evaluate(s);
+	result = evaluate(e, s);
 	EXPECT_EQ(result.type, Value::BOOL);
 	EXPECT_EQ(result.bval, neutral);
 
 	s.clear();
 	s.push_back(Value::X());
 	s.push_back(4);
-	result = e.evaluate(s);
+	result = evaluate(e, s);
 	EXPECT_EQ(result.type, Value::BOOL);
 	EXPECT_EQ(result.bval, unstable);
 
 	s.clear();
 	s.push_back(false);
 	s.push_back(4);
-	result = e.evaluate(s);
+	result = evaluate(e, s);
 	EXPECT_EQ(result.type, Value::BOOL);
 	EXPECT_EQ(result.bval, neutral);
 }
@@ -160,28 +161,28 @@ TEST(Expression, OperandLessThan) {
 	State s;
 	s.push_back(5);
 	s.push_back(4);
-	Value result = e.evaluate(s);
+	Value result = evaluate(e, s);
 	EXPECT_EQ(result.type, Value::BOOL);
 	EXPECT_EQ(result.bval, neutral);
 
 	s.clear();	
 	s.push_back(4);
 	s.push_back(5);
-	result = e.evaluate(s);
+	result = evaluate(e, s);
 	EXPECT_EQ(result.type, Value::BOOL);
 	EXPECT_EQ(result.bval, valid);
 
 	s.clear();
 	s.push_back(Value::X());
 	s.push_back(4);
-	result = e.evaluate(s);
+	result = evaluate(e, s);
 	EXPECT_EQ(result.type, Value::BOOL);
 	EXPECT_EQ(result.bval, unstable);
 
 	s.clear();
 	s.push_back(false);
 	s.push_back(4);
-	result = e.evaluate(s);
+	result = evaluate(e, s);
 	EXPECT_EQ(result.type, Value::BOOL);
 	EXPECT_EQ(result.bval, neutral);
 }
@@ -200,28 +201,28 @@ TEST(Expression, OperandGreaterThan) {
 	State s;
 	s.push_back(5);
 	s.push_back(4);
-	Value result = e.evaluate(s);
+	Value result = evaluate(e, s);
 	EXPECT_EQ(result.type, Value::BOOL);
 	EXPECT_EQ(result.bval, valid);
 
 	s.clear();	
 	s.push_back(4);
 	s.push_back(5);
-	result = e.evaluate(s);
+	result = evaluate(e, s);
 	EXPECT_EQ(result.type, Value::BOOL);
 	EXPECT_EQ(result.bval, neutral);
 
 	s.clear();
 	s.push_back(Value::X());
 	s.push_back(4);
-	result = e.evaluate(s);
+	result = evaluate(e, s);
 	EXPECT_EQ(result.type, Value::BOOL);
 	EXPECT_EQ(result.bval, unstable);
 
 	s.clear();
 	s.push_back(false);
 	s.push_back(4);
-	result = e.evaluate(s);
+	result = evaluate(e, s);
 	EXPECT_EQ(result.type, Value::BOOL);
 	EXPECT_EQ(result.bval, neutral);
 }
@@ -242,7 +243,7 @@ TEST(Expression, Compound) {
 	s.push_back(3);
 	s.push_back(6);
 	s.push_back(3);
-	Value result = e.evaluate(s);
+	Value result = evaluate(e, s);
 	EXPECT_EQ(result.type, Value::INT);
 	EXPECT_EQ(result.ival, 27);
 }

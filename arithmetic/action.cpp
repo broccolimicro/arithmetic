@@ -160,7 +160,7 @@ State Parallel::evaluate(const State &curr) {
 			continue;
 		}
 
-		result.svIntersect(actions[i].variable, arithmetic::evaluate(actions[i].expr, curr));
+		result.svIntersect(actions[i].variable, arithmetic::evaluate(actions[i].expr, actions[i].expr.top, curr));
 	}
 
 	return result;

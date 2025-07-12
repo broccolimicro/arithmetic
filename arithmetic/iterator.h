@@ -27,6 +27,7 @@ struct Iterator {
 	Operation &operator*();
 	Operation *operator->();
 	Iterator &operator++();
+	bool done() const;
 };
 
 bool operator==(const Iterator &i0, const Iterator &i1);
@@ -47,6 +48,7 @@ struct ConstIterator {
 	const Operation &operator*();
 	const Operation *operator->();
 	ConstIterator &operator++();
+	bool done() const;
 };
 
 bool operator==(const ConstIterator &i0, const ConstIterator &i1);
@@ -67,6 +69,7 @@ struct ReverseIterator {
 	Operation &operator*();
 	Operation *operator->();
 	ReverseIterator &operator++();
+	bool done() const;
 };
 
 bool operator==(const ReverseIterator &i0, const ReverseIterator &i1);
@@ -87,6 +90,7 @@ struct ConstReverseIterator {
 	const Operation &operator*();
 	const Operation *operator->();
 	ConstReverseIterator &operator++();
+	bool done() const;
 };
 
 bool operator==(const ConstReverseIterator &i0, const ConstReverseIterator &i1);

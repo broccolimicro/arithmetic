@@ -65,6 +65,10 @@ Iterator &Iterator::operator++() {
 	return *this;
 }
 
+bool Iterator::done() const {
+	return stack.empty();
+}
+
 bool operator==(const Iterator &i0, const Iterator &i1) {
 	return i0.stack == i1.stack;
 }
@@ -133,6 +137,10 @@ ConstIterator &ConstIterator::operator++() {
 	}
 
 	return *this;
+}
+
+bool ConstIterator::done() const {
+	return stack.empty();
 }
 
 bool operator==(const ConstIterator &i0, const ConstIterator &i1) {
@@ -207,6 +215,10 @@ ReverseIterator &ReverseIterator::operator++() {
 	return *this;
 }
 
+bool ReverseIterator::done() const {
+	return stack.empty();
+}
+
 bool operator==(const ReverseIterator &i0, const ReverseIterator &i1) {
 	return i0.stack == i1.stack;
 }
@@ -277,6 +289,10 @@ ConstReverseIterator &ConstReverseIterator::operator++() {
 		expand[stack.back()] = true;
 	}
 	return *this;
+}
+
+bool ConstReverseIterator::done() const {
+	return stack.empty();
 }
 
 bool operator==(const ConstReverseIterator &i0, const ConstReverseIterator &i1) {

@@ -42,14 +42,10 @@ struct Expression {
 	Operation *exprAt(size_t index);
 	const Operation *exprAt(size_t index) const;
 
-	Iterator begin(size_t exprIndex = std::numeric_limits<size_t>::max());
-	Iterator end();
-	ConstIterator begin(size_t exprIndex = std::numeric_limits<size_t>::max()) const;
-	ConstIterator end() const;
-	ReverseIterator rbegin(size_t exprIndex = std::numeric_limits<size_t>::max());
-	ReverseIterator rend();
-	ConstReverseIterator rbegin(size_t exprIndex = std::numeric_limits<size_t>::max()) const;
-	ConstReverseIterator rend() const;
+	UpIterator exprUp(size_t exprIndex = std::numeric_limits<size_t>::max());
+	ConstUpIterator exprUp(size_t exprIndex = std::numeric_limits<size_t>::max()) const;
+	DownIterator exprDown(size_t exprIndex = std::numeric_limits<size_t>::max());
+	ConstDownIterator exprDown(size_t exprIndex = std::numeric_limits<size_t>::max()) const;
 
 	void clear();
 

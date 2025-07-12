@@ -10,52 +10,36 @@
 
 namespace arithmetic {
 
-Iterator Expression::begin(size_t exprIndex) {
+UpIterator Expression::exprUp(size_t exprIndex) {
 	if (exprIndex == std::numeric_limits<size_t>::max() and top.isExpr()) {
 		exprIndex = top.index;
 	}
 
-	return Iterator(*this, exprIndex);
+	return UpIterator(*this, exprIndex);
 }
 
-Iterator Expression::end() {
-	return Iterator(*this);
-}
-
-ConstIterator Expression::begin(size_t exprIndex) const {
+ConstUpIterator Expression::exprUp(size_t exprIndex) const {
 	if (exprIndex == std::numeric_limits<size_t>::max() and top.isExpr()) {
 		exprIndex = top.index;
 	}
 
-	return ConstIterator(*this, exprIndex);
+	return ConstUpIterator(*this, exprIndex);
 }
 
-ConstIterator Expression::end() const {
-	return ConstIterator(*this);
-}
-
-ReverseIterator Expression::rbegin(size_t exprIndex) {
+DownIterator Expression::exprDown(size_t exprIndex) {
 	if (exprIndex == std::numeric_limits<size_t>::max() and top.isExpr()) {
 		exprIndex = top.index;
 	}
 
-	return ReverseIterator(*this, exprIndex);
+	return DownIterator(*this, exprIndex);
 }
 
-ReverseIterator Expression::rend() {
-	return ReverseIterator(*this);
-}
-
-ConstReverseIterator Expression::rbegin(size_t exprIndex) const {
+ConstDownIterator Expression::exprDown(size_t exprIndex) const {
 	if (exprIndex == std::numeric_limits<size_t>::max() and top.isExpr()) {
 		exprIndex = top.index;
 	}
 
-	return ConstReverseIterator(*this, exprIndex);
-}
-
-ConstReverseIterator Expression::rend() const {
-	return ConstReverseIterator(*this);
+	return ConstDownIterator(*this, exprIndex);
 }
 
 void Expression::breakMap() const {
@@ -309,8 +293,8 @@ Expression &Expression::tidy(bool rules) {
 
 	// cout << ::to_string(exprMap) << " " << exprMapIsDirty << endl;
 	// cout << *this << endl;
-	auto curr = begin();
-	for (; curr != end(); ++curr) {
+	auto curr = exprUp();
+	for (; not curr.done(); ++curr) {
 		// cout << "start: " << curr.get() << endl;
 		curr->replace(replace);
 		curr->tidy();
@@ -459,7 +443,7 @@ Cost Expression::cost(vector<Type> vars) const {
 	double complexity = 0.0;
 	vector<Type> expr;
 
-	for (auto curr = begin(); curr != end(); ++curr) {
+	for (auto curr = exprUp(); not curr.done(); ++curr) {
 		pair<Type, double> result(Type(0.0, 0.0, 0.0), 0.0);
 		vector<Type> args;
 		for (auto j = curr->operands.begin(); j != curr->operands.end(); j++) {
@@ -724,7 +708,7 @@ void Expression::replace(const Expression &rules, Match match) {
 
 		// Iterate over the replacement expression
 		map<size_t, size_t> exprMap;
-		for (auto curr = ConstReverseIterator(rules, match.replace.index); curr != ConstReverseIterator(rules); ++curr) {
+		for (auto curr = ConstDownIterator(rules, match.replace.index); not curr.done(); ++curr) {
 			// Along the way, compute the exprIndex mapping
 			auto pos = exprMap.insert({curr->exprIndex, 0});
 			if (pos.second) {

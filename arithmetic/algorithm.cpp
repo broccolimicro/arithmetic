@@ -9,7 +9,7 @@ Value evaluate(ConstOperationSet expr, Operand top, State values) {
 
 	vector<Value> result;
 	Value prev;
-	for (auto i = ConstIterator(expr, top.index); not i.done(); ++i) {
+	for (auto i = ConstUpIterator(expr, top.index); not i.done(); ++i) {
 		if (i->exprIndex >= result.size()) {
 			result.resize(i->exprIndex+1, Value::X());
 		}

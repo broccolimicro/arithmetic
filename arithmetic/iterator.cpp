@@ -2,30 +2,30 @@
 
 namespace arithmetic {
 
-Iterator::Iterator(OperationSet root, size_t exprIndex) : root(root) {
+UpIterator::UpIterator(OperationSet root, size_t exprIndex) : root(root) {
 	if (exprIndex != std::numeric_limits<size_t>::max()) {
 		stack.push_back(exprIndex);
 		++*this;
 	}
 }
 
-Iterator::~Iterator() {
+UpIterator::~UpIterator() {
 }
 
-Operation &Iterator::get() {
+Operation &UpIterator::get() {
 	return *root.exprAt(stack.back());
 }
 
-Operation &Iterator::operator*() {
+Operation &UpIterator::operator*() {
 	return *root.exprAt(stack.back());
 }
 
-Operation *Iterator::operator->() {
+Operation *UpIterator::operator->() {
 	return root.exprAt(stack.back());
 }
 
 // Depth first from leaves to root
-Iterator &Iterator::operator++() {
+UpIterator &UpIterator::operator++() {
 	if (stack.empty()) {
 		return *this;
 	}
@@ -65,41 +65,41 @@ Iterator &Iterator::operator++() {
 	return *this;
 }
 
-bool Iterator::done() const {
+bool UpIterator::done() const {
 	return stack.empty();
 }
 
-bool operator==(const Iterator &i0, const Iterator &i1) {
+bool operator==(const UpIterator &i0, const UpIterator &i1) {
 	return i0.stack == i1.stack;
 }
 
-bool operator!=(const Iterator &i0, const Iterator &i1) {
+bool operator!=(const UpIterator &i0, const UpIterator &i1) {
 	return i0.stack != i1.stack;
 }
 
-ConstIterator::ConstIterator(ConstOperationSet root, size_t exprIndex) : root(root) {
+ConstUpIterator::ConstUpIterator(ConstOperationSet root, size_t exprIndex) : root(root) {
 	if (exprIndex != std::numeric_limits<size_t>::max()) {
 		stack.push_back(exprIndex);
 		++*this;
 	}
 }
 
-ConstIterator::~ConstIterator() {
+ConstUpIterator::~ConstUpIterator() {
 }
 
-const Operation &ConstIterator::get() {
+const Operation &ConstUpIterator::get() {
 	return *root.exprAt(stack.back());
 }
 
-const Operation &ConstIterator::operator*() {
+const Operation &ConstUpIterator::operator*() {
 	return *root.exprAt(stack.back());
 }
 
-const Operation *ConstIterator::operator->() {
+const Operation *ConstUpIterator::operator->() {
 	return root.exprAt(stack.back());
 }
 
-ConstIterator &ConstIterator::operator++() {
+ConstUpIterator &ConstUpIterator::operator++() {
 	if (stack.empty()) {
 		return *this;
 	}
@@ -139,41 +139,41 @@ ConstIterator &ConstIterator::operator++() {
 	return *this;
 }
 
-bool ConstIterator::done() const {
+bool ConstUpIterator::done() const {
 	return stack.empty();
 }
 
-bool operator==(const ConstIterator &i0, const ConstIterator &i1) {
+bool operator==(const ConstUpIterator &i0, const ConstUpIterator &i1) {
 	return i0.stack == i1.stack;
 }
 
-bool operator!=(const ConstIterator &i0, const ConstIterator &i1) {
+bool operator!=(const ConstUpIterator &i0, const ConstUpIterator &i1) {
 	return i0.stack != i1.stack;
 }
 
-ReverseIterator::ReverseIterator(OperationSet root, size_t exprIndex) : root(root) {
+DownIterator::DownIterator(OperationSet root, size_t exprIndex) : root(root) {
 	if (exprIndex != std::numeric_limits<size_t>::max()) {
 		stack.push_back(exprIndex);
 		++*this;
 	}
 }
 
-ReverseIterator::~ReverseIterator() {
+DownIterator::~DownIterator() {
 }
 
-Operation &ReverseIterator::get() {
+Operation &DownIterator::get() {
 	return *root.exprAt(stack.back());
 }
 
-Operation &ReverseIterator::operator*() {
+Operation &DownIterator::operator*() {
 	return *root.exprAt(stack.back());
 }
 
-Operation *ReverseIterator::operator->() {
+Operation *DownIterator::operator->() {
 	return root.exprAt(stack.back());
 }
 
-ReverseIterator &ReverseIterator::operator++() {
+DownIterator &DownIterator::operator++() {
 	if (stack.empty()) {
 		return *this;
 	}
@@ -215,41 +215,41 @@ ReverseIterator &ReverseIterator::operator++() {
 	return *this;
 }
 
-bool ReverseIterator::done() const {
+bool DownIterator::done() const {
 	return stack.empty();
 }
 
-bool operator==(const ReverseIterator &i0, const ReverseIterator &i1) {
+bool operator==(const DownIterator &i0, const DownIterator &i1) {
 	return i0.stack == i1.stack;
 }
 
-bool operator!=(const ReverseIterator &i0, const ReverseIterator &i1) {
+bool operator!=(const DownIterator &i0, const DownIterator &i1) {
 	return i0.stack != i1.stack;
 }
 
-ConstReverseIterator::ConstReverseIterator(ConstOperationSet root, size_t exprIndex) : root(root) {
+ConstDownIterator::ConstDownIterator(ConstOperationSet root, size_t exprIndex) : root(root) {
 	if (exprIndex != std::numeric_limits<size_t>::max()) {
 		stack.push_back(exprIndex);
 		++*this;
 	}
 }
 
-ConstReverseIterator::~ConstReverseIterator() {
+ConstDownIterator::~ConstDownIterator() {
 }
 
-const Operation &ConstReverseIterator::get() {
+const Operation &ConstDownIterator::get() {
 	return *root.exprAt(stack.back());
 }
 
-const Operation &ConstReverseIterator::operator*() {
+const Operation &ConstDownIterator::operator*() {
 	return *root.exprAt(stack.back());
 }
 
-const Operation *ConstReverseIterator::operator->() {
+const Operation *ConstDownIterator::operator->() {
 	return root.exprAt(stack.back());
 }
 
-ConstReverseIterator &ConstReverseIterator::operator++() {
+ConstDownIterator &ConstDownIterator::operator++() {
 	if (stack.empty()) {
 		return *this;
 	}
@@ -291,15 +291,15 @@ ConstReverseIterator &ConstReverseIterator::operator++() {
 	return *this;
 }
 
-bool ConstReverseIterator::done() const {
+bool ConstDownIterator::done() const {
 	return stack.empty();
 }
 
-bool operator==(const ConstReverseIterator &i0, const ConstReverseIterator &i1) {
+bool operator==(const ConstDownIterator &i0, const ConstDownIterator &i1) {
 	return i0.stack == i1.stack;
 }
 
-bool operator!=(const ConstReverseIterator &i0, const ConstReverseIterator &i1) {
+bool operator!=(const ConstDownIterator &i0, const ConstDownIterator &i1) {
 	return i0.stack != i1.stack;
 }
 

@@ -12,9 +12,9 @@ _INTERFACE_ARG(OperationSet,
 _CONST_INTERFACE_ARG(ConstOperationSet,
 	(const Operation *, exprAt, (size_t index) const));
 
-struct Iterator {
-	Iterator(OperationSet root, size_t exprIndex = std::numeric_limits<size_t>::max());
-	~Iterator();
+struct UpIterator {
+	UpIterator(OperationSet root, size_t exprIndex = std::numeric_limits<size_t>::max());
+	~UpIterator();
 
 	OperationSet root;
 	// prefer multiple vector<bool> instead of vector<pair<bool, bool>
@@ -26,16 +26,16 @@ struct Iterator {
 	Operation &get();
 	Operation &operator*();
 	Operation *operator->();
-	Iterator &operator++();
+	UpIterator &operator++();
 	bool done() const;
 };
 
-bool operator==(const Iterator &i0, const Iterator &i1);
-bool operator!=(const Iterator &i0, const Iterator &i1);
+bool operator==(const UpIterator &i0, const UpIterator &i1);
+bool operator!=(const UpIterator &i0, const UpIterator &i1);
 
-struct ConstIterator {
-	ConstIterator(ConstOperationSet root, size_t exprIndex = std::numeric_limits<size_t>::max());
-	~ConstIterator();
+struct ConstUpIterator {
+	ConstUpIterator(ConstOperationSet root, size_t exprIndex = std::numeric_limits<size_t>::max());
+	~ConstUpIterator();
 
 	ConstOperationSet root;
 	// prefer multiple vector<bool> instead of vector<pair<bool, bool>
@@ -47,16 +47,16 @@ struct ConstIterator {
 	const Operation &get();
 	const Operation &operator*();
 	const Operation *operator->();
-	ConstIterator &operator++();
+	ConstUpIterator &operator++();
 	bool done() const;
 };
 
-bool operator==(const ConstIterator &i0, const ConstIterator &i1);
-bool operator!=(const ConstIterator &i0, const ConstIterator &i1);
+bool operator==(const ConstUpIterator &i0, const ConstUpIterator &i1);
+bool operator!=(const ConstUpIterator &i0, const ConstUpIterator &i1);
 
-struct ReverseIterator {
-	ReverseIterator(OperationSet root, size_t exprIndex = std::numeric_limits<size_t>::max());
-	~ReverseIterator();
+struct DownIterator {
+	DownIterator(OperationSet root, size_t exprIndex = std::numeric_limits<size_t>::max());
+	~DownIterator();
 
 	OperationSet root;
 	// prefer multiple vector<bool> instead of vector<pair<bool, bool>
@@ -68,16 +68,16 @@ struct ReverseIterator {
 	Operation &get();
 	Operation &operator*();
 	Operation *operator->();
-	ReverseIterator &operator++();
+	DownIterator &operator++();
 	bool done() const;
 };
 
-bool operator==(const ReverseIterator &i0, const ReverseIterator &i1);
-bool operator!=(const ReverseIterator &i0, const ReverseIterator &i1);
+bool operator==(const DownIterator &i0, const DownIterator &i1);
+bool operator!=(const DownIterator &i0, const DownIterator &i1);
 
-struct ConstReverseIterator {
-	ConstReverseIterator(ConstOperationSet root, size_t exprIndex = std::numeric_limits<size_t>::max());
-	~ConstReverseIterator();
+struct ConstDownIterator {
+	ConstDownIterator(ConstOperationSet root, size_t exprIndex = std::numeric_limits<size_t>::max());
+	~ConstDownIterator();
 
 	ConstOperationSet root;
 	// prefer multiple vector<bool> instead of vector<pair<bool, bool>
@@ -89,11 +89,11 @@ struct ConstReverseIterator {
 	const Operation &get();
 	const Operation &operator*();
 	const Operation *operator->();
-	ConstReverseIterator &operator++();
+	ConstDownIterator &operator++();
 	bool done() const;
 };
 
-bool operator==(const ConstReverseIterator &i0, const ConstReverseIterator &i1);
-bool operator!=(const ConstReverseIterator &i0, const ConstReverseIterator &i1);
+bool operator==(const ConstDownIterator &i0, const ConstDownIterator &i1);
+bool operator!=(const ConstDownIterator &i0, const ConstDownIterator &i1);
 
 }

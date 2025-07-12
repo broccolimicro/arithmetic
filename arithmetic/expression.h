@@ -7,6 +7,7 @@
 
 #include "operation.h"
 #include "iterator.h"
+#include "algorithm.h"
 
 namespace arithmetic {
 
@@ -41,6 +42,7 @@ struct Expression {
 
 	Operation *exprAt(size_t index);
 	const Operation *exprAt(size_t index) const;
+	vector<Operand> exprIndex() const;
 
 	UpIterator exprUp(size_t exprIndex = std::numeric_limits<size_t>::max());
 	ConstUpIterator exprUp(size_t exprIndex = std::numeric_limits<size_t>::max()) const;
@@ -66,29 +68,7 @@ struct Expression {
 	// Expression and operate on an interface that represents any
 	// random-access container of Operations
 	Expression &tidy(bool rules=false);
-
-	struct Match {
-		// what to replace this match with from the rules
-		Operand replace;
-		// exprIndex of matched operations. These are things we can replace.
-		vector<size_t> expr;
-		// index into operands for expr.back(). Some operations are commutative and
-		// commutative operations are rolled up into a single operation with more
-		// than two operands to help deal with the search space. top is the index
-		// of the operands that were matched. In most cases it will be every
-		// operand, but in the commutative cases, it'll only be specific operands.
-		vector<size_t> top;
-
-		// map variable index to Operand in this
-		map<size_t, vector<Operand> > vars;
-	};
-
-	bool verifyRuleFormat(Operand i, bool msg) const;
-	bool verifyRulesFormat(bool msg) const;
-
 	Operand extract(size_t exprIndex, vector<size_t> operands);
-	Cost cost(vector<Type> vars) const;
-	vector<Match> search(const Expression &rules, size_t count=0, bool fwd=true, bool bwd=true);
 	void replace(Operand o0, Operand o1);
 	void replace(const Expression &rules, Match token);
 	Expression &minimize(Expression directed=Expression());
@@ -102,10 +82,7 @@ bool areSame(Expression e0, Expression e1);
 
 Expression espresso(Expression expr, vector<Type> vars=vector<Type>(), Expression directed=Expression(), Expression undirected=Expression());
 
-bool canMap(vector<Operand> search, Operand rule, ConstOperationSet e0, ConstOperationSet e1, bool init, map<size_t, vector<Operand> > *vars=nullptr);
-
 ostream &operator<<(ostream &os, Expression e);
-ostream &operator<<(ostream &os, Expression::Match m);
 
 Expression operator~(Expression e);
 Expression operator-(Expression e);

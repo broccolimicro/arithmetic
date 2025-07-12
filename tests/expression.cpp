@@ -289,12 +289,12 @@ TEST(Expression, Simplify) {
 	vector<Type> vars({Type(1.0, 16.0, 0.0), Type(1.0, 16.0, 0.0), Type(1.0, 16.0, 0.0)});
 	
 	Expression dut = (a*c+b*c-c*a)/c;
-	Cost cost = dut.cost(vars);
+	Cost cost = arithmetic::cost(dut, dut.top, vars);
 	cout << "Before: cost=" << cost.complexity << " del=" << cost.critical << endl << dut << endl;
 	dut.minimize();
 	EXPECT_TRUE(areSame(dut, Expression(b)));
 
-	Cost cost2 = dut.cost(vars);
+	Cost cost2 = arithmetic::cost(dut, dut.top, vars);
 	cout << "After: cost=" << cost2.complexity << " del=" << cost2.critical << endl << dut << endl;
 	EXPECT_LE(cost2.complexity, cost.complexity);
 	EXPECT_LE(cost2.critical, cost.critical);
@@ -325,7 +325,7 @@ TEST(Expression, ElasticRewrite) {
 	});
 
 	Expression dut = e*add({a,b,c,d});
-	auto m = dut.search(rules);
+	auto m = arithmetic::search(dut, rules, rules.top);
 	cout << ::to_string(m) << endl;
 }
 

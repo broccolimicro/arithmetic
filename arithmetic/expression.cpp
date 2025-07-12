@@ -6,7 +6,6 @@
 #include <array>
 #include <common/standard.h>
 #include <common/text.h>
-#include <common/combinatoric.h>
 
 namespace arithmetic {
 
@@ -118,6 +117,15 @@ const Operation *Expression::exprAt(size_t index) const {
 		return nullptr;
 	}
 	return &operations[i];
+}
+
+vector<Operand> Expression::exprIndex() const {
+	vector<Operand> result;
+	result.reserve(operations.size());
+	for (auto i = operations.begin(); i != operations.end(); i++) {
+		result.push_back(Operand::exprOf(i->exprIndex));
+	}
+	return result;
 }
 
 void Expression::clear() {
@@ -394,247 +402,11 @@ Expression &Expression::tidy(bool rules) {
 	// TODO(edward.bingham) create hash function on expression for insertion into hash map
 }
 
-bool Expression::verifyRuleFormat(Operand i, bool msg) const {
-	// ==, <, >
-	if (not i.isExpr()) {
-		if (msg) printf("internal:%s:%d: invalid format for rule\n", __FILE__, __LINE__);
-		return false;
-	}
-	auto j = exprAt(i.index);
-	if (j == nullptr
-		or j->operands.size() != 2u
-		or (j->func != Operation::EQUAL
-		and j->func != Operation::LESS
-		and j->func != Operation::GREATER)) {
-		if (msg) printf("internal:%s:%d: invalid format for rule\n", __FILE__, __LINE__);
-		return false;
-	}
-	return true;
-}
-
-bool Expression::verifyRulesFormat(bool msg) const {
-	if (not top.isExpr() or operations.empty()) {
-		if (msg) printf("error: no replacement rules found\n");
-		return false;
-	}
-	auto ruleTop = exprAt(top.index);
-	if (ruleTop->func != Operation::ARRAY) {
-		if (msg) printf("error: invalid format for replacement rules\n");
-		return false;
-	}
-	bool result = true;
-	for (auto i = ruleTop->operands.begin(); i != ruleTop->operands.end(); i++) {
-		result = verifyRuleFormat(*i, msg) and result;
-	}
-	return result;
-}
-
 Operand Expression::extract(size_t exprIndex, vector<size_t> idx) {
 	operations.push_back(exprAt(exprIndex)->extract(idx, nextExprIndex++));
 	setExpr(operations.back().exprIndex, operations.size()-1);
 	return Operand::exprOf(operations.back().exprIndex);
 }
-
-Cost Expression::cost(vector<Type> vars) const {
-	if (not top.isExpr()) {
-		return Cost();
-	}
-
-	double complexity = 0.0;
-	vector<Type> expr;
-
-	for (auto curr = exprUp(); not curr.done(); ++curr) {
-		pair<Type, double> result(Type(0.0, 0.0, 0.0), 0.0);
-		vector<Type> args;
-		for (auto j = curr->operands.begin(); j != curr->operands.end(); j++) {
-			if (j->isConst()) {
-				args.push_back(j->cnst.typeOf());
-			} else if (j->isVar() and j->index < vars.size()) {
-				args.push_back(vars[j->index]);
-			} else if (j->isExpr() and j->index < expr.size()) {
-				args.push_back(expr[j->index]);
-			} else {
-				printf("error: variable not defined for expression\n");
-				args.push_back(Type());
-			}
-		}
-		result = curr->funcCost(curr->func, args);
-		if (curr->exprIndex >= expr.size()) {
-			expr.resize(curr->exprIndex+1);
-		}
-		expr[curr->exprIndex] = result.first;
-		complexity += result.second;
-	}
-
-	double delay = 0.0;
-	if (top.index < expr.size()) {
-		delay = expr[top.index].delay;
-	}
-	return Cost(complexity, delay);
-}
-
-// TODO(edward.bingham) I need a way to canonicalize expressions and hash
-// them so that I can do the state search algorithm.
-//
-// TODO(edward.bingham) rules aren't currently able to match with a variable
-// number of operands. I need to create a comprehension functionality to
-// support those more complex matches.
-//
-// TODO(edward.bingham) look into "tree automata" and "regular tree grammar"
-// as a form of regex for trees instead of sequences.
-vector<Expression::Match> Expression::search(const Expression &rules, size_t count, bool fwd, bool bwd) {
-	if (not rules.verifyRulesFormat(true)) {
-		return vector<Expression::Match>();
-	}
-
-	using Leaf = pair<Operand, Operand>;
-	vector<pair<vector<Leaf>, Match> > stack;
-
-	// initialize the initial matches
-	auto ruleTop = rules.exprAt(rules.top.index);
-	for (int i = 0; i < (int)operations.size(); i++) {
-		Operand op = Operand::exprOf(operations[i].exprIndex);
-
-		// search through the "rules" rules and add all of the matching starts
-		for (auto j = ruleTop->operands.begin(); j != ruleTop->operands.end(); j++) {
-			if (not rules.verifyRuleFormat(*j, false)) {
-				continue;
-			}
-
-			auto rule = rules.exprAt(j->index);
-			auto lhs = rule->operands.begin();
-			auto rhs = std::next(lhs);
-			// map left to right
-			if (rule->func == Operation::GREATER or (fwd and rule->func == Operation::EQUAL)) {
-				Match match;
-				vector<Leaf> leaves;
-				if (canMap({op}, *lhs, *this, rules, true, &match.vars)) {
-					match.replace = *rhs;
-					leaves.push_back({op, *lhs});
-					stack.push_back({leaves, match});
-				}
-			}
-
-			// map right to left
-			if (rule->func == Operation::LESS or (bwd and rule->func == Operation::EQUAL)) {
-				Match match;
-				vector<Leaf> leaves;
-				if (canMap({op}, *rhs, *this, rules, true, &match.vars)) {
-					match.replace = *lhs;
-					leaves.push_back({op, *rhs});
-					stack.push_back({leaves, match});
-				}
-			}
-		}
-	}
-
-	//cout << "Search:" << endl;
-	//for (int i = 0; i < (int)stack.size(); i++) {
-	//	cout << "Stack " << i << ": " << ::to_string(stack[i].first) << " " << stack[i].second << endl;
-	//}
-	// Find expression matches with depth-first search
-	vector<Match> result;
-	while (not stack.empty()) {
-		vector<Leaf> leaves = stack.back().first;
-		Match curr = stack.back().second;
-		stack.pop_back();
-
-		Operand from = leaves.back().first;
-		Operand to = leaves.back().second;
-		if (from.isExpr() and to.isExpr()) {
-			curr.expr.push_back(from.index);
-		}
-		leaves.pop_back();
-
-		//cout << "Curr: " << curr << " from=" << from << " to=" << to << endl;
-		//cout << "Leaves: " << ::to_string(leaves) << endl;
-
-		if (to.isExpr()) {
-			auto fOp = exprAt(from.index);
-			auto tOp = rules.exprAt(to.index);
-
-			bool commute = tOp->isCommutative();
-			if (commute and tOp->operands.size() == 1u) {
-				//cout << "Elastic Commutative" << endl;
-				Match nextMatch = curr;
-				vector<Leaf> nextLeaves = leaves;
-				if (canMap(fOp->operands, tOp->operands[0], *this, rules, false, &nextMatch.vars)) {
-					for (size_t i = 0; i < fOp->operands.size(); i++) {
-						nextLeaves.push_back({fOp->operands[i], tOp->operands[0]});
-						if (nextMatch.top.empty()) {
-							nextMatch.top.push_back(i);
-						}
-					}
-					stack.push_back({nextLeaves, nextMatch});
-				}
-			} else {
-				//cout << "Looking for Partial Permutations" << endl;
-				CombinatoricIterator it((int)fOp->operands.size(), (int)tOp->operands.size());
-				do {
-					Match nextMatch = curr;
-					vector<Leaf> nextLeaves = leaves;
-					vector<size_t> operands;
-					bool found = true;
-					//cout << "Looking at [";
-					for (auto i = it.begin(); i != it.end() and found; i++) {
-						//cout << *i << "(" << fOp->operands[*i] << "==" << tOp->operands[i-it.begin()] << ") ";
-						nextLeaves.push_back({fOp->operands[*i], tOp->operands[i-it.begin()]});
-						operands.push_back(*i);
-						found = canMap({fOp->operands[*i]}, tOp->operands[i-it.begin()], *this, rules, false, &nextMatch.vars);
-						//if (not found) {
-						//	cout << "XX";
-						//}
-					}
-					//cout << "]" << endl;
-
-					if (found) {
-						//cout << "found" << endl;
-						if (nextMatch.top.empty()) {
-							sort(operands.begin(), operands.end());
-							nextMatch.top = operands;
-						}
-						stack.push_back({nextLeaves, nextMatch});
-					}
-				} while (commute ? it.nextPerm() : it.nextShift());
-			}
-		} else if (leaves.empty()) {
-			//cout << "Found " << curr << endl;
-			reverse(curr.expr.begin(), curr.expr.end());
-			result.push_back(curr);
-			if (count != 0 and result.size() >= count) {
-				return result;
-			}
-		} else {
-			stack.push_back({leaves, curr});
-		}
-		//cout << endl;
-	}
-	//cout << "Done" << endl;
-	return result;
-}
-
-/*size_t Expression::count(Operand start) const {
-	if (not start.isExpr()) {
-		return 1u;
-	}
-	
-	size_t result = 0u;
-	vector<size_t> stack(1, start.index);
-	while (not stack.empty()) {
-		size_t curr = stack.back();
-		stack.pop_back();
-
-		auto currOp = operations.begin() + mapping[curr];
-
-		++result;
-		for (auto op = currOp->operands.begin(); op != currOp->operands.end(); op++) {
-			if (op->isExpr()) {
-				stack.push_back(op->index);
-			}
-		}
-	}
-	return result;
-}*/
 
 void Expression::replace(Operand from, Operand to) {
 	for (auto i = operations.begin(); i != operations.end(); i++) {
@@ -645,8 +417,6 @@ void Expression::replace(Operand from, Operand to) {
 		}
 	}
 }
-
-// TODO(edward.bingham) I am currently decoupling the expression ids from the index in the operations vector. This is the next function I have to do.
 
 void Expression::replace(const Expression &rules, Match match) {
 	if (not match.replace.isExpr()) {
@@ -807,7 +577,7 @@ Expression &Expression::minimize(Expression directed) {
 	// cout << "Rules: " << rules << endl;
 
 	tidy();
-	vector<Match> tokens = search(directed, 1u);
+	vector<Match> tokens = search(*this, directed, directed.top, 1u);
 	while (not tokens.empty()) {
 		// cout << "Expr: " << *this << endl;
 		// cout << "Match: " << ::to_string(tokens) << endl;
@@ -815,7 +585,7 @@ Expression &Expression::minimize(Expression directed) {
 		// cout << "Replace: " << *this << endl;
 		tidy();
 		// cout << "Canon: " << *this << endl << endl;
-		tokens = search(directed, 1u);
+		tokens = search(*this, directed, directed.top, 1u);
 	}
 
 	// TODO(edward.bingham) Then I need to implement encoding
@@ -894,11 +664,6 @@ string Expression::to_string() const {
 
 ostream &operator<<(ostream &os, Expression e) {
 	os << e.to_string();
-	return os;
-}
-
-ostream &operator<<(ostream &os, Expression::Match m) {
-	os << m.replace << " expr=" << ::to_string(m.expr) << " top=" << ::to_string(m.top) << " vars=" << ::to_string(m.vars);
 	return os;
 }
 

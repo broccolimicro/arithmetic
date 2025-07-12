@@ -7,9 +7,11 @@
 namespace arithmetic {
 
 _INTERFACE_ARG(OperationSet,
+	(vector<Operand>, exprIndex, () const),
 	(Operation *, exprAt, (size_t index)));
 
 _CONST_INTERFACE_ARG(ConstOperationSet,
+	(vector<Operand>, exprIndex, () const),
 	(const Operation *, exprAt, (size_t index) const));
 
 struct UpIterator {

@@ -286,52 +286,6 @@ Operator::Operator(string prefix, string trigger, string infix, string postfix, 
 Operator::~Operator() {
 }
 
-bool canMap(vector<Operand> o0, Operand o1, ConstOperationSet e0, ConstOperationSet e1, bool init, map<size_t, vector<Operand> > *vars) {
-	if (o1.isConst()) {
-		for (auto i = o0.begin(); i != o0.end(); i++) {
-			if (not i->isConst() or not (areSame(i->cnst, o1.cnst)
-				or (o1.cnst.type == Value::BOOL
-					and ((o1.cnst.bval == Value::VALID and i->cnst.isValid())
-						or (o1.cnst.bval == Value::NEUTRAL and i->cnst.isNeutral()))))) {
-				return false;
-			}
-		}
-		return true;
-	} else if (o1.isVar()) {
-		if (vars != nullptr) {
-			auto ins = vars->insert({o1.index, o0});
-			if (ins.second) {
-				return true;
-			} else if (o0.size() != ins.first->second.size()) {
-				return false;
-			}
-			for (int i = 0; i < (int)o0.size(); i++) {
-				if (not areSame(o0[i], ins.first->second[i])) {
-					return false;
-				}
-			}
-			return true;
-		}
-		return true;
-	} else if (o1.isExpr()) {
-		for (auto i = o0.begin(); i != o0.end(); i++) {
-			if (not i->isExpr()) {
-				return false;
-			}
-			auto op0 = e0.exprAt(i->index);
-			auto op1 = e1.exprAt(o1.index);
-			if (not (op0->func == op1->func
-				and (op0->operands.size() == op1->operands.size()
-					or ((op1->isCommutative() or init)
-						and op0->operands.size() > op1->operands.size())))) {
-				return false;
-			}
-		}
-		return true;
-	}
-	return false;
-}
-
 Operation::Operation() {
 	exprIndex = std::numeric_limits<size_t>::max();
 	func = -1;

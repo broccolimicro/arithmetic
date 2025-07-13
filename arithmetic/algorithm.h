@@ -36,5 +36,7 @@ bool canMap(vector<Operand> o0, Operand o1, ConstOperationSet e0, ConstOperation
 
 vector<Match> search(ConstOperationSet ops, ConstOperationSet rules, Operand top, size_t count=0, bool fwd=true, bool bwd=true);
 
+vector<Operand> tidy(OperationSet expr, vector<size_t> top, bool rules=false);
+
 }
 

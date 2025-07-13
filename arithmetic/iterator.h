@@ -18,7 +18,7 @@ _CONST_INTERFACE_ARG(ConstOperationSet,
 	(const Operation *, getExpr, (size_t index) const));
 
 struct UpIterator {
-	UpIterator(OperationSet root, size_t exprIndex = std::numeric_limits<size_t>::max());
+	UpIterator(OperationSet root, vector<size_t> start=vector<size_t>());
 	~UpIterator();
 
 	OperationSet root;
@@ -39,7 +39,7 @@ bool operator==(const UpIterator &i0, const UpIterator &i1);
 bool operator!=(const UpIterator &i0, const UpIterator &i1);
 
 struct ConstUpIterator {
-	ConstUpIterator(ConstOperationSet root, size_t exprIndex = std::numeric_limits<size_t>::max());
+	ConstUpIterator(ConstOperationSet root, vector<size_t> start=vector<size_t>());
 	~ConstUpIterator();
 
 	ConstOperationSet root;
@@ -60,7 +60,7 @@ bool operator==(const ConstUpIterator &i0, const ConstUpIterator &i1);
 bool operator!=(const ConstUpIterator &i0, const ConstUpIterator &i1);
 
 struct DownIterator {
-	DownIterator(OperationSet root, size_t exprIndex = std::numeric_limits<size_t>::max());
+	DownIterator(OperationSet root, vector<size_t> start=vector<size_t>());
 	~DownIterator();
 
 	OperationSet root;
@@ -81,7 +81,7 @@ bool operator==(const DownIterator &i0, const DownIterator &i1);
 bool operator!=(const DownIterator &i0, const DownIterator &i1);
 
 struct ConstDownIterator {
-	ConstDownIterator(ConstOperationSet root, size_t exprIndex = std::numeric_limits<size_t>::max());
+	ConstDownIterator(ConstOperationSet root, vector<size_t> start=vector<size_t>());
 	~ConstDownIterator();
 
 	ConstOperationSet root;

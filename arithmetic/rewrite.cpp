@@ -103,7 +103,8 @@ Expression rewriteBasic() {
 		(!!a) > (a)
 	}));
 
-	return rules.tidy(true);
+	rules.top.replace(tidy(rules, {rules.top.index}, true));
+	return rules;
 }
 
 Expression rewriteHuman() {
@@ -212,7 +213,8 @@ Expression rewriteHuman() {
 		(!!a) > (a)
 	}));
 
-	return rules.tidy(true);
+	rules.top.replace(tidy(rules, {rules.top.index}, true));
+	return rules;
 }
 
 Expression rewriteUndirected() {
@@ -238,8 +240,7 @@ Expression rewriteUndirected() {
 		bitwiseXor(a, b) == ((a && (!b)) || ((!a) && b)),
 	}));
 
-	rules.tidy(true);
-	
+	rules.top.replace(tidy(rules, {rules.top.index}, true));
 	return rules;
 }
 

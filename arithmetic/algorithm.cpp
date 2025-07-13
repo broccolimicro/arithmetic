@@ -16,7 +16,7 @@ Value evaluate(ConstOperationSet ops, Operand top, State values) {
 
 	vector<Value> result;
 	Value prev;
-	for (auto i = ConstUpIterator(ops, top.index); not i.done(); ++i) {
+	for (auto i = ConstUpIterator(ops, {top.index}); not i.done(); ++i) {
 		if (i->exprIndex >= result.size()) {
 			result.resize(i->exprIndex+1, Value::X());
 		}
@@ -35,7 +35,7 @@ Cost cost(ConstOperationSet ops, Operand top, vector<Type> vars) {
 	double complexity = 0.0;
 	vector<Type> expr;
 
-	for (auto curr = ConstUpIterator(ops, top.index); not curr.done(); ++curr) {
+	for (auto curr = ConstUpIterator(ops, {top.index}); not curr.done(); ++curr) {
 		pair<Type, double> result(Type(0.0, 0.0, 0.0), 0.0);
 		vector<Type> args;
 		for (auto j = curr->operands.begin(); j != curr->operands.end(); j++) {
@@ -284,6 +284,143 @@ vector<Match> search(ConstOperationSet ops, ConstOperationSet rules, Operand top
 	}
 	//cout << "Done" << endl;
 	return result;
+}
+
+// tidy() does a few things:
+// 1. propagate constants
+// 2. remove reflexive operations
+// 3. remove unitary commutative operations (if not rules)
+// 4. remove dangling operations
+// ------------ 5. merge successive commutative operations
+// 6. sort operands into a canonical order for commutative operations
+vector<Operand> tidy(OperationSet expr, vector<size_t> top, bool rules) {
+	// Start from the top and do depth first search. That zips up the graph for
+	// us. First, we need a mapping of index in operations to exprIndex so we
+	// don't have to search for the exprIndex each time.
+
+	// DESIGN(edward.bingham) This algorithm assumes that there are no cycles in
+	// the graph. So, a directed acyclic graph. If there are cycles, this
+	// function will fail silently and produce a result that doesn't sufficiently
+	// propagate all constants. The end result should still be functionally
+	// equivalent.
+
+	vector<Operand> replace;
+	vector<size_t> keep;
+
+	// cout << ::to_string(exprMap) << " " << exprMapIsDirty << endl;
+	// cout << *this << endl;
+	auto currIter = UpIterator(expr, top);
+	for (; not currIter.done(); ++currIter) {
+		Operation curr = *currIter;
+		// cout << "start: " << curr.get() << endl;
+		curr.replace(replace);
+		curr.tidy();
+		// cout << "replaced: " << curr.get() << endl;
+
+		if (curr.operands.size() == 1u and curr.operands[0].isConst()) {
+			Operand v = Operation::evaluate(curr.func, {curr.operands[0].get()});
+			if (curr.exprIndex >= replace.size()) {
+				replace.resize(curr.exprIndex+1, Operand::undef());
+			}
+			replace[curr.exprIndex] = v;
+			// cout << "found const expr[" << curr.exprIndex << "] = " << v << endl;
+		}	else if (curr.operands.size() == 1u and (curr.isReflexive()
+			or (not rules and curr.isCommutative()))) {
+			// replace reflexive expressions
+			if (curr.exprIndex >= replace.size()) {
+				replace.resize(curr.exprIndex+1, Operand::undef());
+			}
+			replace[curr.exprIndex] = curr.operands[0];
+			// cout << "found reflex expr[" << curr.exprIndex << "] = " << curr.operands[0] << endl;
+		} else {
+			// replace identical operations
+			for (auto k = keep.begin(); k != keep.end(); k++) {
+				if (areSame(curr, *expr.getExpr(*k))) {
+					if (curr.exprIndex >= replace.size()) {
+						replace.resize(curr.exprIndex+1, Operand::undef());
+					}
+					replace[curr.exprIndex] = Operand::exprOf(*k);
+					// cout << "found duplicate expr[" << curr->exprIndex << "] = " << Operand::exprOf(k->exprIndex) << endl;
+					break;
+				}
+			}
+		}
+
+		if (curr.exprIndex >= replace.size() or replace[curr.exprIndex].isUndef()) {
+			expr.setExpr(curr);
+			keep.push_back(curr.exprIndex);
+		}
+		// cout << ::to_string(curr.seen) << endl;
+		// cout << *this << endl;
+	}
+
+	// TODO(edward.bingham) This ends up being an N^2 algorithm because each
+	// erase invalidates the expr mapping... This needs to be a bit more elegant.
+	vector<Operand> index = expr.exprIndex();
+	for (auto i = index.begin(); i != index.end(); i++) {
+		if (i->index >= currIter.seen.size() or not currIter.seen[i->index]
+			or (i->index < replace.size() and not replace[i->index].isUndef())) {
+			expr.eraseExpr(i->index);
+		}
+	}
+
+	// cout << "done: " << *this << endl;
+
+	return replace;
+
+	// TODO(edward.bingham) reorder operations into a canonical order
+
+	// for each expression, we need to know if it depends on another
+	// expression. If so, then the dependency must come first.
+	/*vector<vector<size_t> > depend(operations.size());
+	for (int i = 0; i < (int)operations.size(); i++) {
+		for (auto j = operations[i].begin(); j != operations[i].end(); j++) {
+			if (j->isExpr()) {
+				depend[i].insert(depend[i].end(), depend[j->index].begin(), depend[j->index].end());
+				depend[i].push_back(j->index);
+			}
+		}
+		sort(depend[i].begin(); depend[i].end());
+		depend[i].erase(unique(depend[i].begin(), depend[i].end()), depend[i].end());
+	}
+
+	// Remapping is an expensive operation, so lets figure out the
+	// mapping first before we start swapping indices in the actual
+	// expression.
+	vector<size_t> mapping(operations.size());
+	for (size_t i = 0; i < mapping.size(); i++) {
+		mapping[i] = i;
+	}
+
+	// One expression A is less than another B if
+	// 1. B depends on A
+	// 2. A's operation is less than B's
+	// 3. Their operations are not commutative 
+
+	for (size_t i = 1; i < mapping.size(); i++) {
+		size_t mi = mapping[i];
+		size_t j = i;
+		for (; j > 0; j--) {
+			size_t mj = mapping[j-1];
+			// If operation i depends on operation j-1, then it must be greater
+			if (find(depend[mi].begin(), depend[mi].end(), mj) != depend[mi].end()
+				or operations[mi].func > operations[mj].func) {
+				break;
+			} else if (operations[mi].func < operations[mj].func) {
+				continue;
+			}
+
+			
+		}
+	}*/
+
+	// 1. identify a mapping from expression index -> expression index
+	//   a. determine recursively if one expression should be placed before another
+	//   b. use that to order expressons from left to right in the operands in a way that is unaffected by expression index
+	//   c. order the expressions for post-order traversal
+	// 2. apply that mapping and update all indices
+
+	// TODO(edward.bingham) create hash function on expression for insertion into hash map
 }
 
 

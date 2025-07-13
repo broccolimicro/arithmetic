@@ -69,7 +69,6 @@ struct Expression {
 	// TODO(edward.bingham) All of these functions need to be moved out of
 	// Expression and operate on an interface that represents any
 	// random-access container of Operations
-	Expression &tidy(bool rules=false);
 	Operand extract(size_t exprIndex, vector<size_t> operands);
 	void replace(Operand o0, Operand o1);
 	void replace(const Expression &rules, Match token);

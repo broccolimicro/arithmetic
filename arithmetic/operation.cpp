@@ -232,10 +232,6 @@ void Operand::apply(vector<Operand> varMap) {
 }
 
 void Operand::replace(vector<Operand> exprMap) {
-	if (exprMap.empty()) {
-		return;
-	}
-
 	if (isExpr() and index < exprMap.size() and not exprMap[index].isUndef()) {
 		*this = exprMap[index];
 	}

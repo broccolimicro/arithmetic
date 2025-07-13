@@ -256,7 +256,7 @@ TEST(Expression, TidyConstants) {
 	
 	Expression e = (a+b)*c-d;
 	cout << e << endl;
-	e.tidy();
+	e.top.replace(tidy(e, {e.top.index}));
 	cout << e << endl;
 	ASSERT_EQ(e.operations.size(), 0u);
 	EXPECT_EQ(e.top.type, Operand::CONST);
@@ -273,7 +273,7 @@ TEST(Expression, TidyCommutative) {
 	Expression e = (a+b)+(c+d);
 	ASSERT_EQ(e.operations.size(), 3u);
 	cout << e << endl;
-	e.tidy();
+	e.top.replace(tidy(e, {e.top.index}));
 	cout << e << endl;
 	ASSERT_EQ(e.operations.size(), 1u);
 	EXPECT_EQ(e.top.type, Operand::CONST);

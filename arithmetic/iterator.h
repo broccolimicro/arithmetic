@@ -8,11 +8,14 @@ namespace arithmetic {
 
 _INTERFACE_ARG(OperationSet,
 	(vector<Operand>, exprIndex, () const),
-	(Operation *, exprAt, (size_t index)));
+	(const Operation *, getExpr, (size_t index) const),
+	(bool, setExpr, (Operation o)),
+	(Operand, pushExpr, (Operation o)),
+	(bool, eraseExpr, (size_t index)));
 
 _CONST_INTERFACE_ARG(ConstOperationSet,
 	(vector<Operand>, exprIndex, () const),
-	(const Operation *, exprAt, (size_t index) const));
+	(const Operation *, getExpr, (size_t index) const));
 
 struct UpIterator {
 	UpIterator(OperationSet root, size_t exprIndex = std::numeric_limits<size_t>::max());
@@ -25,9 +28,9 @@ struct UpIterator {
 	vector<bool> seen;
 	vector<size_t> stack;
 
-	Operation &get();
-	Operation &operator*();
-	Operation *operator->();
+	const Operation &get();
+	const Operation &operator*();
+	const Operation *operator->();
 	UpIterator &operator++();
 	bool done() const;
 };
@@ -67,9 +70,9 @@ struct DownIterator {
 	vector<bool> seen;
 	vector<size_t> stack;
 
-	Operation &get();
-	Operation &operator*();
-	Operation *operator->();
+	const Operation &get();
+	const Operation &operator*();
+	const Operation *operator->();
 	DownIterator &operator++();
 	bool done() const;
 };

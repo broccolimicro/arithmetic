@@ -12,16 +12,16 @@ UpIterator::UpIterator(OperationSet root, size_t exprIndex) : root(root) {
 UpIterator::~UpIterator() {
 }
 
-Operation &UpIterator::get() {
-	return *root.exprAt(stack.back());
+const Operation &UpIterator::get() {
+	return *root.getExpr(stack.back());
 }
 
-Operation &UpIterator::operator*() {
-	return *root.exprAt(stack.back());
+const Operation &UpIterator::operator*() {
+	return *root.getExpr(stack.back());
 }
 
-Operation *UpIterator::operator->() {
-	return root.exprAt(stack.back());
+const Operation *UpIterator::operator->() {
+	return root.getExpr(stack.back());
 }
 
 // Depth first from leaves to root
@@ -48,7 +48,7 @@ UpIterator &UpIterator::operator++() {
 		}
 
 		expand[stack.back()] = true;
-		auto curr = root.exprAt(stack.back());
+		auto curr = root.getExpr(stack.back());
 		for (auto i = curr->operands.begin(); i != curr->operands.end(); i++) {
 			if (i->isExpr()) {
 				if (i->index >= seen.size()) {
@@ -88,15 +88,15 @@ ConstUpIterator::~ConstUpIterator() {
 }
 
 const Operation &ConstUpIterator::get() {
-	return *root.exprAt(stack.back());
+	return *root.getExpr(stack.back());
 }
 
 const Operation &ConstUpIterator::operator*() {
-	return *root.exprAt(stack.back());
+	return *root.getExpr(stack.back());
 }
 
 const Operation *ConstUpIterator::operator->() {
-	return root.exprAt(stack.back());
+	return root.getExpr(stack.back());
 }
 
 ConstUpIterator &ConstUpIterator::operator++() {
@@ -122,7 +122,7 @@ ConstUpIterator &ConstUpIterator::operator++() {
 		}
 
 		expand[stack.back()] = true;
-		auto curr = root.exprAt(stack.back());
+		auto curr = root.getExpr(stack.back());
 		for (auto i = curr->operands.begin(); i != curr->operands.end(); i++) {
 			if (i->isExpr()) {
 				if (i->index >= seen.size()) {
@@ -161,16 +161,16 @@ DownIterator::DownIterator(OperationSet root, size_t exprIndex) : root(root) {
 DownIterator::~DownIterator() {
 }
 
-Operation &DownIterator::get() {
-	return *root.exprAt(stack.back());
+const Operation &DownIterator::get() {
+	return *root.getExpr(stack.back());
 }
 
-Operation &DownIterator::operator*() {
-	return *root.exprAt(stack.back());
+const Operation &DownIterator::operator*() {
+	return *root.getExpr(stack.back());
 }
 
-Operation *DownIterator::operator->() {
-	return root.exprAt(stack.back());
+const Operation *DownIterator::operator->() {
+	return root.getExpr(stack.back());
 }
 
 DownIterator &DownIterator::operator++() {
@@ -183,7 +183,7 @@ DownIterator &DownIterator::operator++() {
 	}
 
 	if (expand[stack.back()]) {
-		auto curr = root.exprAt(stack.back());
+		auto curr = root.getExpr(stack.back());
 		stack.pop_back();
 		for (auto i = curr->operands.begin(); i != curr->operands.end(); i++) {
 			if (i->isExpr()) {
@@ -238,15 +238,15 @@ ConstDownIterator::~ConstDownIterator() {
 }
 
 const Operation &ConstDownIterator::get() {
-	return *root.exprAt(stack.back());
+	return *root.getExpr(stack.back());
 }
 
 const Operation &ConstDownIterator::operator*() {
-	return *root.exprAt(stack.back());
+	return *root.getExpr(stack.back());
 }
 
 const Operation *ConstDownIterator::operator->() {
-	return root.exprAt(stack.back());
+	return root.getExpr(stack.back());
 }
 
 ConstDownIterator &ConstDownIterator::operator++() {
@@ -259,7 +259,7 @@ ConstDownIterator &ConstDownIterator::operator++() {
 	}
 
 	if (expand[stack.back()]) {
-		auto curr = root.exprAt(stack.back());
+		auto curr = root.getExpr(stack.back());
 		stack.pop_back();
 		for (auto i = curr->operands.begin(); i != curr->operands.end(); i++) {
 			if (i->isExpr()) {

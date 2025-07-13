@@ -40,9 +40,11 @@ struct Expression {
 	Expression(int func, vector<Operand> args);
 	~Expression();
 
-	Operation *exprAt(size_t index);
-	const Operation *exprAt(size_t index) const;
 	vector<Operand> exprIndex() const;
+	const Operation *getExpr(size_t index) const;
+	bool setExpr(Operation o);
+	Operand pushExpr(Operation o);
+	bool eraseExpr(size_t index);
 
 	UpIterator exprUp(size_t exprIndex = std::numeric_limits<size_t>::max());
 	ConstUpIterator exprUp(size_t exprIndex = std::numeric_limits<size_t>::max()) const;

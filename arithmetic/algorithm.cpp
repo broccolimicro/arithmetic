@@ -71,7 +71,7 @@ bool verifyRuleFormat(ConstOperationSet ops, Operand i, bool msg) {
 		if (msg) printf("internal:%s:%d: invalid format for rule\n", __FILE__, __LINE__);
 		return false;
 	}
-	auto j = ops.exprAt(i.index);
+	auto j = ops.getExpr(i.index);
 	if (j == nullptr
 		or j->operands.size() != 2u
 		or (j->func != Operation::EQUAL
@@ -84,7 +84,7 @@ bool verifyRuleFormat(ConstOperationSet ops, Operand i, bool msg) {
 }
 
 bool verifyRulesFormat(ConstOperationSet ops, Operand top, bool msg) {
-	auto ruleTop = ops.exprAt(top.index);
+	auto ruleTop = ops.getExpr(top.index);
 	if (not top.isExpr() or ruleTop == nullptr) {
 		if (msg) printf("error: no replacement rules found\n");
 		return false;
@@ -132,8 +132,8 @@ bool canMap(vector<Operand> o0, Operand o1, ConstOperationSet e0, ConstOperation
 			if (not i->isExpr()) {
 				return false;
 			}
-			auto op0 = e0.exprAt(i->index);
-			auto op1 = e1.exprAt(o1.index);
+			auto op0 = e0.getExpr(i->index);
+			auto op1 = e1.getExpr(o1.index);
 			if (not (op0->func == op1->func
 				and (op0->operands.size() == op1->operands.size()
 					or ((op1->isCommutative() or init)
@@ -165,7 +165,7 @@ vector<Match> search(ConstOperationSet ops, ConstOperationSet rules, Operand top
 	vector<pair<vector<Leaf>, Match> > stack;
 
 	// initialize the initial matches
-	auto ruleTop = rules.exprAt(top.index);
+	auto ruleTop = rules.getExpr(top.index);
 	vector<Operand> indices = ops.exprIndex();
 	for (auto i = indices.begin(); i != indices.end(); i++) {
 		// search through the "rules" rules and add all of the matching starts
@@ -174,7 +174,7 @@ vector<Match> search(ConstOperationSet ops, ConstOperationSet rules, Operand top
 				continue;
 			}
 
-			auto rule = rules.exprAt(j->index);
+			auto rule = rules.getExpr(j->index);
 			auto lhs = rule->operands.begin();
 			auto rhs = std::next(lhs);
 			// map left to right
@@ -223,8 +223,8 @@ vector<Match> search(ConstOperationSet ops, ConstOperationSet rules, Operand top
 		//cout << "Leaves: " << ::to_string(leaves) << endl;
 
 		if (to.isExpr()) {
-			auto fOp = ops.exprAt(from.index);
-			auto tOp = rules.exprAt(to.index);
+			auto fOp = ops.getExpr(from.index);
+			auto tOp = rules.getExpr(to.index);
 
 			bool commute = tOp->isCommutative();
 			if (commute and tOp->operands.size() == 1u) {

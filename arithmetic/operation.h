@@ -145,7 +145,7 @@ struct Operation {
 	void apply(vector<int> varMap);
 	void apply(vector<Operand> varMap);
 	void replace(vector<Operand> exprMap);
-	Operation extract(vector<size_t> idx, size_t exprIndex);
+	Operation extract(vector<size_t> idx, size_t exprIndex=0);
 	Operation &offsetExpr(int off);
 
 	void tidy();

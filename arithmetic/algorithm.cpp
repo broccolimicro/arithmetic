@@ -18,7 +18,7 @@ Value evaluate(ConstOperationSet ops, Operand top, State values) {
 
 	vector<Value> result;
 	Value prev;
-	for (auto i = ConstUpIterator(ops, {top.index}); not i.done(); ++i) {
+	for (auto i = ConstUpIterator(ops, {top}); not i.done(); ++i) {
 		if (i->exprIndex >= result.size()) {
 			result.resize(i->exprIndex+1, Value::X());
 		}
@@ -37,7 +37,7 @@ Cost cost(ConstOperationSet ops, Operand top, vector<Type> vars) {
 	double complexity = 0.0;
 	vector<Type> expr;
 
-	for (auto curr = ConstUpIterator(ops, {top.index}); not curr.done(); ++curr) {
+	for (auto curr = ConstUpIterator(ops, {top}); not curr.done(); ++curr) {
 		pair<Type, double> result(Type(0.0, 0.0, 0.0), 0.0);
 		vector<Type> args;
 		for (auto j = curr->operands.begin(); j != curr->operands.end(); j++) {
@@ -163,7 +163,7 @@ Operand extract(OperationSet expr, size_t from, vector<size_t> operands) {
 // 4. remove dangling operations
 // ------------ 5. merge successive commutative operations
 // 6. sort operands into a canonical order for commutative operations
-Mapping tidy(OperationSet expr, vector<size_t> top, bool rules) {
+Mapping tidy(OperationSet expr, vector<Operand> top, bool rules) {
 	// Start from the top and do depth first search. That zips up the graph for
 	// us. First, we need a mapping of index in operations to exprIndex so we
 	// don't have to search for the exprIndex each time.
@@ -297,7 +297,7 @@ Mapping tidy(OperationSet expr, vector<size_t> top, bool rules) {
 
 // pin - these expression IDs cannot be contained in a match except at the very
 // top of the match. These must be preserved through a replace.
-vector<Match> search(ConstOperationSet ops, vector<size_t> pin, const Expression &rules, size_t count, bool fwd, bool bwd) {
+vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const Expression &rules, size_t count, bool fwd, bool bwd) {
 	if (not verifyRulesFormat(rules, rules.top, true)) {
 		return vector<Match>();
 	}
@@ -369,7 +369,7 @@ vector<Match> search(ConstOperationSet ops, vector<size_t> pin, const Expression
 
 			bool foundPin = false;
 			for (auto i = fOp->operands.begin(); i != fOp->operands.end(); i++) {
-				if (i->isExpr() and find(pin.begin(), pin.end(), i->index) != pin.end()) {
+				if (i->isExpr() and find(pin.begin(), pin.end(), *i) != pin.end()) {
 					foundPin = true;
 					break;
 				}
@@ -501,7 +501,7 @@ Mapping replace(OperationSet expr, const Expression &rules, Match match) {
 
 		// Iterate over the replacement expression
 		map<size_t, size_t> exprMap;
-		for (auto curr = ConstDownIterator(rules, {match.replace.index}); not curr.done(); ++curr) {
+		for (auto curr = ConstDownIterator(rules, {match.replace}); not curr.done(); ++curr) {
 			// Along the way, compute the exprIndex mapping
 			auto pos = exprMap.insert({curr->exprIndex, 0});
 			if (pos.second) {
@@ -584,7 +584,7 @@ Mapping replace(OperationSet expr, const Expression &rules, Match match) {
 	// cout << "after erase: " << *this << endl;
 }
 
-Mapping minimize(OperationSet expr, vector<size_t> top, Expression rules) {
+Mapping minimize(OperationSet expr, vector<Operand> top, Expression rules) {
 	static const Expression defaultRules = rewriteBasic();
 	if (rules.operations.empty()) {
 		rules = defaultRules;
@@ -601,7 +601,7 @@ Mapping minimize(OperationSet expr, vector<size_t> top, Expression rules) {
 		Mapping sub = replace(expr, rules, tokens.back());
 		//cout << "Replace: " << expr.cast<Expression>() << endl;
 		sub.apply(tidy(expr, top));
-		top = sub.mapExpr(top);
+		top = sub.map(top);
 		result.apply(sub);
 		//cout << "Canon: " << ::to_string(top) << " " << expr.cast<Expression>() << endl << endl;
 		tokens = search(expr, top, rules, 1u);

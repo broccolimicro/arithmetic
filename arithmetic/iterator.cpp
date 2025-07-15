@@ -2,11 +2,13 @@
 
 namespace arithmetic {
 
-UpIterator::UpIterator(OperationSet root, vector<size_t> start) : root(root) {
-	if (not start.empty()) {
-		stack = start;
-		++*this;
+UpIterator::UpIterator(OperationSet root, vector<Operand> start) : root(root) {
+	for (auto i = start.begin(); i != start.end(); i++) {
+		if (i->isExpr()) {
+			stack.push_back(i->index);
+		}
 	}
+	++*this;
 }
 
 UpIterator::~UpIterator() {
@@ -77,11 +79,13 @@ bool operator!=(const UpIterator &i0, const UpIterator &i1) {
 	return i0.stack != i1.stack;
 }
 
-ConstUpIterator::ConstUpIterator(ConstOperationSet root, vector<size_t> start) : root(root) {
-	if (not start.empty()) {
-		stack = start;
-		++*this;
+ConstUpIterator::ConstUpIterator(ConstOperationSet root, vector<Operand> start) : root(root) {
+	for (auto i = start.begin(); i != start.end(); i++) {
+		if (i->isExpr()) {
+			stack.push_back(i->index);
+		}
 	}
+	++*this;
 }
 
 ConstUpIterator::~ConstUpIterator() {
@@ -151,11 +155,13 @@ bool operator!=(const ConstUpIterator &i0, const ConstUpIterator &i1) {
 	return i0.stack != i1.stack;
 }
 
-DownIterator::DownIterator(OperationSet root, vector<size_t> start) : root(root) {
-	if (not start.empty()) {
-		stack = start;
-		++*this;
+DownIterator::DownIterator(OperationSet root, vector<Operand> start) : root(root) {
+	for (auto i = start.begin(); i != start.end(); i++) {
+		if (i->isExpr()) {
+			stack.push_back(i->index);
+		}
 	}
+	++*this;
 }
 
 DownIterator::~DownIterator() {
@@ -227,11 +233,13 @@ bool operator!=(const DownIterator &i0, const DownIterator &i1) {
 	return i0.stack != i1.stack;
 }
 
-ConstDownIterator::ConstDownIterator(ConstOperationSet root, vector<size_t> start) : root(root) {
-	if (not start.empty()) {
-		stack = start;
-		++*this;
+ConstDownIterator::ConstDownIterator(ConstOperationSet root, vector<Operand> start) : root(root) {
+	for (auto i = start.begin(); i != start.end(); i++) {
+		if (i->isExpr()) {
+			stack.push_back(i->index);
+		}
 	}
+	++*this;
 }
 
 ConstDownIterator::~ConstDownIterator() {

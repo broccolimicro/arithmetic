@@ -104,7 +104,7 @@ Expression rewriteBasic() {
 		(!!a) > (a)
 	}));
 
-	rules.top = tidy(rules, {rules.top.index}, true).map(rules.top);
+	rules.top = tidy(rules, {rules.top}, true).map(rules.top);
 	return rules;
 }
 
@@ -214,7 +214,7 @@ Expression rewriteHuman() {
 		(!!a) > (a)
 	}));
 
-	rules.top = tidy(rules, {rules.top.index}, true).map(rules.top);
+	rules.top = tidy(rules, {rules.top}, true).map(rules.top);
 	return rules;
 }
 
@@ -241,7 +241,7 @@ Expression rewriteUndirected() {
 		bitwiseXor(a, b) == ((a && (!b)) || ((!a) && b)),
 	}));
 
-	rules.top = tidy(rules, {rules.top.index}, true).map(rules.top);
+	rules.top = tidy(rules, {rules.top}, true).map(rules.top);
 	return rules;
 }
 

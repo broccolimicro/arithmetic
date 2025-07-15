@@ -36,11 +36,11 @@ bool verifyRulesFormat(ConstOperationSet ops, Operand top, bool msg=true);
 bool canMap(vector<Operand> o0, Operand o1, ConstOperationSet e0, ConstOperationSet e1, bool init, map<size_t, vector<Operand> > *vars=nullptr);
 Operand extract(OperationSet expr, size_t from, vector<size_t> operands);
 
-Mapping tidy(OperationSet expr, vector<size_t> top, bool rules=false);
+Mapping tidy(OperationSet expr, vector<Operand> top, bool rules=false);
 
-vector<Match> search(ConstOperationSet ops, vector<size_t> pin, const Expression &rules, size_t count=0, bool fwd=true, bool bwd=true);
+vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const Expression &rules, size_t count=0, bool fwd=true, bool bwd=true);
 Mapping replace(OperationSet expr, const Expression &rules, Match token);
-Mapping minimize(OperationSet expr, vector<size_t> top, Expression rules=Expression());
+Mapping minimize(OperationSet expr, vector<Operand> top, Expression rules=Expression());
 
 //Expression espresso(Expression expr, vector<Type> vars=vector<Type>(), Expression directed=Expression(), Expression undirected=Expression());
 

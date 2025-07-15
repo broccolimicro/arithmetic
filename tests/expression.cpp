@@ -256,7 +256,7 @@ TEST(Expression, TidyConstants) {
 	
 	Expression e = (a+b)*c-d;
 	cout << e << endl;
-	e.top = tidy(e, {e.top.index}).map(e.top);
+	e.top = tidy(e, {e.top}).map(e.top);
 	cout << e << endl;
 	ASSERT_EQ(e.size(), 0u);
 	EXPECT_TRUE(e.top.isConst());
@@ -273,7 +273,7 @@ TEST(Expression, TidyCommutative) {
 	Expression e = (a+b)+(c+d);
 	ASSERT_EQ(e.size(), 3u);
 	cout << e << endl;
-	e.top = tidy(e, {e.top.index}).map(e.top);
+	e.top = tidy(e, {e.top}).map(e.top);
 	cout << e << endl;
 	ASSERT_EQ(e.size(), 1u);
 	EXPECT_TRUE(e.top.isConst());
@@ -291,7 +291,7 @@ TEST(Expression, Simplify) {
 	Expression dut = (a*c+b*c-c*a)/c;
 	Cost cost = arithmetic::cost(dut, dut.top, vars);
 	cout << "Before: cost=" << cost.complexity << " del=" << cost.critical << endl << dut << endl;
-	dut.top = minimize(dut, {dut.top.index}).map(dut.top);
+	dut.top = minimize(dut, {dut.top}).map(dut.top);
 	EXPECT_TRUE(areSame(dut, b));
 
 	Cost cost2 = arithmetic::cost(dut, dut.top, vars);
@@ -310,7 +310,7 @@ TEST(Expression, ChainOfAdds) {
 	Expression g = Expression::varOf(6);
 	
 	Expression dut = a+b+c+d+e+f+g;
-	dut.top = minimize(dut, {dut.top.index}).map(dut.top);
+	dut.top = minimize(dut, {dut.top}).map(dut.top);
 }
 
 TEST(Expression, ElasticRewrite) {
@@ -325,7 +325,7 @@ TEST(Expression, ElasticRewrite) {
 	});
 
 	Expression dut = e*add({a,b,c,d});
-	auto m = arithmetic::search(dut, {dut.top.index}, rules);
+	auto m = arithmetic::search(dut, {dut.top}, rules);
 	cout << ::to_string(m) << endl;
 }
 
@@ -339,7 +339,7 @@ TEST(Expression, Boolean) {
 	//Expression dut = ((false|c)|d);
 	Expression dut = (false|c)|d;
 	cout << dut << endl;
-	dut.top = minimize(dut, {dut.top.index}).map(dut.top);
+	dut.top = minimize(dut, {dut.top}).map(dut.top);
 	cout << dut << endl;
 }
 
@@ -349,7 +349,7 @@ TEST(Expression, Identity) {
 	Expression dut = a;
 	dut.push(Operation::BOOLEAN_NOT, {dut.top});
 	cout << dut << endl;
-	dut.top = minimize(dut, {dut.top.index}).map(dut.top);
+	dut.top = minimize(dut, {dut.top}).map(dut.top);
 	cout << dut << endl;
 }
 
@@ -363,6 +363,6 @@ TEST(Expression, Function) {
 
 	Expression dut = call(0, {a+b, c, d+e+f});
 	cout << dut << endl;
-	dut.top = minimize(dut, {dut.top.index}).map(dut.top);
+	dut.top = minimize(dut, {dut.top}).map(dut.top);
 	cout << dut << endl;
 }

@@ -212,16 +212,13 @@ bool areSame(Expression e0, Expression e1) {
 	if (e0.top != e1.top) {
 		return false;
 	}
-	if (e0.top.isExpr() and e1.top.isExpr()) {
-		auto i = ConstDownIterator(e0, {e0.top.index}), j = ConstDownIterator(e1, {e1.top.index});
-		for (; not i.done() and not j.done(); ++i, ++j) {
-			if (*i != *j) {
-				return false;
-			}
+	auto i = ConstDownIterator(e0, {e0.top}), j = ConstDownIterator(e1, {e1.top});
+	for (; not i.done() and not j.done(); ++i, ++j) {
+		if (*i != *j) {
+			return false;
 		}
-		return i.done() and j.done();
 	}
-	return true;
+	return i.done() and j.done();
 }
 
 Expression &Expression::operator=(Operand e) {

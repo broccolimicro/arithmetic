@@ -281,10 +281,10 @@ Operand Mapping::map(Operand o0) const {
 	return o0;
 }
 
-vector<size_t> Mapping::mapExpr(vector<size_t> from) const {
-	vector<size_t> result;
+vector<Operand> Mapping::map(vector<Operand> from) const {
+	vector<Operand> result;
 	for (auto i = from.begin(); i != from.end(); i++) {
-		result.push_back(map(Operand::exprOf(*i)).index);
+		result.push_back(map(*i));
 	}
 	return result;
 }

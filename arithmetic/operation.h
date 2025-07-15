@@ -79,7 +79,7 @@ struct Mapping {
 
 	bool has(Operand o0) const;
 	Operand map(Operand o0) const;
-	vector<size_t> mapExpr(vector<size_t> from) const;
+	vector<Operand> map(vector<Operand> from) const;
 
 	bool isIdentity() const;
 

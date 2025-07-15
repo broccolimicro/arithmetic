@@ -702,7 +702,7 @@ Value index(Value v, Value i) {
 		if (i.ival >= 0 and i.ival < (int)v.arr.size()) {
 			return v.arr[i.ival];
 		}
-		printf("error: index %d out of bounds for array of size %lld\n", (int)v.arr.size(), i.ival);
+		printf("error: index %zu out of bounds for array of size %ld\n", v.arr.size(), (long)i.ival);
 		return Value::X();
 	}
 	printf("error: 'operator[]' not defined for '%s' and '%s'\n", v.ctypeName(), i.ctypeName());
@@ -715,7 +715,7 @@ Value member(Value v0, Value v1, TypeSet types) {
 		if (idx >= 0 and idx < (int)v0.arr.size()) {
 			return v0.arr[idx];
 		}
-		printf("internal: member %s(%d) out of bounds for structure of size %d\n", v1.sval.c_str(), idx, (int)v0.arr.size());
+		printf("internal: member %s(%d) out of bounds for structure of size %zu\n", v1.sval.c_str(), idx, v0.arr.size());
 		return Value::X();
 	}
 	printf("error: 'operator.' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());

@@ -35,6 +35,7 @@ bool verifyRulesFormat(ConstOperationSet ops, Operand top, bool msg=true);
 
 bool canMap(vector<Operand> o0, Operand o1, ConstOperationSet e0, ConstOperationSet e1, bool init, map<size_t, vector<Operand> > *vars=nullptr);
 Operand extract(OperationSet expr, size_t from, vector<size_t> operands);
+Expression subExpr(ConstOperationSet e0, Operand top);
 
 Mapping tidy(OperationSet expr, vector<Operand> top, bool rules=false);
 

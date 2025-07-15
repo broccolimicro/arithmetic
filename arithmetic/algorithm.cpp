@@ -156,6 +156,16 @@ Operand extract(OperationSet expr, size_t from, vector<size_t> operands) {
 	return result;
 }
 
+Expression subExpr(ConstOperationSet e0, Operand top) {
+	Expression result;
+	Mapping m;
+	for (ConstUpIterator i(e0, {top}); not i.done(); ++i) {
+		m.set(i->op(), result.pushExpr(Operation(*i).apply(m)));
+	}
+	result.top = m.map(top);
+	return result;
+}
+
 // tidy() does a few things:
 // 1. propagate constants
 // 2. remove reflexive operations
@@ -586,7 +596,7 @@ Mapping replace(OperationSet expr, const Expression &rules, Match match) {
 
 Mapping minimize(OperationSet expr, vector<Operand> top, Expression rules) {
 	static const Expression defaultRules = rewriteBasic();
-	if (rules.operations.empty()) {
+	if (rules.top.isUndef()) {
 		rules = defaultRules;
 	}
 

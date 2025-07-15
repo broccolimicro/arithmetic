@@ -9,6 +9,87 @@
 
 namespace arithmetic {
 
+SimpleOperationSet::SimpleOperationSet() {
+	Operation::loadOperators();
+}
+
+SimpleOperationSet::~SimpleOperationSet() {
+}
+
+vector<Operand> SimpleOperationSet::exprIndex() const {
+	vector<Operand> result;
+	result.reserve(elems.size());
+	for (auto i = elems.begin(); i != elems.end(); i++) {
+		if (not i->isUndef()) {
+			result.push_back(i->op());
+		}
+	}
+	return result;
+}
+
+const Operation *SimpleOperationSet::getExpr(size_t index) const {
+	if (index < elems.size() and not elems[index].isUndef()) {
+		return &elems[index];
+	}
+	return nullptr;
+}
+
+bool SimpleOperationSet::setExpr(Operation o) {
+	if (o.exprIndex >= elems.size()) {
+		for (size_t i = elems.size(); i < o.exprIndex; i++) {
+			free.push_back(i);
+		}
+		elems.resize(o.exprIndex+1, Operation::undef());
+	}
+	elems[o.exprIndex] = o;
+	return true;
+}
+
+Operand SimpleOperationSet::pushExpr(Operation o) {
+	if (free.empty()) {
+		o.exprIndex = elems.size();
+		elems.push_back(o);
+	} else {
+		o.exprIndex = free.back();
+		free.pop_back();
+		elems[o.exprIndex] = o;
+	}
+	return o.op();
+}
+
+bool SimpleOperationSet::eraseExpr(size_t index) {
+	if (index < elems.size() and not elems[index].isUndef()) {
+		elems[index] = Operation::undef();
+		free.push_back(index);
+		return true;
+	}
+	return false;
+}
+
+void SimpleOperationSet::clear() {
+	elems.clear();
+	free.clear();
+}
+
+size_t SimpleOperationSet::size() const {
+	return elems.size() - free.size();
+}
+
+string SimpleOperationSet::to_string() const {
+	ostringstream oss;
+	for (int i = (int)elems.size()-1; i >= 0; i--) {
+		if (not elems[i].isUndef()) {
+			oss << i << ": " << elems[i] << endl;
+		}
+	}
+	return oss.str();
+}
+
+ostream &operator<<(ostream &os, SimpleOperationSet e) {
+	os << e.to_string();
+	return os;
+}
+
 Expression::Expression() {
 	Operation::loadOperators();
 	top = Operand::undef();
@@ -89,68 +170,39 @@ Expression Expression::typeOf(int type) {
 }
 
 vector<Operand> Expression::exprIndex() const {
-	vector<Operand> result;
-	result.reserve(operations.size());
-	for (auto i = operations.begin(); i != operations.end(); i++) {
-		if (not i->isUndef()) {
-			result.push_back(i->op());
-		}
-	}
-	return result;
+	return sub.exprIndex();
 }
 
 const Operation *Expression::getExpr(size_t index) const {
-	if (index < operations.size() and not operations[index].isUndef()) {
-		return &operations[index];
-	}
-	return nullptr;
+	return sub.getExpr(index);
 }
 
 bool Expression::setExpr(Operation o) {
-	if (o.exprIndex >= operations.size()) {
-		operations.resize(o.exprIndex+1);
-	}
-	operations[o.exprIndex] = o;
-	return true;
+	return sub.setExpr(o);
 }
 
 Operand Expression::pushExpr(Operation o) {
-	if (next.empty()) {
-		o.exprIndex = operations.size();
-		operations.push_back(o);
-	} else {
-		o.exprIndex = next.back();
-		next.pop_back();
-		operations[o.exprIndex] = o;
-	}
-	return o.op();
+	return sub.pushExpr(o);
 }
 
 bool Expression::eraseExpr(size_t index) {
-	if (index < operations.size() and not operations[index].isUndef()) {
-		operations[index] = Operation::undef();
-		next.push_back(index);
-		return true;
-	}
-	return false;
+	return sub.eraseExpr(index);
 }
 
 void Expression::clear() {
+	sub.clear();
 	top = Operand::undef();
-	operations.clear();
-	next.clear();
 }
 
 size_t Expression::size() const {
-	return operations.size() - next.size();
+	return sub.size();
 }
 
 Operand Expression::append(Expression arg) {
 	Mapping m;
-	for (auto i = arg.operations.begin(); i != arg.operations.end(); i++) {
-		if (not i->isUndef()) {
-			m.set(i->op(), pushExpr(Operation(*i).apply(m)));
-		}
+	vector<Operand> idx = arg.exprIndex();
+	for (auto i = idx.begin(); i != idx.end(); i++) {
+		m.set(*i, pushExpr(Operation(*arg.getExpr(i->index)).apply(m)));
 	}
 	return m.map(arg.top);
 }
@@ -165,10 +217,11 @@ vector<Operand> Expression::append(vector<Expression> arg) {
 
 Expression &Expression::push(int func, vector<Operand> args) {
 	// add to operations list if doesn't exist
-	Operation arg(func, args);
-	for (auto i = operations.begin(); i != operations.end(); i++) {
-		if (not i->isUndef() and *i == arg) {
-			top = i->op();
+	Operation arg(func, args);	
+	vector<Operand> idx = exprIndex();
+	for (auto i = idx.begin(); i != idx.end(); i++) {
+		if (*getExpr(i->index) == arg) {
+			top = *i;
 			return *this;
 		}
 	}
@@ -180,12 +233,11 @@ bool Expression::isNull() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is null after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
-	for (auto i = operations.begin(); i != operations.end(); i++) {
-		if (not i->isUndef()) {
-			for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
-				if (j->isVar() or (j->isConst() and not j->cnst.isUnstable())) {
-					return false;
-				}
+	vector<Operand> idx = exprIndex();
+	for (auto i = idx.begin(); i != idx.end(); i++) {
+		for (auto j = getExpr(i->index)->operands.begin(); j != getExpr(i->index)->operands.end(); j++) {
+			if (j->isVar() or (j->isConst() and not j->cnst.isUnstable())) {
+				return false;
 			}
 		}
 	}
@@ -196,12 +248,11 @@ bool Expression::isConstant() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is constant after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
-	for (auto i = operations.begin(); i != operations.end(); i++) {
-		if (not i->isUndef()) {
-			for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
-				if (j->isVar() or (j->isConst() and j->cnst.isUnstable())) {
-					return false;
-				}
+	vector<Operand> idx = exprIndex();
+	for (auto i = idx.begin(); i != idx.end(); i++) {
+		for (auto j = getExpr(i->index)->operands.begin(); j != getExpr(i->index)->operands.end(); j++) {
+			if (j->isVar() or (j->isConst() and j->cnst.isUnstable())) {
+				return false;
 			}
 		}
 	}
@@ -212,12 +263,11 @@ bool Expression::isValid() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is constant after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
-	for (auto i = operations.begin(); i != operations.end(); i++) {
-		if (not i->isUndef()) {
-			for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
-				if (j->isVar() or (j->isConst() and (j->cnst.isUnstable() or j->cnst.isNeutral()))) {
-					return false;
-				}
+	vector<Operand> idx = exprIndex();
+	for (auto i = idx.begin(); i != idx.end(); i++) {
+		for (auto j = getExpr(i->index)->operands.begin(); j != getExpr(i->index)->operands.end(); j++) {
+			if (j->isVar() or (j->isConst() and (j->cnst.isUnstable() or j->cnst.isNeutral()))) {
+				return false;
 			}
 		}
 	}
@@ -228,12 +278,11 @@ bool Expression::isNeutral() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is null after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
-	for (auto i = operations.begin(); i != operations.end(); i++) {
-		if (not i->isUndef()) {
-			for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
-				if (j->isVar() or (j->isConst() and (j->cnst.isUnstable() or j->cnst.isValid()))) {
-					return false;
-				}
+	vector<Operand> idx = exprIndex();
+	for (auto i = idx.begin(); i != idx.end(); i++) {
+		for (auto j = getExpr(i->index)->operands.begin(); j != getExpr(i->index)->operands.end(); j++) {
+			if (j->isVar() or (j->isConst() and (j->cnst.isUnstable() or j->cnst.isValid()))) {
+				return false;
 			}
 		}
 	}
@@ -243,15 +292,17 @@ bool Expression::isNeutral() const {
 bool Expression::isWire() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is null after constant propagation using quantified element elimination
-	for (auto i = operations.begin(); i != operations.end(); i++) {
-		if (i->func == Operation::VALIDITY or i->func == Operation::BOOLEAN_NOT or i->func == Operation::BOOLEAN_AND or i->func == Operation::BOOLEAN_OR) {
+	vector<Operand> idx = exprIndex();
+	for (auto i = idx.begin(); i != idx.end(); i++) {
+		if (getExpr(i->index)->func == Operation::VALIDITY
+			or getExpr(i->index)->func == Operation::BOOLEAN_NOT
+			or getExpr(i->index)->func == Operation::BOOLEAN_AND
+			or getExpr(i->index)->func == Operation::BOOLEAN_OR) {
 			return true;
 		}
-		if (not i->isUndef()) {
-			for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
-				if (j->isConst() and (j->cnst.isNeutral() or j->cnst.isValid())) {
-					return true;
-				}
+		for (auto j = getExpr(i->index)->operands.begin(); j != getExpr(i->index)->operands.end(); j++) {
+			if (j->isConst() and (j->cnst.isNeutral() or j->cnst.isValid())) {
+				return true;
 			}
 		}
 	}
@@ -263,10 +314,9 @@ Expression &Expression::apply(vector<int> uidMap) {
 		return *this;
 	}
 
-	for (auto i = operations.begin(); i != operations.end(); i++) {
-		if (not i->isUndef()) {
-			i->apply(uidMap);
-		}
+	vector<Operand> idx = exprIndex();
+	for (auto i = idx.begin(); i != idx.end(); i++) {
+		setExpr(Operation(*getExpr(i->index)).apply(uidMap));
 	}
 	return *this;
 }
@@ -286,11 +336,10 @@ bool areSame(Expression e0, Expression e1) {
 
 string Expression::to_string() const {
 	ostringstream oss;
-	oss << "top: " << top << "/" << operations.size() << endl;
-	for (int i = (int)operations.size()-1; i >= 0; i--) {
-		if (not operations[i].isUndef()) {
-			oss << i << ": " << operations[i] << endl;
-		}
+	oss << "top: " << top << endl;
+	vector<Operand> idx = exprIndex();
+	for (auto i = idx.rbegin(); i != idx.rend(); i++) {
+		oss << *getExpr(i->index) << endl;
 	}
 	return oss.str();
 }
@@ -395,9 +444,9 @@ int passesGuard(const State &encoding, const State &global, const Expression &gu
 	vector<Value> expressions;
 	vector<Value> gexpressions;
 
-	for (int i = 0; i < (int)guard.operations.size(); i++) {
-		Value g = guard.operations[i].evaluate(global, gexpressions);
-		Value l = guard.operations[i].evaluate(encoding, expressions);
+	for (ConstUpIterator i(guard.sub, {guard.top}); not i.done(); ++i) {
+		Value g = i->evaluate(global, gexpressions);
+		Value l = i->evaluate(encoding, expressions);
 
 		if (l.isUnstable() or g.isUnstable()
 			or (g.isNeutral() and l.isValid())
@@ -406,15 +455,21 @@ int passesGuard(const State &encoding, const State &global, const Expression &gu
 			l = Value::X();
 		}
 
-		expressions.push_back(l);
-		gexpressions.push_back(g);
+		if (i->exprIndex >= expressions.size()) {
+			expressions.resize(i->exprIndex+1, Value::X());
+		}
+		if (i->exprIndex >= gexpressions.size()) {
+			gexpressions.resize(i->exprIndex+1, Value::X());
+		}
+		expressions[i->exprIndex] = l;
+		gexpressions[i->exprIndex] = g;
 	}
 
-	if (expressions.back().isUnknown() or expressions.back().isValid()) {
-		if (gexpressions.back().isNeutral() or gexpressions.back().isUnknown()) {
-			expressions.back() = Value::X();
-		} else if (gexpressions.back().isValid()) {
-			expressions.back() = gexpressions.back();
+	if (expressions[guard.top.index].isUnknown() or expressions[guard.top.index].isValid()) {
+		if (gexpressions[guard.top.index].isNeutral() or gexpressions[guard.top.index].isUnknown()) {
+			expressions[guard.top.index] = Value::X();
+		} else if (gexpressions[guard.top.index].isValid()) {
+			expressions[guard.top.index] = gexpressions[guard.top.index];
 		}
 	}
 
@@ -431,14 +486,14 @@ int passesGuard(const State &encoding, const State &global, const Expression &gu
 	// This validity/neutrality information propagates differently through
 	// different operations.
 	if (total != nullptr and expressions.back().isValid()) {
-		for (int i = (int)guard.operations.size()-1; i >= 0; i--) {
-			guard.operations[i].propagate(*total, global, expressions, gexpressions, expressions[i]);
+		for (ConstDownIterator i(guard.sub, {guard.top}); not i.done(); ++i) {
+			i->propagate(*total, global, expressions, gexpressions, expressions[i->exprIndex]);
 		}
 	}
 
-	if (expressions.empty() or expressions.back().isNeutral()) {
+	if (expressions.empty() or expressions[guard.top.index].isNeutral()) {
 		return -1;
-	} else if (expressions.back().isUnstable()) {
+	} else if (expressions[guard.top.index].isUnstable()) {
 		return 0;
 	}
 	

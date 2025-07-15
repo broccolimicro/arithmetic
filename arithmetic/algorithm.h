@@ -1,13 +1,95 @@
 #pragma once
 
 #include "state.h"
-#include "iterator.h"
-#include "operation.h"
 #include "type.h"
 #include "expression.h"
 #include <ostream>
 
 namespace arithmetic {
+
+struct UpIterator {
+	UpIterator(OperationSet root, vector<Operand> start=vector<Operand>());
+	~UpIterator();
+
+	OperationSet root;
+	// prefer multiple vector<bool> instead of vector<pair<bool, bool>
+	// > because vector<bool> is a bitset in a c++
+	vector<bool> expand;
+	vector<bool> seen;
+	vector<size_t> stack;
+
+	const Operation &get();
+	const Operation &operator*();
+	const Operation *operator->();
+	UpIterator &operator++();
+	bool done() const;
+};
+
+bool operator==(const UpIterator &i0, const UpIterator &i1);
+bool operator!=(const UpIterator &i0, const UpIterator &i1);
+
+struct ConstUpIterator {
+	ConstUpIterator(ConstOperationSet root, vector<Operand> start=vector<Operand>());
+	~ConstUpIterator();
+
+	ConstOperationSet root;
+	// prefer multiple vector<bool> instead of vector<pair<bool, bool>
+	// > because vector<bool> is a bitset in a c++
+	vector<bool> expand;
+	vector<bool> seen;
+	vector<size_t> stack;
+
+	const Operation &get();
+	const Operation &operator*();
+	const Operation *operator->();
+	ConstUpIterator &operator++();
+	bool done() const;
+};
+
+bool operator==(const ConstUpIterator &i0, const ConstUpIterator &i1);
+bool operator!=(const ConstUpIterator &i0, const ConstUpIterator &i1);
+
+struct DownIterator {
+	DownIterator(OperationSet root, vector<Operand> start=vector<Operand>());
+	~DownIterator();
+
+	OperationSet root;
+	// prefer multiple vector<bool> instead of vector<pair<bool, bool>
+	// > because vector<bool> is a bitset in a c++
+	vector<bool> expand;
+	vector<bool> seen;
+	vector<size_t> stack;
+
+	const Operation &get();
+	const Operation &operator*();
+	const Operation *operator->();
+	DownIterator &operator++();
+	bool done() const;
+};
+
+bool operator==(const DownIterator &i0, const DownIterator &i1);
+bool operator!=(const DownIterator &i0, const DownIterator &i1);
+
+struct ConstDownIterator {
+	ConstDownIterator(ConstOperationSet root, vector<Operand> start=vector<Operand>());
+	~ConstDownIterator();
+
+	ConstOperationSet root;
+	// prefer multiple vector<bool> instead of vector<pair<bool, bool>
+	// > because vector<bool> is a bitset in a c++
+	vector<bool> expand;
+	vector<bool> seen;
+	vector<size_t> stack;
+
+	const Operation &get();
+	const Operation &operator*();
+	const Operation *operator->();
+	ConstDownIterator &operator++();
+	bool done() const;
+};
+
+bool operator==(const ConstDownIterator &i0, const ConstDownIterator &i1);
+bool operator!=(const ConstDownIterator &i0, const ConstDownIterator &i1);
 
 struct Match {
 	// what to replace this match with from the rules

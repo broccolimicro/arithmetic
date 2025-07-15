@@ -5,31 +5,9 @@
 #include "state.h"
 #include "type.h"
 
-#include "operation.h"
-#include "iterator.h"
+#include "operation_set.h"
 
 namespace arithmetic {
-
-struct SimpleOperationSet {
-	SimpleOperationSet();
-	~SimpleOperationSet();
-
-	vector<Operation> elems;
-	vector<size_t> free;
-
-	vector<Operand> exprIndex() const;
-	const Operation *getExpr(size_t index) const;
-	bool setExpr(Operation o);
-	Operand pushExpr(Operation o);
-	bool eraseExpr(size_t index);
-
-	void clear();
-	size_t size() const;
-
-	string to_string() const;
-};
-
-ostream &operator<<(ostream &os, SimpleOperationSet e);
 
 // The Expression is a tree of operations stored in an array.
 // 0. a+b

@@ -24,6 +24,18 @@ struct Expression {
 	Operand top;
 	vector<size_t> next;
 
+	static Expression undef();
+	static Expression X();
+	static Expression U();
+	static Expression boolOf(bool bval);
+	static Expression intOf(int64_t ival);
+	static Expression realOf(double rval);
+	static Expression arrOf(vector<Value> arr);
+	static Expression structOf(vector<Value> arr);
+	static Expression stringOf(string sval);
+	static Expression varOf(size_t index);
+	static Expression typeOf(int type);
+
 	vector<Operand> exprIndex() const;
 	const Operation *getExpr(size_t index) const;
 	bool setExpr(Operation o);
@@ -45,21 +57,6 @@ struct Expression {
 
 	Expression &apply(vector<int> uidMap);
 	Expression &apply(Mapping m);
-	Expression &apply(vector<Expression> uidMap);
-
-	Expression &operator=(Operand e);
-
-	static Expression undef();
-	static Expression X();
-	static Expression U();
-	static Expression boolOf(bool bval);
-	static Expression intOf(int64_t ival);
-	static Expression realOf(double rval);
-	static Expression arrOf(vector<Value> arr);
-	static Expression structOf(vector<Value> arr);
-	static Expression stringOf(string sval);
-	static Expression varOf(size_t index);
-	static Expression typeOf(int type);
 
 	string to_string() const;
 };

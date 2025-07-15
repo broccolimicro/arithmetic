@@ -22,6 +22,72 @@ Expression::Expression(int func, vector<Operand> args) {
 Expression::~Expression() {
 }
 
+Expression Expression::undef() {
+	Expression result;
+	result.top = Operand::undef();
+	return result;
+}
+
+Expression Expression::X() {
+	Expression result;
+	result.top = Operand::X();
+	return result;
+}
+
+Expression Expression::U() {
+	Expression result;
+	result.top = Operand::U();
+	return result;
+}
+
+Expression Expression::boolOf(bool bval) {
+	Expression result;
+	result.top = Operand::boolOf(bval);
+	return result;
+}
+
+Expression Expression::intOf(int64_t ival) {
+	Expression result;
+	result.top = Operand::intOf(ival);
+	return result;
+}
+
+Expression Expression::realOf(double rval) {
+	Expression result;
+	result.top = Operand::realOf(rval);
+	return result;
+}
+
+Expression Expression::arrOf(vector<Value> arr) {
+	Expression result;
+	result.top = Operand::arrOf(arr);
+	return result;
+}
+
+Expression Expression::structOf(vector<Value> arr) {
+	Expression result;
+	result.top = Operand::structOf(arr);
+	return result;
+}
+
+Expression Expression::stringOf(string sval) {
+	Expression result;
+	result.top = Operand::stringOf(sval);
+	return result;
+}
+
+Expression Expression::varOf(size_t index) {
+	Expression result;
+	result.top = Operand::varOf(index);
+	return result;
+}
+
+Expression Expression::typeOf(int type) {
+	Expression result;
+	result.top = Operand::typeOf(type);
+	return result;
+}
+
 vector<Operand> Expression::exprIndex() const {
 	vector<Operand> result;
 	result.reserve(operations.size());
@@ -216,78 +282,6 @@ bool areSame(Expression e0, Expression e1) {
 		}
 	}
 	return i.done() and j.done();
-}
-
-Expression &Expression::operator=(Operand e) {
-	clear();
-	top = e;
-	return *this;
-}
-
-Expression Expression::undef() {
-	Expression result;
-	result.top = Operand::undef();
-	return result;
-}
-
-Expression Expression::X() {
-	Expression result;
-	result.top = Operand::X();
-	return result;
-}
-
-Expression Expression::U() {
-	Expression result;
-	result.top = Operand::U();
-	return result;
-}
-
-Expression Expression::boolOf(bool bval) {
-	Expression result;
-	result.top = Operand::boolOf(bval);
-	return result;
-}
-
-Expression Expression::intOf(int64_t ival) {
-	Expression result;
-	result.top = Operand::intOf(ival);
-	return result;
-}
-
-Expression Expression::realOf(double rval) {
-	Expression result;
-	result.top = Operand::realOf(rval);
-	return result;
-}
-
-Expression Expression::arrOf(vector<Value> arr) {
-	Expression result;
-	result.top = Operand::arrOf(arr);
-	return result;
-}
-
-Expression Expression::structOf(vector<Value> arr) {
-	Expression result;
-	result.top = Operand::structOf(arr);
-	return result;
-}
-
-Expression Expression::stringOf(string sval) {
-	Expression result;
-	result.top = Operand::stringOf(sval);
-	return result;
-}
-
-Expression Expression::varOf(size_t index) {
-	Expression result;
-	result.top = Operand::varOf(index);
-	return result;
-}
-
-Expression Expression::typeOf(int type) {
-	Expression result;
-	result.top = Operand::typeOf(type);
-	return result;
 }
 
 string Expression::to_string() const {

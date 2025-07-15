@@ -4,6 +4,7 @@
 #include "iterator.h"
 #include "operation.h"
 #include "type.h"
+#include "expression.h"
 #include <ostream>
 
 namespace arithmetic {
@@ -33,10 +34,15 @@ bool verifyRuleFormat(ConstOperationSet ops, Operand i, bool msg=true);
 bool verifyRulesFormat(ConstOperationSet ops, Operand top, bool msg=true);
 
 bool canMap(vector<Operand> o0, Operand o1, ConstOperationSet e0, ConstOperationSet e1, bool init, map<size_t, vector<Operand> > *vars=nullptr);
+Operand extract(OperationSet expr, size_t from, vector<size_t> operands);
 
-vector<Match> search(ConstOperationSet ops, ConstOperationSet rules, Operand top, size_t count=0, bool fwd=true, bool bwd=true);
+Mapping tidy(OperationSet expr, vector<size_t> top, bool rules=false);
 
-vector<Operand> tidy(OperationSet expr, vector<size_t> top, bool rules=false);
+vector<Match> search(ConstOperationSet ops, vector<size_t> pin, const Expression &rules, size_t count=0, bool fwd=true, bool bwd=true);
+Mapping replace(OperationSet expr, const Expression &rules, Match token);
+Mapping minimize(OperationSet expr, vector<size_t> top, Expression rules=Expression());
+
+//Expression espresso(Expression expr, vector<Type> vars=vector<Type>(), Expression directed=Expression(), Expression undirected=Expression());
 
 }
 

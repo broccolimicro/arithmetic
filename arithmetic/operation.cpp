@@ -215,28 +215,6 @@ void Operand::apply(vector<int> varMap) {
 	}
 }
 
-void Operand::apply(vector<Operand> varMap) {
-	if (varMap.empty()) {
-		return;
-	}
-
-	if (isVar()) {
-		if (index < varMap.size()) {
-			type = varMap[index].type;
-			index = varMap[index].index;
-		} else {
-			type = CONST;
-			cnst = Value::X();
-		}
-	}
-}
-
-void Operand::replace(vector<Operand> exprMap) {
-	if (isExpr() and index < exprMap.size() and not exprMap[index].isUndef()) {
-		*this = exprMap[index];
-	}
-}
-
 Operand Operand::typeOf(int type) {
 	Operand result;
 	result.type = TYPE;
@@ -259,10 +237,71 @@ ostream &operator<<(ostream &os, Operand o) {
 	return os;
 }
 
-bool areSame(Operand o0, Operand o1) {
+bool operator==(Operand o0, Operand o1) {
 	return ((o0.isConst() and o1.isConst() and areSame(o0.cnst, o1.cnst))
 		or (o0.isVar() and o1.isVar() and o0.index == o1.index)
-		or (o0.isExpr() and o1.isExpr() and o0.index == o1.index));
+		or (o0.isExpr() and o1.isExpr() and o0.index == o1.index)
+		or (o0.isType() and o1.isType() and o0.index == o1.index)
+		or (o0.isUndef() and o1.isUndef()));
+}
+
+bool operator!=(Operand o0, Operand o1) {
+	return not (o0 == o1);
+}
+
+bool operator<(Operand o0, Operand o1) {
+	return o0.type < o1.type or (o0.type == o1.type
+		and (o0.isVar() or o0.isExpr() or o0.isType())
+		and o0.index < o1.index);
+}
+
+bool Mapping::set(Operand o0, Operand o1) {
+	auto pos = m.insert({o0, o1});
+	if (pos.second) {
+		for (auto i = m.begin(); i != m.end(); i++) {
+			if (i->second == o0) {
+				i->second = o1;
+			}
+		}
+		return true;
+	}
+	return false;
+}
+
+bool Mapping::has(Operand o0) const {
+	return m.find(o0) != m.end();
+}
+
+Operand Mapping::map(Operand o0) const {
+	auto pos = m.find(o0);
+	if (pos != m.end()) {
+		return pos->second;
+	}
+	return o0;
+}
+
+vector<size_t> Mapping::mapExpr(vector<size_t> from) const {
+	vector<size_t> result;
+	for (auto i = from.begin(); i != from.end(); i++) {
+		result.push_back(map(Operand::exprOf(*i)).index);
+	}
+	return result;
+}
+
+bool Mapping::isIdentity() const {
+	return m.empty();
+}
+
+Mapping &Mapping::apply(Mapping m0) {
+	for (auto i = m.begin(); i != m.end(); i++) {
+		i->second = m0.map(i->second);
+	}
+	for (auto i = m0.m.begin(); i != m0.m.end(); i++) {
+		if (not has(i->first)) {
+			set(i->first, i->second);
+		}
+	}
+	return *this;
 }
 
 Operator::Operator() {
@@ -795,23 +834,13 @@ void Operation::apply(vector<int> varMap) {
 	}
 }
 
-void Operation::apply(vector<Operand> varMap) {
-	if (varMap.empty()) {
+void Operation::apply(const Mapping &m) {
+	if (m.isIdentity()) {
 		return;
 	}
 
 	for (int i = 0; i < (int)operands.size(); i++) {
-		operands[i].apply(varMap);
-	}
-}
-
-void Operation::replace(vector<Operand> exprMap) {
-	if (exprMap.empty()) {
-		return;
-	}
-
-	for (int i = 0; i < (int)operands.size(); i++) {
-		operands[i].replace(exprMap);
+		operands[i] = m.map(operands[i]);
 	}
 }
 
@@ -833,6 +862,10 @@ Operation &Operation::offsetExpr(int off) {
 		operands[i].offsetExpr(off);
 	}
 	return *this;
+}
+
+Operand Operation::op() const {
+	return Operand::exprOf(exprIndex);
 }
 
 void Operation::tidy() {
@@ -859,18 +892,22 @@ void Operation::tidy() {
 	}
 }
 
-bool areSame(Operation o0, Operation o1) {
+bool operator==(Operation o0, Operation o1) {
 	if (o0.func != o1.func or 
 		o0.operands.size() != o1.operands.size()) {
 		return false;
 	}
 
 	for (int j = 0; j < (int)o0.operands.size(); j++) {
-		if (not areSame(o0.operands[j], o1.operands[j])) {
+		if (o0.operands[j] != o1.operands[j]) {
 			return false;
 		}
 	}
 	return true;
+}
+
+bool operator!=(Operation o0, Operation o1) {
+	return not (o0 == o1);
 }
 
 ostream &operator<<(ostream &os, Operation o) {

@@ -9,38 +9,6 @@
 
 namespace arithmetic {
 
-UpIterator Expression::exprUp(size_t exprIndex) {
-	if (exprIndex == std::numeric_limits<size_t>::max() and top.isExpr()) {
-		exprIndex = top.index;
-	}
-
-	return UpIterator(*this, {exprIndex});
-}
-
-ConstUpIterator Expression::exprUp(size_t exprIndex) const {
-	if (exprIndex == std::numeric_limits<size_t>::max() and top.isExpr()) {
-		exprIndex = top.index;
-	}
-
-	return ConstUpIterator(*this, {exprIndex});
-}
-
-DownIterator Expression::exprDown(size_t exprIndex) {
-	if (exprIndex == std::numeric_limits<size_t>::max() and top.isExpr()) {
-		exprIndex = top.index;
-	}
-
-	return DownIterator(*this, {exprIndex});
-}
-
-ConstDownIterator Expression::exprDown(size_t exprIndex) const {
-	if (exprIndex == std::numeric_limits<size_t>::max() and top.isExpr()) {
-		exprIndex = top.index;
-	}
-
-	return ConstDownIterator(*this, {exprIndex});
-}
-
 void Expression::breakMap() const {
 	exprMapIsDirty = true;
 }
@@ -176,7 +144,7 @@ Expression &Expression::push(int func, vector<Operand> args) {
 	Operation arg(func, args);
 	int pos = -1;
 	for (int i = 0; i < (int)operations.size() and pos < 0; i++) {
-		if (areSame(operations[i], arg)) {
+		if (operations[i] == arg) {
 			pos = i;
 		}
 	}
@@ -281,221 +249,18 @@ void Expression::apply(vector<Expression> sub) {
 	breakMap();
 	size_t sz = operations.size();
 
-	vector<Operand> result;
+	Mapping result;
 	for (auto i = sub.begin(); i != sub.end(); i++) {
 		for (auto j = i->operations.begin(); j != i->operations.end(); i++) {
 			operations.push_back(j->offsetExpr(nextExprIndex));
 		}
-		result.push_back(i->top.offsetExpr(nextExprIndex));
+		result.set(Operand::exprOf(i-sub.begin()), i->top.offsetExpr(nextExprIndex));
 		nextExprIndex += i->nextExprIndex;
 	}
 	for (int i = 0; i < (int)sz; i++) {
 		operations[i].apply(result);
 	}
-	top.apply(result);
-}
-
-Operand Expression::extract(size_t exprIndex, vector<size_t> idx) {
-	Operation o0 = *getExpr(exprIndex);
-	Operand result = pushExpr(Operation());
-	setExpr(o0.extract(idx, result.index));
-	setExpr(o0);
-	return result;
-}
-
-void Expression::replace(Operand from, Operand to) {
-	for (auto i = operations.begin(); i != operations.end(); i++) {
-		for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
-			if (areSame(*j, from)) {
-				*j = to;
-			}
-		}
-	}
-}
-
-void Expression::replace(const Expression &rules, Match match) {
-	if (not match.replace.isExpr()) {
-		size_t ins = 0;
-		size_t slotIndex = match.expr.back();
-		match.expr.pop_back();
-
-		auto slotPtr = getExpr(slotIndex);
-		if (slotPtr == nullptr) {
-			printf("internal:%s:%d: expression %lu not found\n", __FILE__, __LINE__, slotIndex);
-			return;
-		}
-		Operation slot = *slotPtr;
-
-		if (match.top.empty()) {
-			slot.operands.clear();
-			slot.func = -1;
-		} else {
-			// If this match doesn't cover all operands, we only want to replace
-			// the ones that are covered.
-			for (int i = (int)match.top.size()-1; i >= 0; i--) {
-				slot.operands.erase(slot.operands.begin() + match.top[i]);
-			}
-			ins = match.top[0];
-		}
-
-		if (match.replace.isVar()) {
-			auto v = match.vars.find(match.replace.index);
-			if (v != match.vars.end()) {
-				slot.operands.insert(
-					slot.operands.begin()+ins,
-					v->second.begin(), v->second.end());
-			} else {
-				printf("variable not mapped\n");
-			}
-		} else {
-			slot.operands.insert(
-				slot.operands.begin()+ins,
-				match.replace);
-		}
-		match.top.clear();
-
-		setExpr(slot);
-	} else {
-		size_t matchTop = this->top.index;
-		if (not match.expr.empty()) {
-			matchTop = match.expr.back();
-		}
-		//cout << "top=" << matchTop << " expr=" << ::to_string(match.expr) << endl;
-		if (match.replace.isExpr()
-			and rules.getExpr(match.replace.index)->func != getExpr(matchTop)->func
-			and match.top.size() < getExpr(matchTop)->operands.size()) {
-			// We matched to a commutative operation and we need to collapse the
-			// matched operands to the output of our expression.
-			match.expr.back() = extract(matchTop, match.top).index;
-			match.top.clear();
-		}
-
-		//cout << "top=" << matchTop << " expr=" << ::to_string(match.expr) << endl;
-		//cout << "after insert: " << *this << endl;
-
-		// Iterate over the replacement expression
-		map<size_t, size_t> exprMap;
-		for (auto curr = ConstDownIterator(rules, {match.replace.index}); not curr.done(); ++curr) {
-			// Along the way, compute the exprIndex mapping
-			auto pos = exprMap.insert({curr->exprIndex, 0});
-			if (pos.second) {
-				if (match.expr.empty()) {
-					operations.push_back(Operation(-1, {}, nextExprIndex++));
-					setExpr(operations.back().exprIndex, operations.size()-1);
-					pos.first->second = operations.back().exprIndex;
-				} else {
-					pos.first->second = match.expr.back();
-					match.expr.pop_back();
-				}
-			}
-			auto slotPtr = getExpr(pos.first->second);
-			if (slotPtr == nullptr) {
-				printf("internal:%s:%d: expression %lu not found\n", __FILE__, __LINE__, pos.first->second);
-				return;
-			}
-			Operation slot = *slotPtr;
-
-			slot.func = curr->func;
-			size_t ins = 0;
-			if (match.top.empty()) {
-				slot.operands.clear();
-			} else {
-				// TODO(edward.bingham) this is causing a out of bounds exception --
-				//           may have been fixed by clearing match.top on line 845.
-
-				// If this match doesn't cover all operands, we only want to replace
-				// the ones that are covered.
-				for (int i = (int)match.top.size()-1; i >= 0; i--) {
-					slot.operands.erase(slot.operands.begin() + match.top[i]);
-				}
-				ins = match.top[0];
-			}
-
-
-			for (auto op = curr->operands.begin(); op != curr->operands.end(); op++) {
-				if (op->isExpr()) {
-					pos = exprMap.insert({op->index, 0});
-					if (pos.second) {
-						if (match.expr.empty()) {
-							operations.push_back(Operation(-1, {}, nextExprIndex++));
-							setExpr(operations.back().exprIndex, operations.size()-1);
-							pos.first->second = operations.back().exprIndex;
-						} else {
-							pos.first->second = match.expr.back();
-							match.expr.pop_back();
-						}
-					}
-					
-					slot.operands.insert(
-						slot.operands.begin()+ins,
-						Operand::exprOf(pos.first->second));
-					++ins;
-				} else if (op->isVar()) {
-					auto v = match.vars.find(op->index);
-					if (v != match.vars.end()) {
-						slot.operands.insert(
-							slot.operands.begin()+ins,
-							v->second.begin(), v->second.end());
-						ins += v->second.size();
-					} else {
-						printf("variable not mapped\n");
-					}
-				} else {
-					slot.operands.insert(
-						slot.operands.begin()+ins,
-						*op);
-					++ins;
-				}
-			}
-			match.top.clear();
-			setExpr(slot);
-		}
-	}
-	//cout << "expr=" << ::to_string(match.expr) << endl;
-	//cout << "after mapping: " << *this << endl;
-
-	if (not match.expr.empty()) {
-		vector<int> toErase;
-		for (auto i = match.expr.begin(); i != match.expr.end(); i++) {
-			int idx = lookup(*i);
-			if (idx >= 0) {
-				toErase.push_back(idx);
-			}
-		}
-		sort(toErase.begin(), toErase.end());
-		for (int i = (int)toErase.size()-1; i >= 0; i--) {
-			breakMap();
-			operations.erase(operations.begin() + toErase[i]);
-		}
-		// cout << "after erase: " << *this << endl;
-	}
-}
-
-Expression &Expression::minimize(Expression directed) {
-	static const Expression rules = rewriteBasic();
-	if (directed.operations.empty()) {
-		directed = rules;
-	}
-
-	// cout << "Rules: " << rules << endl;
-
-	top.replace(tidy(*this, {top.index}));
-	vector<Match> tokens = search(*this, directed, directed.top, 1u);
-	while (not tokens.empty()) {
-		//cout << "Expr: " << *this << endl;
-		//cout << "Match: " << ::to_string(tokens) << endl;
-		replace(directed, tokens.back());
-		//cout << "Replace: " << *this << endl;
-		top.replace(tidy(*this, {top.index}));
-		//cout << "Canon: " << *this << endl << endl;
-		tokens = search(*this, directed, directed.top, 1u);
-	}
-
-	// TODO(edward.bingham) Then I need to implement encoding
-	// Use the unidirectional expression rewrite system?
-	// propagate validity?
-	
-	return *this;
+	top = result.map(top);
 }
 
 bool areSame(Expression e0, Expression e1) {
@@ -504,56 +269,61 @@ bool areSame(Expression e0, Expression e1) {
 	}
 
 	for (int i = 0; i < (int)e0.operations.size(); i++) {
-		if (not areSame(e0.operations[i], e1.operations[i])) {
+		if (e0.operations[i] != e1.operations[i]) {
 			return false;
 		}
 	}
 	return true;
 }
 
-/*Expression espresso(Expression expr, vector<Type> vars, Expression directed, Expression undirected) {
-	static const Expression rules = rewriteUndirected();
-	if (undirected.operations.empty()) {
-		undirected = rules;
-	}
-
-	// TODO(edward.bingham) Implement the bidirectional search function to search
-	// rule applications that minimize the cost function but then apply all of
-	// the unidirectional rules in between
-
-	// TODO(edward.bingham) Create a set of unidirectional rewrite rules to
-	// change bitwise operators into arithmetic operators, and then a set of
-	// unidirectional rules to switch them back
-
-	// TODO(edward.bingham) Tie this all together into an easy-to-use
-	// minimization system.
-
-	//Expression result;
-	//Cost best(1e20, 1e20);
-	expr.minimize(directed);
-
-	/ *vector<pair<Cost, Expression> > stack;
-	stack.push_back({expr.cost(vars), expr});
-	while (not stack.empty()) {
-		pair<Cost, Expression> curr = stack.back();
-		stack.pop_back();
-
-		vector<Expression::Match> opts = curr.second.search(undirected);
-		for (auto i = opts.begin(); i != opts.end(); i++) {
-			Expression next = curr.second;
-			next.replace(undirected, *i);
-			Cost cost = next.cost(vars);
-			stack.push_back({cost, next});
-		}
-	}* /
-
-	return expr;
-}*/
-
 Expression &Expression::operator=(Operand e) {
 	clear();
 	top = e;
 	return *this;
+}
+
+Expression Expression::undef() {
+	return Expression(Operand::undef());
+}
+
+Expression Expression::X() {
+	return Expression(Operand::X());
+}
+
+Expression Expression::U() {
+	return Expression(Operand::U());
+}
+
+Expression Expression::boolOf(bool bval) {
+	return Expression(Operand::boolOf(bval));
+}
+
+Expression Expression::intOf(int64_t ival) {
+	return Expression(Operand::intOf(ival));
+}
+
+Expression Expression::realOf(double rval) {
+	return Expression(Operand::realOf(rval));
+}
+
+Expression Expression::arrOf(vector<Value> arr) {
+	return Expression(Operand::arrOf(arr));
+}
+
+Expression Expression::structOf(vector<Value> arr) {
+	return Expression(Operand::structOf(arr));
+}
+
+Expression Expression::stringOf(string sval) {
+	return Expression(Operand::stringOf(sval));
+}
+
+Expression Expression::varOf(size_t index) {
+	return Expression(Operand::varOf(index));
+}
+
+Expression Expression::typeOf(int type) {
+	return Expression(Operand::typeOf(type));
 }
 
 string Expression::to_string() const {
@@ -577,7 +347,7 @@ Expression isValid(Expression e)    { return e.push(Operation::VALIDITY,    {e.t
 Expression isNegative(Expression e) { return e.push(Operation::NEGATIVE,    {e.top}); }
 Expression operator!(Expression e)  { return e.push(Operation::BITWISE_NOT, {e.top}); }
 Expression inv(Expression e)        { return e.push(Operation::INVERSE,     {e.top}); }
-Expression operator||(Expression e0, Expression e1) { return e0.push(Operation::BITWISE_NOT,   {e0.top, e0.append(e1)}); }
+Expression operator||(Expression e0, Expression e1) { return e0.push(Operation::BITWISE_OR,   {e0.top, e0.append(e1)}); }
 Expression operator&&(Expression e0, Expression e1) { return e0.push(Operation::BITWISE_AND,   {e0.top, e0.append(e1)}); }
 Expression operator^ (Expression e0, Expression e1) { return e0.push(Operation::BOOLEAN_XOR,   {e0.top, e0.append(e1)}); }
 Expression bitwiseXor(Expression e0, Expression e1) { return e0.push(Operation::BITWISE_XOR,   {e0.top, e0.append(e1)}); }
@@ -634,25 +404,7 @@ Expression operator/ (Operand e0, Expression e1) { return e1.push(Operation::DIV
 Expression operator% (Operand e0, Expression e1) { return e1.push(Operation::MOD,           {e0, e1.top}); }
 Expression operator&&(Operand e0, Expression e1) { return e1.push(Operation::BITWISE_AND,   {e0, e1.top}); }
 Expression operator||(Operand e0, Expression e1) { return e1.push(Operation::BITWISE_OR,    {e0, e1.top}); }
-Expression operator|(Operand e0, Operand e1)  { return Expression(Operation::BOOLEAN_OR,    {e0, e1}); }
-Expression operator& (Operand e0, Operand e1) { return Expression(Operation::BOOLEAN_AND,   {e0, e1}); }
-Expression operator^ (Operand e0, Operand e1) { return Expression(Operation::BOOLEAN_XOR,   {e0, e1}); }
-Expression bitwiseXor(Operand e0, Operand e1) { return Expression(Operation::BITWISE_XOR,   {e0, e1}); }
-Expression operator==(Operand e0, Operand e1) { return Expression(Operation::EQUAL,         {e0, e1}); }
-Expression operator!=(Operand e0, Operand e1) { return Expression(Operation::NOT_EQUAL,     {e0, e1}); }
-Expression operator<(Operand e0, Operand e1)  { return Expression(Operation::LESS,          {e0, e1}); }
-Expression operator>(Operand e0, Operand e1)  { return Expression(Operation::GREATER,       {e0, e1}); }
-Expression operator<=(Operand e0, Operand e1) { return Expression(Operation::LESS_EQUAL,    {e0, e1}); }
-Expression operator>=(Operand e0, Operand e1) { return Expression(Operation::GREATER_EQUAL, {e0, e1}); }
-Expression operator<<(Operand e0, Operand e1) { return Expression(Operation::SHIFT_LEFT,    {e0, e1}); }
-Expression operator>>(Operand e0, Operand e1) { return Expression(Operation::SHIFT_RIGHT,   {e0, e1}); }
-Expression operator+ (Operand e0, Operand e1) { return Expression(Operation::ADD,           {e0, e1}); }
-Expression operator- (Operand e0, Operand e1) { return Expression(Operation::SUBTRACT,      {e0, e1}); }
-Expression operator* (Operand e0, Operand e1) { return Expression(Operation::MULTIPLY,      {e0, e1}); }
-Expression operator/ (Operand e0, Operand e1) { return Expression(Operation::DIVIDE,        {e0, e1}); }
-Expression operator% (Operand e0, Operand e1) { return Expression(Operation::MOD,           {e0, e1}); }
-Expression operator&&(Operand e0, Operand e1) { return Expression(Operation::BITWISE_AND,   {e0, e1}); }
-Expression operator||(Operand e0, Operand e1) { return Expression(Operation::BITWISE_OR,    {e0, e1}); }
+
 Expression booleanOr(Expression e0)  { return e0.push(Operation::BOOLEAN_OR,  {e0.top}); }
 Expression booleanAnd(Expression e0) { return e0.push(Operation::BOOLEAN_AND, {e0.top}); }
 Expression booleanXor(Expression e0) { return e0.push(Operation::BOOLEAN_XOR, {e0.top}); }

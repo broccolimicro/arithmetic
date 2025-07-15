@@ -1,4 +1,6 @@
 #include "algorithm.h"
+#include "rewrite.h"
+
 #include <common/text.h>
 #include <common/combinatoric.h>
 
@@ -120,7 +122,7 @@ bool canMap(vector<Operand> o0, Operand o1, ConstOperationSet e0, ConstOperation
 				return false;
 			}
 			for (int i = 0; i < (int)o0.size(); i++) {
-				if (not areSame(o0[i], ins.first->second[i])) {
+				if (o0[i] != ins.first->second[i]) {
 					return false;
 				}
 			}
@@ -146,6 +148,142 @@ bool canMap(vector<Operand> o0, Operand o1, ConstOperationSet e0, ConstOperation
 	return false;
 }
 
+Operand extract(OperationSet expr, size_t from, vector<size_t> operands) {
+	Operation o0 = *expr.getExpr(from);
+	Operand result = expr.pushExpr(Operation());
+	expr.setExpr(o0.extract(operands, result.index));
+	expr.setExpr(o0);
+	return result;
+}
+
+// tidy() does a few things:
+// 1. propagate constants
+// 2. remove reflexive operations
+// 3. remove unitary commutative operations (if not rules)
+// 4. remove dangling operations
+// ------------ 5. merge successive commutative operations
+// 6. sort operands into a canonical order for commutative operations
+Mapping tidy(OperationSet expr, vector<size_t> top, bool rules) {
+	// Start from the top and do depth first search. That zips up the graph for
+	// us. First, we need a mapping of index in operations to exprIndex so we
+	// don't have to search for the exprIndex each time.
+
+	// DESIGN(edward.bingham) This algorithm assumes that there are no cycles in
+	// the graph. So, a directed acyclic graph. If there are cycles, this
+	// function will fail silently and produce a result that doesn't sufficiently
+	// propagate all constants. The end result should still be functionally
+	// equivalent.
+
+	Mapping result;
+	vector<size_t> keep;
+
+	// cout << ::to_string(exprMap) << " " << exprMapIsDirty << endl;
+	// cout << *this << endl;
+	auto currIter = UpIterator(expr, top);
+	for (; not currIter.done(); ++currIter) {
+		Operation curr = *currIter;
+		// cout << "start: " << curr.get() << endl;
+		curr.apply(result);
+		curr.tidy();
+		// cout << "replaced: " << curr.get() << endl;
+
+		if (curr.operands.size() == 1u and curr.operands[0].isConst()) {
+			// cout << "found const " << curr.op() << " = " << v << endl;
+			result.set(curr.op(), Operation::evaluate(curr.func, {curr.operands[0].get()}));
+		}	else if (curr.operands.size() == 1u and (curr.isReflexive()
+			or (not rules and curr.isCommutative()))) {
+			// replace reflexive expressions
+			// cout << "found reflex " << curr.op() << " = " << curr.operands[0] << endl;
+			result.set(curr.op(), curr.operands[0]);
+		} else {
+			// replace identical operations
+			for (auto k = keep.begin(); k != keep.end(); k++) {
+				if (curr == *expr.getExpr(*k)) {
+					// cout << "found duplicate " << curr.op() << " = " << Operand::exprOf(*k) << endl;
+					result.set(curr.op(), Operand::exprOf(*k));
+					break;
+				}
+			}
+		}
+
+		if (not result.has(curr.op())) {
+			expr.setExpr(curr);
+			keep.push_back(curr.exprIndex);
+		}
+		// cout << ::to_string(curr.seen) << endl;
+		// cout << *this << endl;
+	}
+
+	// TODO(edward.bingham) This ends up being an N^2 algorithm because each
+	// erase invalidates the expr mapping... This needs to be a bit more elegant.
+	vector<Operand> index = expr.exprIndex();
+	for (auto i = index.begin(); i != index.end(); i++) {
+		if (result.has(*i)) {
+			expr.eraseExpr(i->index);
+		} else if (i->index >= currIter.seen.size() or not currIter.seen[i->index]) {
+			expr.eraseExpr(i->index);
+			result.set(*i, Operand::undef());
+		}
+	}
+
+	// cout << "done: " << *this << endl;
+
+	return result;
+
+	// TODO(edward.bingham) reorder operations into a canonical order
+
+	// for each expression, we need to know if it depends on another
+	// expression. If so, then the dependency must come first.
+	/*vector<vector<size_t> > depend(operations.size());
+	for (int i = 0; i < (int)operations.size(); i++) {
+		for (auto j = operations[i].begin(); j != operations[i].end(); j++) {
+			if (j->isExpr()) {
+				depend[i].insert(depend[i].end(), depend[j->index].begin(), depend[j->index].end());
+				depend[i].push_back(j->index);
+			}
+		}
+		sort(depend[i].begin(); depend[i].end());
+		depend[i].erase(unique(depend[i].begin(), depend[i].end()), depend[i].end());
+	}
+
+	// Remapping is an expensive operation, so lets figure out the
+	// mapping first before we start swapping indices in the actual
+	// expression.
+	vector<size_t> mapping(operations.size());
+	for (size_t i = 0; i < mapping.size(); i++) {
+		mapping[i] = i;
+	}
+
+	// One expression A is less than another B if
+	// 1. B depends on A
+	// 2. A's operation is less than B's
+	// 3. Their operations are not commutative 
+
+	for (size_t i = 1; i < mapping.size(); i++) {
+		size_t mi = mapping[i];
+		size_t j = i;
+		for (; j > 0; j--) {
+			size_t mj = mapping[j-1];
+			// If operation i depends on operation j-1, then it must be greater
+			if (find(depend[mi].begin(), depend[mi].end(), mj) != depend[mi].end()
+				or operations[mi].func > operations[mj].func) {
+				break;
+			} else if (operations[mi].func < operations[mj].func) {
+				continue;
+			}
+
+			
+		}
+	}*/
+
+	// 1. identify a mapping from expression index -> expression index
+	//   a. determine recursively if one expression should be placed before another
+	//   b. use that to order expressons from left to right in the operands in a way that is unaffected by expression index
+	//   c. order the expressions for post-order traversal
+	// 2. apply that mapping and update all indices
+
+	// TODO(edward.bingham) create hash function on expression for insertion into hash map
+}
 
 // TODO(edward.bingham) I need a way to canonicalize expressions and hash
 // them so that I can do the state search algorithm.
@@ -156,8 +294,11 @@ bool canMap(vector<Operand> o0, Operand o1, ConstOperationSet e0, ConstOperation
 //
 // TODO(edward.bingham) look into "tree automata" and "regular tree grammar"
 // as a form of regex for trees instead of sequences.
-vector<Match> search(ConstOperationSet ops, ConstOperationSet rules, Operand top, size_t count, bool fwd, bool bwd) {
-	if (not verifyRulesFormat(rules, top, true)) {
+
+// pin - these expression IDs cannot be contained in a match except at the very
+// top of the match. These must be preserved through a replace.
+vector<Match> search(ConstOperationSet ops, vector<size_t> pin, const Expression &rules, size_t count, bool fwd, bool bwd) {
+	if (not verifyRulesFormat(rules, rules.top, true)) {
 		return vector<Match>();
 	}
 
@@ -165,7 +306,7 @@ vector<Match> search(ConstOperationSet ops, ConstOperationSet rules, Operand top
 	vector<pair<vector<Leaf>, Match> > stack;
 
 	// initialize the initial matches
-	auto ruleTop = rules.getExpr(top.index);
+	auto ruleTop = rules.getExpr(rules.top.index);
 	vector<Operand> indices = ops.exprIndex();
 	for (auto i = indices.begin(); i != indices.end(); i++) {
 		// search through the "rules" rules and add all of the matching starts
@@ -225,6 +366,17 @@ vector<Match> search(ConstOperationSet ops, ConstOperationSet rules, Operand top
 		if (to.isExpr()) {
 			auto fOp = ops.getExpr(from.index);
 			auto tOp = rules.getExpr(to.index);
+
+			bool foundPin = false;
+			for (auto i = fOp->operands.begin(); i != fOp->operands.end(); i++) {
+				if (i->isExpr() and find(pin.begin(), pin.end(), i->index) != pin.end()) {
+					foundPin = true;
+					break;
+				}
+			}
+			if (foundPin) {
+				continue;
+			}
 
 			bool commute = tOp->isCommutative();
 			if (commute and tOp->operands.size() == 1u) {
@@ -286,143 +438,220 @@ vector<Match> search(ConstOperationSet ops, ConstOperationSet rules, Operand top
 	return result;
 }
 
-// tidy() does a few things:
-// 1. propagate constants
-// 2. remove reflexive operations
-// 3. remove unitary commutative operations (if not rules)
-// 4. remove dangling operations
-// ------------ 5. merge successive commutative operations
-// 6. sort operands into a canonical order for commutative operations
-vector<Operand> tidy(OperationSet expr, vector<size_t> top, bool rules) {
-	// Start from the top and do depth first search. That zips up the graph for
-	// us. First, we need a mapping of index in operations to exprIndex so we
-	// don't have to search for the exprIndex each time.
+Mapping replace(OperationSet expr, const Expression &rules, Match match) {
+	Mapping result;
+	for (int i = 0; i < ((int)match.expr.size())-1; i++) {
+		result.set(Operand::exprOf(match.expr[i]), Operand::undef());
+	}
 
-	// DESIGN(edward.bingham) This algorithm assumes that there are no cycles in
-	// the graph. So, a directed acyclic graph. If there are cycles, this
-	// function will fail silently and produce a result that doesn't sufficiently
-	// propagate all constants. The end result should still be functionally
-	// equivalent.
+	if (not match.replace.isExpr()) {
+		size_t ins = 0;
+		size_t slotIndex = match.expr.back();
+		match.expr.pop_back();
 
-	vector<Operand> replace;
-	vector<size_t> keep;
+		auto slotPtr = expr.getExpr(slotIndex);
+		if (slotPtr == nullptr) {
+			printf("internal:%s:%d: expression %lu not found\n", __FILE__, __LINE__, slotIndex);
+			return result;
+		}
+		Operation slot = *slotPtr;
 
-	// cout << ::to_string(exprMap) << " " << exprMapIsDirty << endl;
-	// cout << *this << endl;
-	auto currIter = UpIterator(expr, top);
-	for (; not currIter.done(); ++currIter) {
-		Operation curr = *currIter;
-		// cout << "start: " << curr.get() << endl;
-		curr.replace(replace);
-		curr.tidy();
-		// cout << "replaced: " << curr.get() << endl;
-
-		if (curr.operands.size() == 1u and curr.operands[0].isConst()) {
-			Operand v = Operation::evaluate(curr.func, {curr.operands[0].get()});
-			if (curr.exprIndex >= replace.size()) {
-				replace.resize(curr.exprIndex+1, Operand::undef());
-			}
-			replace[curr.exprIndex] = v;
-			// cout << "found const expr[" << curr.exprIndex << "] = " << v << endl;
-		}	else if (curr.operands.size() == 1u and (curr.isReflexive()
-			or (not rules and curr.isCommutative()))) {
-			// replace reflexive expressions
-			if (curr.exprIndex >= replace.size()) {
-				replace.resize(curr.exprIndex+1, Operand::undef());
-			}
-			replace[curr.exprIndex] = curr.operands[0];
-			// cout << "found reflex expr[" << curr.exprIndex << "] = " << curr.operands[0] << endl;
+		if (match.top.empty()) {
+			slot.operands.clear();
+			slot.func = -1;
 		} else {
-			// replace identical operations
-			for (auto k = keep.begin(); k != keep.end(); k++) {
-				if (areSame(curr, *expr.getExpr(*k))) {
-					if (curr.exprIndex >= replace.size()) {
-						replace.resize(curr.exprIndex+1, Operand::undef());
-					}
-					replace[curr.exprIndex] = Operand::exprOf(*k);
-					// cout << "found duplicate expr[" << curr->exprIndex << "] = " << Operand::exprOf(k->exprIndex) << endl;
-					break;
+			// If this match doesn't cover all operands, we only want to replace
+			// the ones that are covered.
+			for (int i = (int)match.top.size()-1; i >= 0; i--) {
+				slot.operands.erase(slot.operands.begin() + match.top[i]);
+			}
+			ins = match.top[0];
+		}
+
+		if (match.replace.isVar()) {
+			auto v = match.vars.find(match.replace.index);
+			if (v != match.vars.end()) {
+				slot.operands.insert(
+					slot.operands.begin()+ins,
+					v->second.begin(), v->second.end());
+			} else {
+				printf("variable not mapped\n");
+			}
+		} else {
+			slot.operands.insert(
+				slot.operands.begin()+ins,
+				match.replace);
+		}
+		match.top.clear();
+
+		expr.setExpr(slot);
+	} else if (not match.expr.empty()) {
+		//cout << "top=" << match.expr.back() << " expr=" << ::to_string(match.expr) << endl;
+		if (match.replace.isExpr()
+			and rules.getExpr(match.replace.index)->func != expr.getExpr(match.expr.back())->func
+			and match.top.size() < expr.getExpr(match.expr.back())->operands.size()) {
+			// We matched to a commutative operation and we need to collapse the
+			// matched operands to the output of our expression.
+			match.expr.back() = extract(expr, match.expr.back(), match.top).index;
+			match.top.clear();
+		}
+
+		//cout << "top=" << match.expr.back() << " expr=" << ::to_string(match.expr) << endl;
+		//cout << "after insert: " << *this << endl;
+
+		// Iterate over the replacement expression
+		map<size_t, size_t> exprMap;
+		for (auto curr = ConstDownIterator(rules, {match.replace.index}); not curr.done(); ++curr) {
+			// Along the way, compute the exprIndex mapping
+			auto pos = exprMap.insert({curr->exprIndex, 0});
+			if (pos.second) {
+				if (match.expr.empty()) {
+					pos.first->second = expr.pushExpr(Operation()).index;
+				} else {
+					pos.first->second = match.expr.back();
+					match.expr.pop_back();
 				}
 			}
-		}
-
-		if (curr.exprIndex >= replace.size() or replace[curr.exprIndex].isUndef()) {
-			expr.setExpr(curr);
-			keep.push_back(curr.exprIndex);
-		}
-		// cout << ::to_string(curr.seen) << endl;
-		// cout << *this << endl;
-	}
-
-	// TODO(edward.bingham) This ends up being an N^2 algorithm because each
-	// erase invalidates the expr mapping... This needs to be a bit more elegant.
-	vector<Operand> index = expr.exprIndex();
-	for (auto i = index.begin(); i != index.end(); i++) {
-		if (i->index >= currIter.seen.size() or not currIter.seen[i->index]
-			or (i->index < replace.size() and not replace[i->index].isUndef())) {
-			expr.eraseExpr(i->index);
-		}
-	}
-
-	// cout << "done: " << *this << endl;
-
-	return replace;
-
-	// TODO(edward.bingham) reorder operations into a canonical order
-
-	// for each expression, we need to know if it depends on another
-	// expression. If so, then the dependency must come first.
-	/*vector<vector<size_t> > depend(operations.size());
-	for (int i = 0; i < (int)operations.size(); i++) {
-		for (auto j = operations[i].begin(); j != operations[i].end(); j++) {
-			if (j->isExpr()) {
-				depend[i].insert(depend[i].end(), depend[j->index].begin(), depend[j->index].end());
-				depend[i].push_back(j->index);
+			auto slotPtr = expr.getExpr(pos.first->second);
+			if (slotPtr == nullptr) {
+				printf("internal:%s:%d: expression %lu not found\n", __FILE__, __LINE__, pos.first->second);
+				return result;
 			}
-		}
-		sort(depend[i].begin(); depend[i].end());
-		depend[i].erase(unique(depend[i].begin(), depend[i].end()), depend[i].end());
-	}
+			Operation slot = *slotPtr;
 
-	// Remapping is an expensive operation, so lets figure out the
-	// mapping first before we start swapping indices in the actual
-	// expression.
-	vector<size_t> mapping(operations.size());
-	for (size_t i = 0; i < mapping.size(); i++) {
-		mapping[i] = i;
-	}
+			slot.func = curr->func;
+			size_t ins = 0;
+			if (match.top.empty()) {
+				slot.operands.clear();
+			} else {
+				// TODO(edward.bingham) this is causing a out of bounds exception --
+				//           may have been fixed by clearing match.top on line 845.
 
-	// One expression A is less than another B if
-	// 1. B depends on A
-	// 2. A's operation is less than B's
-	// 3. Their operations are not commutative 
-
-	for (size_t i = 1; i < mapping.size(); i++) {
-		size_t mi = mapping[i];
-		size_t j = i;
-		for (; j > 0; j--) {
-			size_t mj = mapping[j-1];
-			// If operation i depends on operation j-1, then it must be greater
-			if (find(depend[mi].begin(), depend[mi].end(), mj) != depend[mi].end()
-				or operations[mi].func > operations[mj].func) {
-				break;
-			} else if (operations[mi].func < operations[mj].func) {
-				continue;
+				// If this match doesn't cover all operands, we only want to replace
+				// the ones that are covered.
+				for (int i = (int)match.top.size()-1; i >= 0; i--) {
+					slot.operands.erase(slot.operands.begin() + match.top[i]);
+				}
+				ins = match.top[0];
 			}
 
-			
+
+			for (auto op = curr->operands.begin(); op != curr->operands.end(); op++) {
+				if (op->isExpr()) {
+					pos = exprMap.insert({op->index, 0});
+					if (pos.second) {
+						if (match.expr.empty()) {
+							pos.first->second = expr.pushExpr(Operation()).index;
+						} else {
+							pos.first->second = match.expr.back();
+							match.expr.pop_back();
+						}
+					}
+					
+					slot.operands.insert(
+						slot.operands.begin()+ins,
+						Operand::exprOf(pos.first->second));
+					++ins;
+				} else if (op->isVar()) {
+					auto v = match.vars.find(op->index);
+					if (v != match.vars.end()) {
+						slot.operands.insert(
+							slot.operands.begin()+ins,
+							v->second.begin(), v->second.end());
+						ins += v->second.size();
+					} else {
+						printf("variable not mapped\n");
+					}
+				} else {
+					slot.operands.insert(
+						slot.operands.begin()+ins,
+						*op);
+					++ins;
+				}
+			}
+			match.top.clear();
+			expr.setExpr(slot);
 		}
-	}*/
+	}
+	//cout << "expr=" << ::to_string(match.expr) << endl;
+	//cout << "after mapping: " << *this << endl;
 
-	// 1. identify a mapping from expression index -> expression index
-	//   a. determine recursively if one expression should be placed before another
-	//   b. use that to order expressons from left to right in the operands in a way that is unaffected by expression index
-	//   c. order the expressions for post-order traversal
-	// 2. apply that mapping and update all indices
+	for (auto i = match.expr.begin(); i != match.expr.end(); i++) {
+		expr.eraseExpr(*i);
+	}
 
-	// TODO(edward.bingham) create hash function on expression for insertion into hash map
+	return result;
+	// cout << "after erase: " << *this << endl;
 }
 
+Mapping minimize(OperationSet expr, vector<size_t> top, Expression rules) {
+	static const Expression defaultRules = rewriteBasic();
+	if (rules.operations.empty()) {
+		rules = defaultRules;
+	}
+
+	// cout << "Rules: " << rules << endl;
+
+	Mapping result;
+	result.apply(tidy(expr, top));
+	vector<Match> tokens = search(expr, top, rules, 1u);
+	while (not tokens.empty()) {
+		//cout << "Expr: " << ::to_string(top) << " " << expr.cast<Expression>() << endl;
+		//cout << "Match: " << ::to_string(tokens) << endl;
+		Mapping sub = replace(expr, rules, tokens.back());
+		//cout << "Replace: " << expr.cast<Expression>() << endl;
+		sub.apply(tidy(expr, top));
+		top = sub.mapExpr(top);
+		result.apply(sub);
+		//cout << "Canon: " << ::to_string(top) << " " << expr.cast<Expression>() << endl << endl;
+		tokens = search(expr, top, rules, 1u);
+	}
+
+	// TODO(edward.bingham) Then I need to implement encoding
+	// Use the unidirectional expression rewrite system?
+	// propagate validity?
+	
+	return result;
+}
+
+/*Expression espresso(Expression expr, vector<Type> vars, Expression directed, Expression undirected) {
+	static const Expression rules = rewriteUndirected();
+	if (undirected.operations.empty()) {
+		undirected = rules;
+	}
+
+	// TODO(edward.bingham) Implement the bidirectional search function to search
+	// rule applications that minimize the cost function but then apply all of
+	// the unidirectional rules in between
+
+	// TODO(edward.bingham) Create a set of unidirectional rewrite rules to
+	// change bitwise operators into arithmetic operators, and then a set of
+	// unidirectional rules to switch them back
+
+	// TODO(edward.bingham) Tie this all together into an easy-to-use
+	// minimization system.
+
+	//Expression result;
+	//Cost best(1e20, 1e20);
+	expr.minimize(directed);
+
+	/ *vector<pair<Cost, Expression> > stack;
+	stack.push_back({expr.cost(vars), expr});
+	while (not stack.empty()) {
+		pair<Cost, Expression> curr = stack.back();
+		stack.pop_back();
+
+		vector<Expression::Match> opts = curr.second.search(undirected);
+		for (auto i = opts.begin(); i != opts.end(); i++) {
+			Expression next = curr.second;
+			next.replace(undirected, *i);
+			Cost cost = next.cost(vars);
+			stack.push_back({cost, next});
+		}
+	}* /
+
+	return expr;
+}*/
 
 }
 

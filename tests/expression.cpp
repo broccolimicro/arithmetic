@@ -8,8 +8,8 @@ using namespace arithmetic;
 using namespace std;
 
 TEST(Expression, OperandBitwiseOr) {
-	Operand x = Operand::varOf(0);
-	Operand y = Operand::varOf(1);
+	Expression x = Expression::varOf(0);
+	Expression y = Expression::varOf(1);
 	
 	Expression e = x||y;
 	cout << e << endl;
@@ -28,8 +28,8 @@ TEST(Expression, OperandBitwiseOr) {
 }
 
 TEST(Expression, OperandBitwiseAnd) {
-	Operand x = Operand::varOf(0);
-	Operand y = Operand::varOf(1);
+	Expression x = Expression::varOf(0);
+	Expression y = Expression::varOf(1);
 	
 	Expression e = x&&y;
 	cout << e << endl;
@@ -48,8 +48,8 @@ TEST(Expression, OperandBitwiseAnd) {
 }
 
 TEST(Expression, OperandBitwiseXor) {
-	Operand x = Operand::varOf(0);
-	Operand y = Operand::varOf(1);
+	Expression x = Expression::varOf(0);
+	Expression y = Expression::varOf(1);
 	
 	Expression e = x^y;
 	cout << e << endl;
@@ -72,8 +72,8 @@ TEST(Expression, OperandEqualTo) {
 	int neutral = Value::NEUTRAL;
 	int unstable = Value::UNSTABLE;
 
-	Operand x = Operand::varOf(0);
-	Operand y = Operand::varOf(1);
+	Expression x = Expression::varOf(0);
+	Expression y = Expression::varOf(1);
 	
 	Expression e = x==y;
 	cout << e << endl;
@@ -112,8 +112,8 @@ TEST(Expression, OperandNotEqualTo) {
 	int neutral = Value::NEUTRAL;
 	int unstable = Value::UNSTABLE;
 
-	Operand x = Operand::varOf(0);
-	Operand y = Operand::varOf(1);
+	Expression x = Expression::varOf(0);
+	Expression y = Expression::varOf(1);
 	
 	Expression e = x!=y;
 	cout << e << endl;
@@ -152,8 +152,8 @@ TEST(Expression, OperandLessThan) {
 	int neutral = Value::NEUTRAL;
 	int unstable = Value::UNSTABLE;
 
-	Operand x = Operand::varOf(0);
-	Operand y = Operand::varOf(1);
+	Expression x = Expression::varOf(0);
+	Expression y = Expression::varOf(1);
 	
 	Expression e = x<y;
 	cout << e << endl;
@@ -192,8 +192,8 @@ TEST(Expression, OperandGreaterThan) {
 	int neutral = Value::NEUTRAL;
 	int unstable = Value::UNSTABLE;
 
-	Operand x = Operand::varOf(0);
-	Operand y = Operand::varOf(1);
+	Expression x = Expression::varOf(0);
+	Expression y = Expression::varOf(1);
 	
 	Expression e = x>y;
 	cout << e << endl;
@@ -228,11 +228,11 @@ TEST(Expression, OperandGreaterThan) {
 }
 
 TEST(Expression, Compound) {
-	Operand a = Operand::varOf(0);
-	Operand b = Operand::varOf(1);
-	Operand c = Operand::varOf(2);
-	Operand d = Operand::varOf(3);
-	Operand f = Operand::varOf(4);
+	Expression a = Expression::varOf(0);
+	Expression b = Expression::varOf(1);
+	Expression c = Expression::varOf(2);
+	Expression d = Expression::varOf(3);
+	Expression f = Expression::varOf(4);
 	
 	Expression e = (a+b)*c-d%f;
 	cout << e << endl;
@@ -249,49 +249,49 @@ TEST(Expression, Compound) {
 }
 
 TEST(Expression, TidyConstants) {
-	Operand a = Operand::intOf(4);
-	Operand b = Operand::intOf(8);
-	Operand c = Operand::intOf(2);
-	Operand d = Operand::intOf(12);
+	Expression a = Expression::intOf(4);
+	Expression b = Expression::intOf(8);
+	Expression c = Expression::intOf(2);
+	Expression d = Expression::intOf(12);
 	
 	Expression e = (a+b)*c-d;
 	cout << e << endl;
-	e.top.replace(tidy(e, {e.top.index}));
+	e.top = tidy(e, {e.top.index}).map(e.top);
 	cout << e << endl;
 	ASSERT_EQ(e.operations.size(), 0u);
-	EXPECT_EQ(e.top.type, Operand::CONST);
+	EXPECT_TRUE(e.top.isConst());
 	EXPECT_EQ(e.top.cnst.type, Value::INT);
 	EXPECT_EQ(e.top.cnst.ival, 12);
 }
 
 TEST(Expression, TidyCommutative) {
-	Operand a = Operand::varOf(0);
-	Operand b = Operand::varOf(1);
-	Operand c = Operand::varOf(2);
-	Operand d = Operand::varOf(3);
+	Expression a = Expression::varOf(0);
+	Expression b = Expression::varOf(1);
+	Expression c = Expression::varOf(2);
+	Expression d = Expression::varOf(3);
 	
 	Expression e = (a+b)+(c+d);
 	ASSERT_EQ(e.operations.size(), 3u);
 	cout << e << endl;
-	e.top.replace(tidy(e, {e.top.index}));
+	e.top = tidy(e, {e.top.index}).map(e.top);
 	cout << e << endl;
 	ASSERT_EQ(e.operations.size(), 1u);
-	EXPECT_EQ(e.top.type, Operand::CONST);
+	EXPECT_TRUE(e.top.isConst());
 	EXPECT_EQ(e.top.cnst.type, Value::INT);
 	EXPECT_EQ(e.top.cnst.ival, 12);
 }
 
 TEST(Expression, Simplify) {
-	Operand a = Operand::varOf(0);
-	Operand b = Operand::varOf(1);
-	Operand c = Operand::varOf(2);
+	Expression a = Expression::varOf(0);
+	Expression b = Expression::varOf(1);
+	Expression c = Expression::varOf(2);
 
 	vector<Type> vars({Type(1.0, 16.0, 0.0), Type(1.0, 16.0, 0.0), Type(1.0, 16.0, 0.0)});
 	
 	Expression dut = (a*c+b*c-c*a)/c;
 	Cost cost = arithmetic::cost(dut, dut.top, vars);
 	cout << "Before: cost=" << cost.complexity << " del=" << cost.critical << endl << dut << endl;
-	dut.minimize();
+	dut.top = minimize(dut, {dut.top.index}).map(dut.top);
 	EXPECT_TRUE(areSame(dut, Expression(b)));
 
 	Cost cost2 = arithmetic::cost(dut, dut.top, vars);
@@ -301,68 +301,68 @@ TEST(Expression, Simplify) {
 }
 
 TEST(Expression, ChainOfAdds) {
-	Operand a = Operand::varOf(0);
-	Operand b = Operand::varOf(1);
-	Operand c = Operand::varOf(2);
-	Operand d = Operand::varOf(3);
-	Operand e = Operand::varOf(4);
-	Operand f = Operand::varOf(5);
-	Operand g = Operand::varOf(6);
+	Expression a = Expression::varOf(0);
+	Expression b = Expression::varOf(1);
+	Expression c = Expression::varOf(2);
+	Expression d = Expression::varOf(3);
+	Expression e = Expression::varOf(4);
+	Expression f = Expression::varOf(5);
+	Expression g = Expression::varOf(6);
 	
 	Expression dut = a+b+c+d+e+f+g;
-	dut.minimize();
+	dut.top = minimize(dut, {dut.top.index}).map(dut.top);
 }
 
 TEST(Expression, ElasticRewrite) {
-	Operand a = Operand::varOf(0);
-	Operand b = Operand::varOf(1);
-	Operand c = Operand::varOf(2);
-	Operand d = Operand::varOf(3);
-	Operand e = Operand::varOf(4);
+	Expression a = Expression::varOf(0);
+	Expression b = Expression::varOf(1);
+	Expression c = Expression::varOf(2);
+	Expression d = Expression::varOf(3);
+	Expression e = Expression::varOf(4);
 	
 	Expression rules = arithmetic::array({
 		a*add(b) > add(a*b),
 	});
 
 	Expression dut = e*add({a,b,c,d});
-	auto m = arithmetic::search(dut, rules, rules.top);
+	auto m = arithmetic::search(dut, {dut.top.index}, rules);
 	cout << ::to_string(m) << endl;
 }
 
 TEST(Expression, Boolean) {
-	Operand a = Operand::varOf(0);
-	Operand b = Operand::varOf(1);
-	Operand c = Operand::varOf(2);
-	Operand d = Operand::varOf(3);
+	Expression a = Expression::varOf(0);
+	Expression b = Expression::varOf(1);
+	Expression c = Expression::varOf(2);
+	Expression d = Expression::varOf(3);
 
 	//Expression dut = ((true&~a)&~b)|((false|c)|d);
 	//Expression dut = ((false|c)|d);
 	Expression dut = (false|c)|d;
 	cout << dut << endl;
-	dut.minimize();
+	dut.top = minimize(dut, {dut.top.index}).map(dut.top);
 	cout << dut << endl;
 }
 
 TEST(Expression, Identity) {
-	Operand a = Operand::varOf(0);
+	Expression a = Expression::varOf(0);
 
 	Expression dut = a;
 	dut.push(Operation::BOOLEAN_NOT, {dut.top});
 	cout << dut << endl;
-	dut.minimize();
+	dut.top = minimize(dut, {dut.top.index}).map(dut.top);
 	cout << dut << endl;
 }
 
 TEST(Expression, Function) {
-	Operand a = Operand::varOf(0);
-	Operand b = Operand::varOf(1);
-	Operand c = Operand::varOf(2);
-	Operand d = Operand::varOf(3);
-	Operand e = Operand::varOf(4);
-	Operand f = Operand::varOf(5);
+	Expression a = Expression::varOf(0);
+	Expression b = Expression::varOf(1);
+	Expression c = Expression::varOf(2);
+	Expression d = Expression::varOf(3);
+	Expression e = Expression::varOf(4);
+	Expression f = Expression::varOf(5);
 
 	Expression dut = call(0, {a+b, c, d+e+f});
 	cout << dut << endl;
-	dut.minimize();
+	dut.top = minimize(dut, {dut.top.index}).map(dut.top);
 	cout << dut << endl;
 }

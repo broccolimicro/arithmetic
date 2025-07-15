@@ -7,6 +7,8 @@
 
 namespace arithmetic {
 
+struct Mapping;
+
 struct Operand {
 	Operand(Value v = Value());
 	Operand(bool bval);
@@ -60,15 +62,29 @@ struct Operand {
 
 	static Operand varOf(size_t index);
 	void apply(vector<int> varMap);
-	void apply(vector<Operand> varMap);
-	void replace(vector<Operand> exprMap);
 	
 	static Operand typeOf(int type);
 };
 
 ostream &operator<<(ostream &os, Operand o);
 
-bool areSame(Operand o0, Operand o1);
+bool operator==(Operand o0, Operand o1);
+bool operator!=(Operand o0, Operand o1);
+bool operator<(Operand o0, Operand o1); // does not differentiate constants
+
+struct Mapping {
+	std::map<Operand, Operand> m;
+
+	bool set(Operand o0, Operand o1);
+
+	bool has(Operand o0) const;
+	Operand map(Operand o0) const;
+	vector<size_t> mapExpr(vector<size_t> from) const;
+
+	bool isIdentity() const;
+
+	Mapping &apply(Mapping m0);
+};
 
 struct Operator {
 	Operator();
@@ -143,15 +159,17 @@ struct Operation {
 	Value evaluate(State values, vector<Value> expressions, TypeSet types) const;
 	void propagate(State &result, const State &global, vector<Value> &expressions, const vector<Value> gexpressions, Value v) const;
 	void apply(vector<int> varMap);
-	void apply(vector<Operand> varMap);
-	void replace(vector<Operand> exprMap);
+	void apply(const Mapping &m);
 	Operation extract(vector<size_t> idx, size_t exprIndex=0);
 	Operation &offsetExpr(int off);
+
+	Operand op() const;
 
 	void tidy();
 };
 
-bool areSame(Operation o0, Operation o1);
+bool operator==(Operation o0, Operation o1);
+bool operator!=(Operation o0, Operation o1);
 
 ostream &operator<<(ostream &os, Operation o);
 

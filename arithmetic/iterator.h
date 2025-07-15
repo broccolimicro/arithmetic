@@ -7,15 +7,15 @@
 namespace arithmetic {
 
 _INTERFACE_ARG(OperationSet,
-	(vector<Operand>, exprIndex, () const),
-	(const Operation *, getExpr, (size_t index) const),
-	(bool, setExpr, (Operation o)),
-	(Operand, pushExpr, (Operation o)),
-	(bool, eraseExpr, (size_t index)));
+	(vector<Operand>, exprIndex, () const, ()),
+	(const Operation *, getExpr, (size_t index) const, (index)),
+	(bool, setExpr, (Operation o), (o)),
+	(Operand, pushExpr, (Operation o), (o)),
+	(bool, eraseExpr, (size_t index), (index)));
 
 _CONST_INTERFACE_ARG(ConstOperationSet,
-	(vector<Operand>, exprIndex, () const),
-	(const Operation *, getExpr, (size_t index) const));
+	(vector<Operand>, exprIndex, () const, ()),
+	(const Operation *, getExpr, (size_t index) const, (index)));
 
 struct UpIterator {
 	UpIterator(OperationSet root, vector<size_t> start=vector<size_t>());

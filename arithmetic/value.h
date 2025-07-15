@@ -8,7 +8,7 @@ namespace arithmetic
 {
 
 _CONST_INTERFACE_ARG(TypeSet,
-	(int, memberIndex, (int type, string name) const));
+	(int, memberIndex, (int type, string name) const, (type, name)));
 
 // This structure represents a delay insensitive encoded integer
 // value with a single neutral state. This is purposefully limited

@@ -7,7 +7,6 @@
 
 #include "operation.h"
 #include "iterator.h"
-#include "algorithm.h"
 
 namespace arithmetic {
 
@@ -46,11 +45,6 @@ struct Expression {
 	Operand pushExpr(Operation o);
 	bool eraseExpr(size_t index);
 
-	UpIterator exprUp(size_t exprIndex = std::numeric_limits<size_t>::max());
-	ConstUpIterator exprUp(size_t exprIndex = std::numeric_limits<size_t>::max()) const;
-	DownIterator exprDown(size_t exprIndex = std::numeric_limits<size_t>::max());
-	ConstDownIterator exprDown(size_t exprIndex = std::numeric_limits<size_t>::max()) const;
-
 	void clear();
 
 	Operand append(Expression arg);
@@ -66,22 +60,24 @@ struct Expression {
 	void apply(vector<int> uidMap);
 	void apply(vector<Expression> uidMap);
 
-	// TODO(edward.bingham) All of these functions need to be moved out of
-	// Expression and operate on an interface that represents any
-	// random-access container of Operations
-	Operand extract(size_t exprIndex, vector<size_t> operands);
-	void replace(Operand o0, Operand o1);
-	void replace(const Expression &rules, Match token);
-	Expression &minimize(Expression directed=Expression());
-
 	Expression &operator=(Operand e);
+
+	static Expression undef();
+	static Expression X();
+	static Expression U();
+	static Expression boolOf(bool bval);
+	static Expression intOf(int64_t ival);
+	static Expression realOf(double rval);
+	static Expression arrOf(vector<Value> arr);
+	static Expression structOf(vector<Value> arr);
+	static Expression stringOf(string sval);
+	static Expression varOf(size_t index);
+	static Expression typeOf(int type);
 
 	string to_string() const;
 };
 
 bool areSame(Expression e0, Expression e1);
-
-Expression espresso(Expression expr, vector<Type> vars=vector<Type>(), Expression directed=Expression(), Expression undirected=Expression());
 
 ostream &operator<<(ostream &os, Expression e);
 
@@ -151,26 +147,6 @@ Expression operator/(Operand e0, Expression e1);
 Expression operator%(Operand e0, Expression e1);
 Expression operator&&(Operand e0, Expression e1);
 Expression operator||(Operand e0, Expression e1);
-
-Expression operator|(Operand e0, Operand e1);
-Expression operator&(Operand e0, Operand e1);
-Expression operator^(Operand e0, Operand e1);
-Expression bitwiseXor(Operand e0, Operand e1);
-Expression operator==(Operand e0, Operand e1);
-Expression operator!=(Operand e0, Operand e1);
-Expression operator<(Operand e0, Operand e1);
-Expression operator>(Operand e0, Operand e1);
-Expression operator<=(Operand e0, Operand e1);
-Expression operator>=(Operand e0, Operand e1);
-Expression operator<<(Operand e0, Operand e1);
-Expression operator>>(Operand e0, Operand e1);
-Expression operator+(Operand e0, Operand e1);
-Expression operator-(Operand e0, Operand e1);
-Expression operator*(Operand e0, Operand e1);
-Expression operator/(Operand e0, Operand e1);
-Expression operator%(Operand e0, Operand e1);
-Expression operator&&(Operand e0, Operand e1);
-Expression operator||(Operand e0, Operand e1);
 
 // Used to create elastic rewrite rules for commutative operators
 Expression booleanOr(Expression e0);

@@ -1,15 +1,16 @@
 #include "rewrite.h"
+#include "algorithm.h"
 
 namespace arithmetic {
 
 Expression rewriteBasic() {
 	// matches all variables and Expressions
-	Operand a = Operand::varOf(0);
-	Operand b = Operand::varOf(1);
-	Operand c = Operand::varOf(2);
+	Expression a = Expression::varOf(0);
+	Expression b = Expression::varOf(1);
+	Expression c = Expression::varOf(2);
 
-	Operand X = Operand::X();
-	Operand U = Operand::U();
+	Expression X = Expression::X();
+	Expression U = Expression::U();
 
 	// true matches valid
 	// false matches neutral
@@ -103,18 +104,18 @@ Expression rewriteBasic() {
 		(!!a) > (a)
 	}));
 
-	rules.top.replace(tidy(rules, {rules.top.index}, true));
+	rules.top = tidy(rules, {rules.top.index}, true).map(rules.top);
 	return rules;
 }
 
 Expression rewriteHuman() {
 	// matches all variables and Expressions
-	Operand a = Operand::varOf(0);
-	Operand b = Operand::varOf(1);
-	Operand c = Operand::varOf(2);
+	Expression a = Expression::varOf(0);
+	Expression b = Expression::varOf(1);
+	Expression c = Expression::varOf(2);
 
-	Operand X = Operand::X();
-	Operand U = Operand::U();
+	Expression X = Expression::X();
+	Expression U = Expression::U();
 
 	// true matches valid
 	// false matches neutral
@@ -213,18 +214,18 @@ Expression rewriteHuman() {
 		(!!a) > (a)
 	}));
 
-	rules.top.replace(tidy(rules, {rules.top.index}, true));
+	rules.top = tidy(rules, {rules.top.index}, true).map(rules.top);
 	return rules;
 }
 
 Expression rewriteUndirected() {
 	// matches all variables and Expressions
-	Operand a = Operand::varOf(0);
-	Operand b = Operand::varOf(1);
-	Operand c = Operand::varOf(2);
+	Expression a = Expression::varOf(0);
+	Expression b = Expression::varOf(1);
+	Expression c = Expression::varOf(2);
 
-	Operand X = Operand::X();
-	Operand U = Operand::U();
+	Expression X = Expression::X();
+	Expression U = Expression::U();
 
 	Expression rules = arithmetic::array(vector<Expression>({
 		(~booleanAnd(a)) == booleanOr(~a),
@@ -240,7 +241,7 @@ Expression rewriteUndirected() {
 		bitwiseXor(a, b) == ((a && (!b)) || ((!a) && b)),
 	}));
 
-	rules.top.replace(tidy(rules, {rules.top.index}, true));
+	rules.top = tidy(rules, {rules.top.index}, true).map(rules.top);
 	return rules;
 }
 

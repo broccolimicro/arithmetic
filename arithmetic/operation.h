@@ -61,7 +61,7 @@ struct Operand {
 	Operand &offsetExpr(int off);
 
 	static Operand varOf(size_t index);
-	void apply(vector<int> varMap);
+	Operand &apply(vector<int> varMap);
 	
 	static Operand typeOf(int type);
 };
@@ -105,7 +105,10 @@ struct Operation {
 	Operation(int func, vector<Operand> args, size_t exprIndex=std::numeric_limits<size_t>::max());
 	~Operation();
 
+	static Operation undef(size_t exprIndex=std::numeric_limits<size_t>::max());
+
 	static vector<Operator> operators;
+	static const int UNDEF = -1;
 	static int BITWISE_NOT;
 	static int IDENTITY;
 	static int NEGATION;
@@ -152,14 +155,15 @@ struct Operation {
 	void set(int func, vector<Operand> args);
 	bool isCommutative() const;
 	bool isReflexive() const;
+	bool isUndef() const;
 
 	static Value evaluate(int func, vector<Value> args);
 	static Value evaluate(int func, vector<Value> args, TypeSet types);
 	Value evaluate(State values, vector<Value> expressions) const;
 	Value evaluate(State values, vector<Value> expressions, TypeSet types) const;
 	void propagate(State &result, const State &global, vector<Value> &expressions, const vector<Value> gexpressions, Value v) const;
-	void apply(vector<int> varMap);
-	void apply(const Mapping &m);
+	Operation &apply(vector<int> varMap);
+	Operation &apply(const Mapping &m);
 	Operation extract(vector<size_t> idx, size_t exprIndex=0);
 	Operation &offsetExpr(int off);
 

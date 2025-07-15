@@ -167,7 +167,7 @@ State Parallel::evaluate(const State &curr) {
 }
 
 Expression Parallel::guard() {
-	Expression result(true);
+	Expression result = Expression::boolOf(true);
 	for (auto a = actions.begin(); a != actions.end(); a++) {
 		if (not a->expr.isConstant()) {
 			result = result & a->expr;
@@ -306,10 +306,10 @@ Region Choice::evaluate(const State &curr) {
 
 Expression Choice::guard() {
 	if (terms.empty()) {
-		return Operand(true);
+		return Expression::boolOf(true);
 	}
 
-	Expression result(false);
+	Expression result = Expression::boolOf(false);
 	for (auto t = terms.begin(); t != terms.end(); t++) {
 		result = result | t->guard();
 	}

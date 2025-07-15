@@ -258,7 +258,7 @@ TEST(Expression, TidyConstants) {
 	cout << e << endl;
 	e.top = tidy(e, {e.top.index}).map(e.top);
 	cout << e << endl;
-	ASSERT_EQ(e.operations.size(), 0u);
+	ASSERT_EQ(e.size(), 0u);
 	EXPECT_TRUE(e.top.isConst());
 	EXPECT_EQ(e.top.cnst.type, Value::INT);
 	EXPECT_EQ(e.top.cnst.ival, 12);
@@ -271,11 +271,11 @@ TEST(Expression, TidyCommutative) {
 	Expression d = Expression::varOf(3);
 	
 	Expression e = (a+b)+(c+d);
-	ASSERT_EQ(e.operations.size(), 3u);
+	ASSERT_EQ(e.size(), 3u);
 	cout << e << endl;
 	e.top = tidy(e, {e.top.index}).map(e.top);
 	cout << e << endl;
-	ASSERT_EQ(e.operations.size(), 1u);
+	ASSERT_EQ(e.size(), 1u);
 	EXPECT_TRUE(e.top.isConst());
 	EXPECT_EQ(e.top.cnst.type, Value::INT);
 	EXPECT_EQ(e.top.cnst.ival, 12);
@@ -292,7 +292,7 @@ TEST(Expression, Simplify) {
 	Cost cost = arithmetic::cost(dut, dut.top, vars);
 	cout << "Before: cost=" << cost.complexity << " del=" << cost.critical << endl << dut << endl;
 	dut.top = minimize(dut, {dut.top.index}).map(dut.top);
-	EXPECT_TRUE(areSame(dut, Expression(b)));
+	EXPECT_TRUE(areSame(dut, b));
 
 	Cost cost2 = arithmetic::cost(dut, dut.top, vars);
 	cout << "After: cost=" << cost2.complexity << " del=" << cost2.critical << endl << dut << endl;

@@ -9,63 +9,14 @@
 
 namespace arithmetic {
 
-void Expression::breakMap() const {
-	exprMapIsDirty = true;
-}
-
-void Expression::fixMap() const {
-	exprMap.clear();
-	for (int i = 0; i < (int)operations.size(); i++) {
-		if (operations[i].exprIndex >= exprMap.size()) {
-			exprMap.resize(operations[i].exprIndex+1, -1);
-		}
-		exprMap[operations[i].exprIndex] = i;
-	}
-	exprMapIsDirty = false;
-}
-
-void Expression::setExpr(size_t exprIndex, size_t index) const {
-	if (not exprMapIsDirty) {
-		if (exprIndex >= exprMap.size()) {
-			exprMap.resize(exprIndex+1);
-		}
-		exprMap[exprIndex] = index;
-	}
-}
-
-int Expression::lookup(size_t exprIndex) const {
-	if (exprMapIsDirty) {
-		fixMap();
-	}
-
-	if (exprIndex >= exprMap.size()) {
-		printf("internal:%s:%d: expression index not found in mapping %lu: %s\n", __FILE__, __LINE__, exprIndex, ::to_string(exprMap).c_str());
-		return -1;
-	}
-	int idx = exprMap[exprIndex];
-	if (idx < 0 or idx >= (int)operations.size()) {
-		printf("internal:%s:%d: operation not found in expression %lu: %s\n", __FILE__, __LINE__, exprIndex, ::to_string(exprMap).c_str());
-		return -1;
-	}
-	return idx;
-}
-
-Expression::Expression(Operand arg0) {
+Expression::Expression() {
 	Operation::loadOperators();
-	exprMapIsDirty = false;
-	nextExprIndex = 0;
-
-	top = arg0;
+	top = Operand::undef();
 }
 
 Expression::Expression(int func, vector<Operand> args) {
 	Operation::loadOperators();
-	exprMapIsDirty = false;
-	nextExprIndex = 0;
-
-	operations.push_back(Operation(func, args, nextExprIndex++));
-	setExpr(operations.back().exprIndex, operations.size()-1);
-	top = Operand::exprOf(operations.back().exprIndex);
+	top = pushExpr(Operation(func, args));
 }
 
 Expression::~Expression() {
@@ -75,60 +26,67 @@ vector<Operand> Expression::exprIndex() const {
 	vector<Operand> result;
 	result.reserve(operations.size());
 	for (auto i = operations.begin(); i != operations.end(); i++) {
-		result.push_back(Operand::exprOf(i->exprIndex));
+		if (not i->isUndef()) {
+			result.push_back(i->op());
+		}
 	}
 	return result;
 }
 
 const Operation *Expression::getExpr(size_t index) const {
-	int i = lookup(index);
-	if (i < 0) {
-		return nullptr;
+	if (index < operations.size() and not operations[index].isUndef()) {
+		return &operations[index];
 	}
-	return &operations[i];
+	return nullptr;
 }
 
 bool Expression::setExpr(Operation o) {
-	int i = lookup(o.exprIndex);
-	if (i >= 0) {
-		operations[i] = o;
-		return true;
+	if (o.exprIndex >= operations.size()) {
+		operations.resize(o.exprIndex+1);
 	}
-	return false;
+	operations[o.exprIndex] = o;
+	return true;
 }
 
 Operand Expression::pushExpr(Operation o) {
-	o.exprIndex = nextExprIndex++;
-	operations.push_back(o);
-	setExpr(o.exprIndex, operations.size()-1);
-	return Operand::exprOf(o.exprIndex);
+	if (next.empty()) {
+		o.exprIndex = operations.size();
+		operations.push_back(o);
+	} else {
+		o.exprIndex = next.back();
+		next.pop_back();
+		operations[o.exprIndex] = o;
+	}
+	return o.op();
 }
 
 bool Expression::eraseExpr(size_t index) {
-	int i = lookup(index);
-	if (i >= 0) {
-		operations.erase(operations.begin()+i);
-		breakMap();
+	if (index < operations.size() and not operations[index].isUndef()) {
+		operations[index] = Operation::undef();
+		next.push_back(index);
 		return true;
 	}
 	return false;
 }
 
 void Expression::clear() {
-	nextExprIndex = 0;
 	top = Operand::undef();
-	exprMap.clear();
-	exprMapIsDirty = false;
+	operations.clear();
+	next.clear();
+}
+
+size_t Expression::size() const {
+	return operations.size() - next.size();
 }
 
 Operand Expression::append(Expression arg) {
+	Mapping m;
 	for (auto i = arg.operations.begin(); i != arg.operations.end(); i++) {
-		operations.push_back(i->offsetExpr(nextExprIndex));
-		setExpr(operations.back().exprIndex, operations.size()-1);
+		if (not i->isUndef()) {
+			m.set(i->op(), pushExpr(Operation(*i).apply(m)));
+		}
 	}
-	Operand result = arg.top.offsetExpr(nextExprIndex);
-	nextExprIndex += arg.nextExprIndex;
-	return result;
+	return m.map(arg.top);
 }
 
 vector<Operand> Expression::append(vector<Expression> arg) {
@@ -142,17 +100,13 @@ vector<Operand> Expression::append(vector<Expression> arg) {
 Expression &Expression::push(int func, vector<Operand> args) {
 	// add to operations list if doesn't exist
 	Operation arg(func, args);
-	int pos = -1;
-	for (int i = 0; i < (int)operations.size() and pos < 0; i++) {
-		if (operations[i] == arg) {
-			pos = i;
+	for (auto i = operations.begin(); i != operations.end(); i++) {
+		if (not i->isUndef() and *i == arg) {
+			top = i->op();
+			return *this;
 		}
 	}
-	if (pos < 0) {
-		pos = (int)operations.size();
-		pushExpr(arg);
-	}
-	top = Operand::exprOf(operations[pos].exprIndex);
+	top = pushExpr(arg);
 	return *this;
 }
 
@@ -161,11 +115,11 @@ bool Expression::isNull() const {
 	// then check if the top Expression is null after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
 	for (auto i = operations.begin(); i != operations.end(); i++) {
-		for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
-			if (j->isVar()
-				or (j->isConst()
-					and not j->cnst.isUnstable())) {
-				return false;
+		if (not i->isUndef()) {
+			for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
+				if (j->isVar() or (j->isConst() and not j->cnst.isUnstable())) {
+					return false;
+				}
 			}
 		}
 	}
@@ -177,9 +131,11 @@ bool Expression::isConstant() const {
 	// then check if the top Expression is constant after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
 	for (auto i = operations.begin(); i != operations.end(); i++) {
-		for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
-			if (j->isVar() or (j->isConst() and j->cnst.isUnstable())) {
-				return false;
+		if (not i->isUndef()) {
+			for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
+				if (j->isVar() or (j->isConst() and j->cnst.isUnstable())) {
+					return false;
+				}
 			}
 		}
 	}
@@ -191,9 +147,11 @@ bool Expression::isValid() const {
 	// then check if the top Expression is constant after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
 	for (auto i = operations.begin(); i != operations.end(); i++) {
-		for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
-			if (j->isVar() or (j->isConst() and (j->cnst.isUnstable() or j->cnst.isNeutral()))) {
-				return false;
+		if (not i->isUndef()) {
+			for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
+				if (j->isVar() or (j->isConst() and (j->cnst.isUnstable() or j->cnst.isNeutral()))) {
+					return false;
+				}
 			}
 		}
 	}
@@ -205,9 +163,11 @@ bool Expression::isNeutral() const {
 	// then check if the top Expression is null after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
 	for (auto i = operations.begin(); i != operations.end(); i++) {
-		for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
-			if (j->isVar() or (j->isConst() and (j->cnst.isUnstable() or j->cnst.isValid()))) {
-				return false;
+		if (not i->isUndef()) {
+			for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
+				if (j->isVar() or (j->isConst() and (j->cnst.isUnstable() or j->cnst.isValid()))) {
+					return false;
+				}
 			}
 		}
 	}
@@ -221,57 +181,45 @@ bool Expression::isWire() const {
 		if (i->func == Operation::VALIDITY or i->func == Operation::BOOLEAN_NOT or i->func == Operation::BOOLEAN_AND or i->func == Operation::BOOLEAN_OR) {
 			return true;
 		}
-		for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
-			if (j->isConst() and (j->cnst.isNeutral() or j->cnst.isValid())) {
-				return true;
+		if (not i->isUndef()) {
+			for (auto j = i->operands.begin(); j != i->operands.end(); j++) {
+				if (j->isConst() and (j->cnst.isNeutral() or j->cnst.isValid())) {
+					return true;
+				}
 			}
 		}
 	}
 	return false;
 }
 
-void Expression::apply(vector<int> uidMap) {
+Expression &Expression::apply(vector<int> uidMap) {
 	if (uidMap.empty()) {
-		return;
+		return *this;
 	}
 
-	breakMap();
 	for (auto i = operations.begin(); i != operations.end(); i++) {
-		i->apply(uidMap);
-	}
-}
-
-void Expression::apply(vector<Expression> sub) {
-	if (sub.empty()) {
-		return;
-	}
-
-	breakMap();
-	size_t sz = operations.size();
-
-	Mapping result;
-	for (auto i = sub.begin(); i != sub.end(); i++) {
-		for (auto j = i->operations.begin(); j != i->operations.end(); i++) {
-			operations.push_back(j->offsetExpr(nextExprIndex));
+		if (not i->isUndef()) {
+			i->apply(uidMap);
 		}
-		result.set(Operand::exprOf(i-sub.begin()), i->top.offsetExpr(nextExprIndex));
-		nextExprIndex += i->nextExprIndex;
 	}
-	for (int i = 0; i < (int)sz; i++) {
-		operations[i].apply(result);
-	}
-	top = result.map(top);
+	return *this;
 }
 
 bool areSame(Expression e0, Expression e1) {
-	if (e0.operations.size() != e1.operations.size()) {
+	cout << "areSame()" << endl;
+	cout << e0 << endl;
+	cout << e1 << endl;
+	if (e0.top != e1.top) {
 		return false;
 	}
-
-	for (int i = 0; i < (int)e0.operations.size(); i++) {
-		if (e0.operations[i] != e1.operations[i]) {
-			return false;
+	if (e0.top.isExpr() and e1.top.isExpr()) {
+		auto i = ConstDownIterator(e0, {e0.top.index}), j = ConstDownIterator(e1, {e1.top.index});
+		for (; not i.done() and not j.done(); ++i, ++j) {
+			if (*i != *j) {
+				return false;
+			}
 		}
+		return i.done() and j.done();
 	}
 	return true;
 }
@@ -283,54 +231,78 @@ Expression &Expression::operator=(Operand e) {
 }
 
 Expression Expression::undef() {
-	return Expression(Operand::undef());
+	Expression result;
+	result.top = Operand::undef();
+	return result;
 }
 
 Expression Expression::X() {
-	return Expression(Operand::X());
+	Expression result;
+	result.top = Operand::X();
+	return result;
 }
 
 Expression Expression::U() {
-	return Expression(Operand::U());
+	Expression result;
+	result.top = Operand::U();
+	return result;
 }
 
 Expression Expression::boolOf(bool bval) {
-	return Expression(Operand::boolOf(bval));
+	Expression result;
+	result.top = Operand::boolOf(bval);
+	return result;
 }
 
 Expression Expression::intOf(int64_t ival) {
-	return Expression(Operand::intOf(ival));
+	Expression result;
+	result.top = Operand::intOf(ival);
+	return result;
 }
 
 Expression Expression::realOf(double rval) {
-	return Expression(Operand::realOf(rval));
+	Expression result;
+	result.top = Operand::realOf(rval);
+	return result;
 }
 
 Expression Expression::arrOf(vector<Value> arr) {
-	return Expression(Operand::arrOf(arr));
+	Expression result;
+	result.top = Operand::arrOf(arr);
+	return result;
 }
 
 Expression Expression::structOf(vector<Value> arr) {
-	return Expression(Operand::structOf(arr));
+	Expression result;
+	result.top = Operand::structOf(arr);
+	return result;
 }
 
 Expression Expression::stringOf(string sval) {
-	return Expression(Operand::stringOf(sval));
+	Expression result;
+	result.top = Operand::stringOf(sval);
+	return result;
 }
 
 Expression Expression::varOf(size_t index) {
-	return Expression(Operand::varOf(index));
+	Expression result;
+	result.top = Operand::varOf(index);
+	return result;
 }
 
 Expression Expression::typeOf(int type) {
-	return Expression(Operand::typeOf(type));
+	Expression result;
+	result.top = Operand::typeOf(type);
+	return result;
 }
 
 string Expression::to_string() const {
 	ostringstream oss;
-	oss << "top: " << top << "/" << nextExprIndex << endl;
+	oss << "top: " << top << "/" << operations.size() << endl;
 	for (int i = (int)operations.size()-1; i >= 0; i--) {
-		oss << i << ": " << operations[i] << endl;
+		if (not operations[i].isUndef()) {
+			oss << i << ": " << operations[i] << endl;
+		}
 	}
 	return oss.str();
 }
@@ -425,7 +397,7 @@ Expression add(vector<Expression> e0)        { Expression e; return e.push(Opera
 Expression mult(vector<Expression> e0)       { Expression e; return e.push(Operation::MULTIPLY,    e.append(e0)); }
 
 Expression call(int func, vector<Expression> args) {
-	args.insert(args.begin(), Operand::typeOf(func));
+	args.insert(args.begin(), Expression::typeOf(func));
 
 	Expression result;
 	return result.push(Operation::CALL, result.append(args));

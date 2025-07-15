@@ -200,9 +200,9 @@ Operand Operand::varOf(size_t index) {
 	return result;
 }
 
-void Operand::apply(vector<int> varMap) {
+Operand &Operand::apply(vector<int> varMap) {
 	if (varMap.empty()) {
-		return;
+		return *this;
 	}
 
 	if (isVar()) {
@@ -213,6 +213,7 @@ void Operand::apply(vector<int> varMap) {
 			cnst = Value::X();
 		}
 	}
+	return *this;
 }
 
 Operand Operand::typeOf(int type) {
@@ -323,7 +324,7 @@ Operator::~Operator() {
 
 Operation::Operation() {
 	exprIndex = std::numeric_limits<size_t>::max();
-	func = -1;
+	func = IDENTITY;
 }
 
 Operation::Operation(int func, vector<Operand> args, size_t exprIndex) {
@@ -332,6 +333,10 @@ Operation::Operation(int func, vector<Operand> args, size_t exprIndex) {
 }
 
 Operation::~Operation() {
+}
+
+Operation Operation::undef(size_t exprIndex) {
+	return Operation(Operation::UNDEF, vector<Operand>(), exprIndex);
 }
 
 int Operation::push(Operator op) {
@@ -587,6 +592,10 @@ bool Operation::isReflexive() const {
 	return true;
 }
 
+bool Operation::isUndef() const {
+	return func == Operation::UNDEF;
+}
+
 Value Operation::evaluate(int func, vector<Value> args) {
 	if (func == Operation::BITWISE_NOT) {
 		return !args[0];
@@ -824,24 +833,26 @@ void Operation::propagate(State &result, const State &global, vector<Value> &exp
 	} 
 }
 
-void Operation::apply(vector<int> varMap) {
+Operation &Operation::apply(vector<int> varMap) {
 	if (varMap.empty()) {
-		return;
+		return *this;
 	}
 
 	for (int i = 0; i < (int)operands.size(); i++) {
 		operands[i].apply(varMap);
 	}
+	return *this;
 }
 
-void Operation::apply(const Mapping &m) {
+Operation &Operation::apply(const Mapping &m) {
 	if (m.isIdentity()) {
-		return;
+		return *this;
 	}
 
 	for (int i = 0; i < (int)operands.size(); i++) {
 		operands[i] = m.map(operands[i]);
 	}
+	return *this;
 }
 
 Operation Operation::extract(vector<size_t> idx, size_t exprIndex) {

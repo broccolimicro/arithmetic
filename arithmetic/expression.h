@@ -16,28 +16,13 @@ namespace arithmetic {
 // 2. x*y
 // 3. operations[1]+operations[2]
 struct Expression {
-	vector<Operation> operations;
-	Operand top;
-
-	// next available index to be assigned as an exprIndex for an expression
-	size_t nextExprIndex;
-
-	// DESIGN(edward.bingham) this is not stricly necessary, but this is a nice
-	// optimization for mapping exprIndex to the index into the operations
-	// vector.
-
-	// exprIndex -> index into operations or -1 if not found
-	mutable vector<int> exprMap;
-	mutable bool exprMapIsDirty;
-
-	void breakMap() const;
-	void fixMap() const;
-	void setExpr(size_t exprIndex, size_t index) const;
-	int lookup(size_t exprIndex) const;
-
-	Expression(Operand arg0 = Operand::undef());
+	Expression();
 	Expression(int func, vector<Operand> args);
 	~Expression();
+
+	vector<Operation> operations;
+	Operand top;
+	vector<size_t> next;
 
 	vector<Operand> exprIndex() const;
 	const Operation *getExpr(size_t index) const;
@@ -46,6 +31,7 @@ struct Expression {
 	bool eraseExpr(size_t index);
 
 	void clear();
+	size_t size() const;
 
 	Operand append(Expression arg);
 	vector<Operand> append(vector<Expression> arg);
@@ -57,8 +43,9 @@ struct Expression {
 	bool isNeutral() const;
 	bool isWire() const;
 
-	void apply(vector<int> uidMap);
-	void apply(vector<Expression> uidMap);
+	Expression &apply(vector<int> uidMap);
+	Expression &apply(Mapping m);
+	Expression &apply(vector<Expression> uidMap);
 
 	Expression &operator=(Operand e);
 

@@ -206,9 +206,6 @@ Expression &Expression::apply(vector<int> uidMap) {
 }
 
 bool areSame(Expression e0, Expression e1) {
-	cout << "areSame()" << endl;
-	cout << e0 << endl;
-	cout << e1 << endl;
 	if (e0.top != e1.top) {
 		return false;
 	}

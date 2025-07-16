@@ -78,5 +78,10 @@ string SimpleOperationSet::to_string() const {
 	return oss.str();
 }
 
+ostream &operator<<(ostream &os, SimpleOperationSet e) {
+	os << e.to_string();
+	return os;
+}
+
 }
 

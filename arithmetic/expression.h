@@ -15,8 +15,9 @@ namespace arithmetic {
 // 2. x*y
 // 3. operations[1]+operations[2]
 struct Expression {
-	Expression();
+	Expression(Operand top = Operand::undef());
 	Expression(int func, vector<Operand> args);
+	Expression(int func, vector<Expression> args);
 	~Expression();
 
 	SimpleOperationSet sub;

@@ -175,7 +175,6 @@ Expression rewriteHuman() {
 		(a & booleanAnd(b)) > (a & b),
 		(a | booleanOr(b)) > (a | b),
 
-		(a-b) > (a+(-b)),
 		(a+a) > (2*a),
 		(a+(-a)) > (0),
 		(false+a) > (false),

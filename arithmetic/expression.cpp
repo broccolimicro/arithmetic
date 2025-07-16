@@ -10,19 +10,19 @@
 
 namespace arithmetic {
 
-ostream &operator<<(ostream &os, SimpleOperationSet e) {
-	os << e.to_string();
-	return os;
-}
-
-Expression::Expression() {
+Expression::Expression(Operand top) {
 	Operation::loadOperators();
-	top = Operand::undef();
+	this->top = top;
 }
 
 Expression::Expression(int func, vector<Operand> args) {
 	Operation::loadOperators();
 	top = pushExpr(Operation(func, args));
+}
+
+Expression::Expression(int func, vector<Expression> args) {
+	Operation::loadOperators();
+	top = pushExpr(Operation(func, append(args)));
 }
 
 Expression::~Expression() {

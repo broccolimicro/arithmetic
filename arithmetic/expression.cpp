@@ -125,9 +125,8 @@ size_t Expression::size() const {
 
 Operand Expression::append(Expression arg) {
 	Mapping m;
-	vector<Operand> idx = arg.exprIndex();
-	for (auto i = idx.begin(); i != idx.end(); i++) {
-		m.set(*i, pushExpr(Operation(*arg.getExpr(i->index)).apply(m)));
+	for (ConstUpIterator i(arg, {arg.top}); not i.done(); ++i) {
+		m.set(i->op(), pushExpr(Operation(*i).apply(m)));
 	}
 	return m.map(arg.top);
 }
@@ -158,10 +157,13 @@ bool Expression::isNull() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is null after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
+	if (top.isVar() or top.isType() or (top.isConst() and not top.cnst.isUnstable())) {
+		return false;
+	}
 	vector<Operand> idx = exprIndex();
 	for (auto i = idx.begin(); i != idx.end(); i++) {
 		for (auto j = getExpr(i->index)->operands.begin(); j != getExpr(i->index)->operands.end(); j++) {
-			if (j->isVar() or (j->isConst() and not j->cnst.isUnstable())) {
+			if (j->isVar() or j->isType() or (j->isConst() and not j->cnst.isUnstable())) {
 				return false;
 			}
 		}
@@ -173,6 +175,9 @@ bool Expression::isConstant() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is constant after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
+	if (top.isVar() or top.isType() or (top.isConst() and top.cnst.isUnstable())) {
+		return false;
+	}
 	vector<Operand> idx = exprIndex();
 	for (auto i = idx.begin(); i != idx.end(); i++) {
 		for (auto j = getExpr(i->index)->operands.begin(); j != getExpr(i->index)->operands.end(); j++) {
@@ -188,6 +193,9 @@ bool Expression::isValid() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is constant after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
+	if (top.isVar() or (top.isConst() and (top.cnst.isUnstable() or top.cnst.isNeutral()))) {
+		return false;
+	}
 	vector<Operand> idx = exprIndex();
 	for (auto i = idx.begin(); i != idx.end(); i++) {
 		for (auto j = getExpr(i->index)->operands.begin(); j != getExpr(i->index)->operands.end(); j++) {
@@ -203,6 +211,9 @@ bool Expression::isNeutral() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is null after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
+	if (top.isVar() or (top.isConst() and (top.cnst.isUnstable() or top.cnst.isValid()))) {
+		return false;
+	}
 	vector<Operand> idx = exprIndex();
 	for (auto i = idx.begin(); i != idx.end(); i++) {
 		for (auto j = getExpr(i->index)->operands.begin(); j != getExpr(i->index)->operands.end(); j++) {
@@ -217,6 +228,9 @@ bool Expression::isNeutral() const {
 bool Expression::isWire() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is null after constant propagation using quantified element elimination
+	if (top.isConst() and (top.cnst.isNeutral() or top.cnst.isValid())) {
+		return true;
+	}
 	vector<Operand> idx = exprIndex();
 	for (auto i = idx.begin(); i != idx.end(); i++) {
 		if (getExpr(i->index)->func == Operation::VALIDITY

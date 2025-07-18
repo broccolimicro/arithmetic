@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common/standard.h>
+#include <common/index_vector.h>
 
 #include "operation.h"
 
@@ -21,8 +22,7 @@ struct SimpleOperationSet {
 	SimpleOperationSet();
 	~SimpleOperationSet();
 
-	vector<Operation> elems;
-	vector<size_t> free;
+	index_vector<Operation> elems;
 
 	vector<Operand> exprIndex() const;
 	const Operation *getExpr(size_t index) const;

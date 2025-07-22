@@ -1,7 +1,8 @@
 #include <gtest/gtest.h>
 
-#include <arithmetic/expression.h>
 #include <arithmetic/algorithm.h>
+#include <arithmetic/expression.h>
+#include <common/mapping.h>
 #include <common/text.h>
 
 using namespace arithmetic;
@@ -365,4 +366,32 @@ TEST(Expression, Function) {
 	cout << dut << endl;
 	dut.top = minimize(dut, {dut.top}).map(dut.top);
 	cout << dut << endl;
+}
+
+TEST(Expression, Apply) {
+	Expression a = Expression::varOf(0);
+	Expression b = Expression::varOf(1);
+	Expression c = Expression::varOf(2);
+	Expression d = Expression::varOf(3);
+	Expression e = Expression::varOf(4);
+	Expression f = Expression::varOf(5);
+
+	std::vector<int> nets1 = {2, 0, 1};
+	mapping m1(nets1);
+
+	std::vector<int> nets2 = {5, 4, 3};
+	mapping m2(nets2);
+
+	Expression expected = f+e+d;
+	Expression reality = a+b+c;
+	reality.apply(nets2);
+	EXPECT_TRUE(areSame(reality, expected));
+	cout << reality << "... vs ..." << endl << expected << endl;
+
+	// Edge case: a lone .top var w/ an empty .sub body should still map
+	expected = f;
+	reality = a;
+	reality.apply(nets2);
+	EXPECT_TRUE(areSame(reality, expected));
+	cout << reality << "... vs ..." << endl << expected << endl;
 }

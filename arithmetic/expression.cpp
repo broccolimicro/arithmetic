@@ -252,6 +252,7 @@ Expression &Expression::apply(vector<int> uidMap) {
 	if (uidMap.empty()) {
 		return *this;
 	}
+	this->top.apply(uidMap);
 
 	vector<Operand> idx = exprIndex();
 	for (auto i = idx.begin(); i != idx.end(); i++) {

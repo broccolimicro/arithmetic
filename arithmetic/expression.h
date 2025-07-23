@@ -42,6 +42,7 @@ struct Expression {
 	bool eraseExpr(size_t index);
 
 	void clear();
+	void minimize();
 	size_t size() const;
 
 	Operand append(Expression arg);

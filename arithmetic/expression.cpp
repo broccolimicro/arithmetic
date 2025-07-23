@@ -447,4 +447,8 @@ Expression weakestGuard(const Expression &guard, const Expression &exclude) {
 	return guard;
 }
 
+void Expression::minimize() {
+	this->top = arithmetic::minimize(*this, {this->top}).map(this->top);
+}
+
 }

@@ -348,7 +348,7 @@ TEST(Expression, Identity) {
 	Expression a = Expression::varOf(0);
 
 	Expression dut = a;
-	dut.push(Operation::BOOLEAN_NOT, {dut.top});
+	dut.push(Operation::OpType::TYPE_BOOLEAN_NOT, {dut.top});
 	cout << dut << endl;
 	dut.top = minimize(dut, {dut.top}).map(dut.top);
 	cout << dut << endl;
@@ -362,7 +362,7 @@ TEST(Expression, Function) {
 	Expression e = Expression::varOf(4);
 	Expression f = Expression::varOf(5);
 
-	Expression dut = call(0, {a+b, c, d+e+f});
+	Expression dut = call(Operand::Type::CONST, {a+b, c, d+e+f});
 	cout << dut << endl;
 	dut.top = minimize(dut, {dut.top}).map(dut.top);
 	cout << dut << endl;

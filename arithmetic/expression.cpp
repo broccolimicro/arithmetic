@@ -15,12 +15,12 @@ Expression::Expression(Operand top) {
 	this->top = top;
 }
 
-Expression::Expression(int func, vector<Operand> args) {
+Expression::Expression(Operation::OpType func, vector<Operand> args) {
 	Operation::loadOperators();
 	top = pushExpr(Operation(func, args));
 }
 
-Expression::Expression(int func, vector<Expression> args) {
+Expression::Expression(Operation::OpType func, vector<Expression> args) {
 	Operation::loadOperators();
 	top = pushExpr(Operation(func, append(args)));
 }
@@ -88,7 +88,7 @@ Expression Expression::varOf(size_t index) {
 	return result;
 }
 
-Expression Expression::typeOf(int type) {
+Expression Expression::typeOf(Operand::Type type) {
 	Expression result;
 	result.top = Operand::typeOf(type);
 	return result;
@@ -139,7 +139,7 @@ vector<Operand> Expression::append(vector<Expression> arg) {
 	return result;
 }
 
-Expression &Expression::push(int func, vector<Operand> args) {
+Expression &Expression::push(Operation::OpType func, vector<Operand> args) {
 	// add to operations list if doesn't exist
 	Operation arg(func, args);	
 	vector<Operand> idx = exprIndex();
@@ -233,10 +233,10 @@ bool Expression::isWire() const {
 	}
 	vector<Operand> idx = exprIndex();
 	for (auto i = idx.begin(); i != idx.end(); i++) {
-		if (getExpr(i->index)->func == Operation::VALIDITY
-			or getExpr(i->index)->func == Operation::BOOLEAN_NOT
-			or getExpr(i->index)->func == Operation::BOOLEAN_AND
-			or getExpr(i->index)->func == Operation::BOOLEAN_OR) {
+		if (getExpr(i->index)->func == Operation::OpType::TYPE_VALIDITY
+			or getExpr(i->index)->func == Operation::OpType::TYPE_BOOLEAN_NOT
+			or getExpr(i->index)->func == Operation::OpType::TYPE_BOOLEAN_AND
+			or getExpr(i->index)->func == Operation::OpType::TYPE_BOOLEAN_OR) {
 			return true;
 		}
 		for (auto j = getExpr(i->index)->operands.begin(); j != getExpr(i->index)->operands.end(); j++) {
@@ -289,95 +289,95 @@ ostream &operator<<(ostream &os, Expression e) {
 	return os;
 }
 
-Expression operator~(Expression e)  { return e.push(Operation::BOOLEAN_NOT, {e.top}); }
-Expression operator-(Expression e)  { return e.push(Operation::NEGATION,    {e.top}); }
-Expression ident(Expression e)      { return e.push(Operation::IDENTITY,    {e.top}); }
-Expression isValid(Expression e)    { return e.push(Operation::VALIDITY,    {e.top}); }
-Expression isNegative(Expression e) { return e.push(Operation::NEGATIVE,    {e.top}); }
-Expression operator!(Expression e)  { return e.push(Operation::BITWISE_NOT, {e.top}); }
-Expression inv(Expression e)        { return e.push(Operation::INVERSE,     {e.top}); }
-Expression operator||(Expression e0, Expression e1) { return e0.push(Operation::BITWISE_OR,   {e0.top, e0.append(e1)}); }
-Expression operator&&(Expression e0, Expression e1) { return e0.push(Operation::BITWISE_AND,   {e0.top, e0.append(e1)}); }
-Expression operator^ (Expression e0, Expression e1) { return e0.push(Operation::BOOLEAN_XOR,   {e0.top, e0.append(e1)}); }
-Expression bitwiseXor(Expression e0, Expression e1) { return e0.push(Operation::BITWISE_XOR,   {e0.top, e0.append(e1)}); }
-Expression operator==(Expression e0, Expression e1) { return e0.push(Operation::EQUAL,         {e0.top, e0.append(e1)}); }
-Expression operator!=(Expression e0, Expression e1) { return e0.push(Operation::NOT_EQUAL,     {e0.top, e0.append(e1)}); }
-Expression operator< (Expression e0, Expression e1) { return e0.push(Operation::LESS,          {e0.top, e0.append(e1)}); }
-Expression operator> (Expression e0, Expression e1) { return e0.push(Operation::GREATER,       {e0.top, e0.append(e1)}); }
-Expression operator<=(Expression e0, Expression e1) { return e0.push(Operation::LESS_EQUAL,    {e0.top, e0.append(e1)}); }
-Expression operator>=(Expression e0, Expression e1) { return e0.push(Operation::GREATER_EQUAL, {e0.top, e0.append(e1)}); }
-Expression operator<<(Expression e0, Expression e1) { return e0.push(Operation::SHIFT_LEFT,    {e0.top, e0.append(e1)}); }
-Expression operator>>(Expression e0, Expression e1) { return e0.push(Operation::SHIFT_RIGHT,   {e0.top, e0.append(e1)}); }
-Expression operator+ (Expression e0, Expression e1) { return e0.push(Operation::ADD,           {e0.top, e0.append(e1)}); }
-Expression operator- (Expression e0, Expression e1) { return e0.push(Operation::SUBTRACT,      {e0.top, e0.append(e1)}); }
-Expression operator* (Expression e0, Expression e1) { return e0.push(Operation::MULTIPLY,      {e0.top, e0.append(e1)}); }
-Expression operator/ (Expression e0, Expression e1) { return e0.push(Operation::DIVIDE,        {e0.top, e0.append(e1)}); }
-Expression operator% (Expression e0, Expression e1) { return e0.push(Operation::MOD,           {e0.top, e0.append(e1)}); }
-Expression operator& (Expression e0, Expression e1) { return e0.push(Operation::BOOLEAN_AND,   {e0.top, e0.append(e1)}); }
-Expression operator| (Expression e0, Expression e1) { return e0.push(Operation::BOOLEAN_OR,    {e0.top, e0.append(e1)}); }
-Expression operator| (Expression e0, Operand e1) { return e0.push(Operation::BOOLEAN_OR,    {e0.top, e1}); }
-Expression operator& (Expression e0, Operand e1) { return e0.push(Operation::BOOLEAN_AND,   {e0.top, e1}); }
-Expression operator^ (Expression e0, Operand e1) { return e0.push(Operation::BOOLEAN_XOR,   {e0.top, e1}); }
-Expression bitwiseXor(Expression e0, Operand e1) { return e0.push(Operation::BITWISE_XOR,   {e0.top, e1}); }
-Expression operator==(Expression e0, Operand e1) { return e0.push(Operation::EQUAL,         {e0.top, e1}); }
-Expression operator!=(Expression e0, Operand e1) { return e0.push(Operation::NOT_EQUAL,     {e0.top, e1}); }
-Expression operator<(Expression e0, Operand e1)  { return e0.push(Operation::LESS,          {e0.top, e1}); }
-Expression operator>(Expression e0, Operand e1)  { return e0.push(Operation::GREATER,       {e0.top, e1}); }
-Expression operator<=(Expression e0, Operand e1) { return e0.push(Operation::LESS_EQUAL,    {e0.top, e1}); }
-Expression operator>=(Expression e0, Operand e1) { return e0.push(Operation::GREATER_EQUAL, {e0.top, e1}); }
-Expression operator<<(Expression e0, Operand e1) { return e0.push(Operation::SHIFT_LEFT,    {e0.top, e1}); }
-Expression operator>>(Expression e0, Operand e1) { return e0.push(Operation::SHIFT_RIGHT,   {e0.top, e1}); }
-Expression operator+ (Expression e0, Operand e1) { return e0.push(Operation::ADD,           {e0.top, e1}); }
-Expression operator- (Expression e0, Operand e1) { return e0.push(Operation::SUBTRACT,      {e0.top, e1}); }
-Expression operator* (Expression e0, Operand e1) { return e0.push(Operation::MULTIPLY,      {e0.top, e1}); }
-Expression operator/ (Expression e0, Operand e1) { return e0.push(Operation::DIVIDE,        {e0.top, e1}); }
-Expression operator% (Expression e0, Operand e1) { return e0.push(Operation::MOD,           {e0.top, e1}); }
-Expression operator&&(Expression e0, Operand e1) { return e0.push(Operation::BITWISE_AND,   {e0.top, e1}); }
-Expression operator||(Expression e0, Operand e1) { return e0.push(Operation::BITWISE_OR,    {e0.top, e1}); }
-Expression operator| (Operand e0, Expression e1) { return e1.push(Operation::BOOLEAN_OR,    {e0, e1.top}); }
-Expression operator& (Operand e0, Expression e1) { return e1.push(Operation::BOOLEAN_AND,   {e0, e1.top}); }
-Expression operator^ (Operand e0, Expression e1) { return e1.push(Operation::BOOLEAN_XOR,   {e0, e1.top}); }
-Expression bitwiseXor(Operand e0, Expression e1) { return e1.push(Operation::BITWISE_XOR,   {e0, e1.top}); }
-Expression operator==(Operand e0, Expression e1) { return e1.push(Operation::EQUAL,         {e0, e1.top}); }
-Expression operator!=(Operand e0, Expression e1) { return e1.push(Operation::NOT_EQUAL,     {e0, e1.top}); }
-Expression operator< (Operand e0, Expression e1) { return e1.push(Operation::LESS,          {e0, e1.top}); }
-Expression operator> (Operand e0, Expression e1) { return e1.push(Operation::GREATER,       {e0, e1.top}); }
-Expression operator<=(Operand e0, Expression e1) { return e1.push(Operation::LESS_EQUAL,    {e0, e1.top}); }
-Expression operator>=(Operand e0, Expression e1) { return e1.push(Operation::GREATER_EQUAL, {e0, e1.top}); }
-Expression operator<<(Operand e0, Expression e1) { return e1.push(Operation::SHIFT_LEFT,    {e0, e1.top}); }
-Expression operator>>(Operand e0, Expression e1) { return e1.push(Operation::SHIFT_RIGHT,   {e0, e1.top}); }
-Expression operator+ (Operand e0, Expression e1) { return e1.push(Operation::ADD,           {e0, e1.top}); }
-Expression operator- (Operand e0, Expression e1) { return e1.push(Operation::SUBTRACT,      {e0, e1.top}); }
-Expression operator* (Operand e0, Expression e1) { return e1.push(Operation::MULTIPLY,      {e0, e1.top}); }
-Expression operator/ (Operand e0, Expression e1) { return e1.push(Operation::DIVIDE,        {e0, e1.top}); }
-Expression operator% (Operand e0, Expression e1) { return e1.push(Operation::MOD,           {e0, e1.top}); }
-Expression operator&&(Operand e0, Expression e1) { return e1.push(Operation::BITWISE_AND,   {e0, e1.top}); }
-Expression operator||(Operand e0, Expression e1) { return e1.push(Operation::BITWISE_OR,    {e0, e1.top}); }
+Expression operator~(Expression e)  { return e.push(Operation::OpType::TYPE_BOOLEAN_NOT, {e.top}); }
+Expression operator-(Expression e)  { return e.push(Operation::OpType::TYPE_NEGATION,    {e.top}); }
+Expression ident(Expression e)      { return e.push(Operation::OpType::TYPE_IDENTITY,    {e.top}); }
+Expression isValid(Expression e)    { return e.push(Operation::OpType::TYPE_VALIDITY,    {e.top}); }
+Expression isNegative(Expression e) { return e.push(Operation::OpType::TYPE_NEGATIVE,    {e.top}); }
+Expression operator!(Expression e)  { return e.push(Operation::OpType::TYPE_BITWISE_NOT, {e.top}); }
+Expression inv(Expression e)        { return e.push(Operation::OpType::TYPE_INVERSE,     {e.top}); }
+Expression operator||(Expression e0, Expression e1) { return e0.push(Operation::OpType::TYPE_BITWISE_OR,   {e0.top, e0.append(e1)}); }
+Expression operator&&(Expression e0, Expression e1) { return e0.push(Operation::OpType::TYPE_BITWISE_AND,   {e0.top, e0.append(e1)}); }
+Expression operator^ (Expression e0, Expression e1) { return e0.push(Operation::OpType::TYPE_BOOLEAN_XOR,   {e0.top, e0.append(e1)}); }
+Expression bitwiseXor(Expression e0, Expression e1) { return e0.push(Operation::OpType::TYPE_BITWISE_XOR,   {e0.top, e0.append(e1)}); }
+Expression operator==(Expression e0, Expression e1) { return e0.push(Operation::OpType::TYPE_EQUAL,         {e0.top, e0.append(e1)}); }
+Expression operator!=(Expression e0, Expression e1) { return e0.push(Operation::OpType::TYPE_NOT_EQUAL,     {e0.top, e0.append(e1)}); }
+Expression operator< (Expression e0, Expression e1) { return e0.push(Operation::OpType::TYPE_LESS,          {e0.top, e0.append(e1)}); }
+Expression operator> (Expression e0, Expression e1) { return e0.push(Operation::OpType::TYPE_GREATER,       {e0.top, e0.append(e1)}); }
+Expression operator<=(Expression e0, Expression e1) { return e0.push(Operation::OpType::TYPE_LESS_EQUAL,    {e0.top, e0.append(e1)}); }
+Expression operator>=(Expression e0, Expression e1) { return e0.push(Operation::OpType::TYPE_GREATER_EQUAL, {e0.top, e0.append(e1)}); }
+Expression operator<<(Expression e0, Expression e1) { return e0.push(Operation::OpType::TYPE_SHIFT_LEFT,    {e0.top, e0.append(e1)}); }
+Expression operator>>(Expression e0, Expression e1) { return e0.push(Operation::OpType::TYPE_SHIFT_RIGHT,   {e0.top, e0.append(e1)}); }
+Expression operator+ (Expression e0, Expression e1) { return e0.push(Operation::OpType::TYPE_ADD,           {e0.top, e0.append(e1)}); }
+Expression operator- (Expression e0, Expression e1) { return e0.push(Operation::OpType::TYPE_SUBTRACT,      {e0.top, e0.append(e1)}); }
+Expression operator* (Expression e0, Expression e1) { return e0.push(Operation::OpType::TYPE_MULTIPLY,      {e0.top, e0.append(e1)}); }
+Expression operator/ (Expression e0, Expression e1) { return e0.push(Operation::OpType::TYPE_DIVIDE,        {e0.top, e0.append(e1)}); }
+Expression operator% (Expression e0, Expression e1) { return e0.push(Operation::OpType::TYPE_MOD,           {e0.top, e0.append(e1)}); }
+Expression operator& (Expression e0, Expression e1) { return e0.push(Operation::OpType::TYPE_BOOLEAN_AND,   {e0.top, e0.append(e1)}); }
+Expression operator| (Expression e0, Expression e1) { return e0.push(Operation::OpType::TYPE_BOOLEAN_OR,    {e0.top, e0.append(e1)}); }
+Expression operator| (Expression e0, Operand e1) { return e0.push(Operation::OpType::TYPE_BOOLEAN_OR,    {e0.top, e1}); }
+Expression operator& (Expression e0, Operand e1) { return e0.push(Operation::OpType::TYPE_BOOLEAN_AND,   {e0.top, e1}); }
+Expression operator^ (Expression e0, Operand e1) { return e0.push(Operation::OpType::TYPE_BOOLEAN_XOR,   {e0.top, e1}); }
+Expression bitwiseXor(Expression e0, Operand e1) { return e0.push(Operation::OpType::TYPE_BITWISE_XOR,   {e0.top, e1}); }
+Expression operator==(Expression e0, Operand e1) { return e0.push(Operation::OpType::TYPE_EQUAL,         {e0.top, e1}); }
+Expression operator!=(Expression e0, Operand e1) { return e0.push(Operation::OpType::TYPE_NOT_EQUAL,     {e0.top, e1}); }
+Expression operator<(Expression e0, Operand e1)  { return e0.push(Operation::OpType::TYPE_LESS,          {e0.top, e1}); }
+Expression operator>(Expression e0, Operand e1)  { return e0.push(Operation::OpType::TYPE_GREATER,       {e0.top, e1}); }
+Expression operator<=(Expression e0, Operand e1) { return e0.push(Operation::OpType::TYPE_LESS_EQUAL,    {e0.top, e1}); }
+Expression operator>=(Expression e0, Operand e1) { return e0.push(Operation::OpType::TYPE_GREATER_EQUAL, {e0.top, e1}); }
+Expression operator<<(Expression e0, Operand e1) { return e0.push(Operation::OpType::TYPE_SHIFT_LEFT,    {e0.top, e1}); }
+Expression operator>>(Expression e0, Operand e1) { return e0.push(Operation::OpType::TYPE_SHIFT_RIGHT,   {e0.top, e1}); }
+Expression operator+ (Expression e0, Operand e1) { return e0.push(Operation::OpType::TYPE_ADD,           {e0.top, e1}); }
+Expression operator- (Expression e0, Operand e1) { return e0.push(Operation::OpType::TYPE_SUBTRACT,      {e0.top, e1}); }
+Expression operator* (Expression e0, Operand e1) { return e0.push(Operation::OpType::TYPE_MULTIPLY,      {e0.top, e1}); }
+Expression operator/ (Expression e0, Operand e1) { return e0.push(Operation::OpType::TYPE_DIVIDE,        {e0.top, e1}); }
+Expression operator% (Expression e0, Operand e1) { return e0.push(Operation::OpType::TYPE_MOD,           {e0.top, e1}); }
+Expression operator&&(Expression e0, Operand e1) { return e0.push(Operation::OpType::TYPE_BITWISE_AND,   {e0.top, e1}); }
+Expression operator||(Expression e0, Operand e1) { return e0.push(Operation::OpType::TYPE_BITWISE_OR,    {e0.top, e1}); }
+Expression operator| (Operand e0, Expression e1) { return e1.push(Operation::OpType::TYPE_BOOLEAN_OR,    {e0, e1.top}); }
+Expression operator& (Operand e0, Expression e1) { return e1.push(Operation::OpType::TYPE_BOOLEAN_AND,   {e0, e1.top}); }
+Expression operator^ (Operand e0, Expression e1) { return e1.push(Operation::OpType::TYPE_BOOLEAN_XOR,   {e0, e1.top}); }
+Expression bitwiseXor(Operand e0, Expression e1) { return e1.push(Operation::OpType::TYPE_BITWISE_XOR,   {e0, e1.top}); }
+Expression operator==(Operand e0, Expression e1) { return e1.push(Operation::OpType::TYPE_EQUAL,         {e0, e1.top}); }
+Expression operator!=(Operand e0, Expression e1) { return e1.push(Operation::OpType::TYPE_NOT_EQUAL,     {e0, e1.top}); }
+Expression operator< (Operand e0, Expression e1) { return e1.push(Operation::OpType::TYPE_LESS,          {e0, e1.top}); }
+Expression operator> (Operand e0, Expression e1) { return e1.push(Operation::OpType::TYPE_GREATER,       {e0, e1.top}); }
+Expression operator<=(Operand e0, Expression e1) { return e1.push(Operation::OpType::TYPE_LESS_EQUAL,    {e0, e1.top}); }
+Expression operator>=(Operand e0, Expression e1) { return e1.push(Operation::OpType::TYPE_GREATER_EQUAL, {e0, e1.top}); }
+Expression operator<<(Operand e0, Expression e1) { return e1.push(Operation::OpType::TYPE_SHIFT_LEFT,    {e0, e1.top}); }
+Expression operator>>(Operand e0, Expression e1) { return e1.push(Operation::OpType::TYPE_SHIFT_RIGHT,   {e0, e1.top}); }
+Expression operator+ (Operand e0, Expression e1) { return e1.push(Operation::OpType::TYPE_ADD,           {e0, e1.top}); }
+Expression operator- (Operand e0, Expression e1) { return e1.push(Operation::OpType::TYPE_SUBTRACT,      {e0, e1.top}); }
+Expression operator* (Operand e0, Expression e1) { return e1.push(Operation::OpType::TYPE_MULTIPLY,      {e0, e1.top}); }
+Expression operator/ (Operand e0, Expression e1) { return e1.push(Operation::OpType::TYPE_DIVIDE,        {e0, e1.top}); }
+Expression operator% (Operand e0, Expression e1) { return e1.push(Operation::OpType::TYPE_MOD,           {e0, e1.top}); }
+Expression operator&&(Operand e0, Expression e1) { return e1.push(Operation::OpType::TYPE_BITWISE_AND,   {e0, e1.top}); }
+Expression operator||(Operand e0, Expression e1) { return e1.push(Operation::OpType::TYPE_BITWISE_OR,    {e0, e1.top}); }
 
-Expression booleanOr(Expression e0)  { return e0.push(Operation::BOOLEAN_OR,  {e0.top}); }
-Expression booleanAnd(Expression e0) { return e0.push(Operation::BOOLEAN_AND, {e0.top}); }
-Expression booleanXor(Expression e0) { return e0.push(Operation::BOOLEAN_XOR, {e0.top}); }
-Expression bitwiseOr(Expression e0)  { return e0.push(Operation::BITWISE_OR,  {e0.top}); }
-Expression bitwiseAnd(Expression e0) { return e0.push(Operation::BITWISE_AND, {e0.top}); }
-Expression bitwiseXor(Expression e0) { return e0.push(Operation::BITWISE_XOR, {e0.top}); }
-Expression add(Expression e0)        { return e0.push(Operation::ADD,         {e0.top}); }
-Expression mult(Expression e0)       { return e0.push(Operation::MULTIPLY,    {e0.top}); }
+Expression booleanOr(Expression e0)  { return e0.push(Operation::OpType::TYPE_BOOLEAN_OR,  {e0.top}); }
+Expression booleanAnd(Expression e0) { return e0.push(Operation::OpType::TYPE_BOOLEAN_AND, {e0.top}); }
+Expression booleanXor(Expression e0) { return e0.push(Operation::OpType::TYPE_BOOLEAN_XOR, {e0.top}); }
+Expression bitwiseOr(Expression e0)  { return e0.push(Operation::OpType::TYPE_BITWISE_OR,  {e0.top}); }
+Expression bitwiseAnd(Expression e0) { return e0.push(Operation::OpType::TYPE_BITWISE_AND, {e0.top}); }
+Expression bitwiseXor(Expression e0) { return e0.push(Operation::OpType::TYPE_BITWISE_XOR, {e0.top}); }
+Expression add(Expression e0)        { return e0.push(Operation::OpType::TYPE_ADD,         {e0.top}); }
+Expression mult(Expression e0)       { return e0.push(Operation::OpType::TYPE_MULTIPLY,    {e0.top}); }
 
-Expression array(vector<Expression> e0)      { Expression e; return e.push(Operation::ARRAY,       e.append(e0)); }
-Expression booleanOr(vector<Expression> e0)  { Expression e; return e.push(Operation::BOOLEAN_OR,  e.append(e0)); }
-Expression booleanAnd(vector<Expression> e0) { Expression e; return e.push(Operation::BOOLEAN_AND, e.append(e0)); }
-Expression booleanXor(vector<Expression> e0) { Expression e; return e.push(Operation::BOOLEAN_XOR, e.append(e0)); }
-Expression bitwiseOr(vector<Expression> e0)  { Expression e; return e.push(Operation::BITWISE_OR,  e.append(e0)); }
-Expression bitwiseAnd(vector<Expression> e0) { Expression e; return e.push(Operation::BITWISE_AND, e.append(e0)); }
-Expression bitwiseXor(vector<Expression> e0) { Expression e; return e.push(Operation::BITWISE_XOR, e.append(e0)); }
-Expression add(vector<Expression> e0)        { Expression e; return e.push(Operation::ADD,         e.append(e0)); }
-Expression mult(vector<Expression> e0)       { Expression e; return e.push(Operation::MULTIPLY,    e.append(e0)); }
+Expression array(vector<Expression> e0)      { Expression e; return e.push(Operation::OpType::TYPE_ARRAY,       e.append(e0)); }
+Expression booleanOr(vector<Expression> e0)  { Expression e; return e.push(Operation::OpType::TYPE_BOOLEAN_OR,  e.append(e0)); }
+Expression booleanAnd(vector<Expression> e0) { Expression e; return e.push(Operation::OpType::TYPE_BOOLEAN_AND, e.append(e0)); }
+Expression booleanXor(vector<Expression> e0) { Expression e; return e.push(Operation::OpType::TYPE_BOOLEAN_XOR, e.append(e0)); }
+Expression bitwiseOr(vector<Expression> e0)  { Expression e; return e.push(Operation::OpType::TYPE_BITWISE_OR,  e.append(e0)); }
+Expression bitwiseAnd(vector<Expression> e0) { Expression e; return e.push(Operation::OpType::TYPE_BITWISE_AND, e.append(e0)); }
+Expression bitwiseXor(vector<Expression> e0) { Expression e; return e.push(Operation::OpType::TYPE_BITWISE_XOR, e.append(e0)); }
+Expression add(vector<Expression> e0)        { Expression e; return e.push(Operation::OpType::TYPE_ADD,         e.append(e0)); }
+Expression mult(vector<Expression> e0)       { Expression e; return e.push(Operation::OpType::TYPE_MULTIPLY,    e.append(e0)); }
 
-Expression call(int func, vector<Expression> args) {
+Expression call(Operand::Type func, vector<Expression> args) {
 	args.insert(args.begin(), Expression::typeOf(func));
 
 	Expression result;
-	return result.push(Operation::CALL, result.append(args));
+	return result.push(Operation::OpType::TYPE_CALL, result.append(args));
 }
 
 int passesGuard(const State &encoding, const State &global, const Expression &guard, State *total) {

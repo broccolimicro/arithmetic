@@ -777,7 +777,7 @@ Mapping replace(OperationSet expr, const Expression &rules, Match match) {
 
 		if (match.top.empty()) {
 			slot.operands.clear();
-			slot.func = -1;
+			slot.func = Operation::OpType::TYPE_UNDEF;
 		} else {
 			// If this match doesn't cover all operands, we only want to replace
 			// the ones that are covered.

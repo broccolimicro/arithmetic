@@ -7,25 +7,13 @@
 namespace arithmetic
 {
 
-_CONST_INTERFACE_ARG(TypeSet,
-	(int, memberIndex, (int type, string name) const, (type, name)));
-
 // This structure represents a delay insensitive encoded integer
 // value with a single neutral state. This is purposefully limited
 // for now to keep the CHP language and simulator simple to
 // implement.
 struct Value
 {
-	Value();
-	Value(bool bval);
-	Value(int64_t ival);
-	Value(int ival);
-	Value(double rval);
-	Value(string sval);
-	~Value();
-
-	// used by "type"
-	enum {
+	enum ValType : int {
 		// can only be used to dereference a member of a structure
 		STRING = -5,
 		BOOL = -4,
@@ -40,9 +28,17 @@ struct Value
 		STRUCT = 0
 	};
 
-	int type;
+	Value();
+	Value(bool bval);
+	Value(int64_t ival);
+	Value(int ival);
+	Value(double rval);
+	Value(string sval);
+	~Value();
 
-	enum {
+	ValType type;
+
+	enum Bval : int16_t {
 		// used by "bval"
 		// At least one signal in this value is unstable or the encoding is in an
 		// illegal state.
@@ -59,7 +55,7 @@ struct Value
 	};
 
 	union {
-		int16_t bval;
+		Bval bval;
 		int64_t ival;
 		double rval;
 	};
@@ -132,6 +128,10 @@ Value boolOf(Value v);
 Value realOf(Value v);
 Value intOf(Value v);
 Value index(Value v, Value i);
+
+_CONST_INTERFACE_ARG(TypeSet,
+	(int, memberIndex, (Value::ValType type, string name) const, (type, name)));
+
 Value member(Value v0, Value v1, TypeSet types);
 
 // set operators of the lattice documented in Value::isSubsetOf()

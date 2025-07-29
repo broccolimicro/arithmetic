@@ -10,6 +10,15 @@ namespace arithmetic {
 struct Mapping;
 
 struct Operand {
+	// Used by "type"
+	enum Type {
+		UNDEF  = -1,
+		CONST  = 0,
+		VAR    = 1,
+		EXPR   = 2,
+		TYPE   = 3,
+	};
+
 	Operand(Value v = Value());
 	Operand(bool bval);
 	Operand(int64_t ival);
@@ -18,16 +27,7 @@ struct Operand {
 	Operand(string sval);
 	~Operand();
 
-	// Used by "type"
-	enum {
-		UNDEF  = -1,
-		CONST  = 0,
-		VAR    = 1,
-		EXPR   = 2,
-		TYPE   = 3,
-	};
-
-	int type;
+	Type type;
 
 	// used for CONST
 	Value cnst;
@@ -63,7 +63,7 @@ struct Operand {
 	static Operand varOf(size_t index);
 	Operand &apply(vector<int> varMap);
 	
-	static Operand typeOf(int type);
+	static Operand typeOf(Type type);
 };
 
 ostream &operator<<(ostream &os, Operand o);
@@ -101,8 +101,43 @@ struct Operator {
 };
 
 struct Operation {
+	enum OpType : int {
+		TYPE_UNDEF = -1,
+		TYPE_BITWISE_NOT = 0,
+		TYPE_IDENTITY = 1,
+		TYPE_NEGATION = 2,
+		TYPE_NEGATIVE = 3,
+		TYPE_VALIDITY = 4,
+		TYPE_BOOLEAN_NOT = 5,
+		TYPE_INVERSE = 6,
+		TYPE_BITWISE_OR = 7,
+		TYPE_BITWISE_AND = 8,
+		TYPE_BITWISE_XOR = 9,
+		TYPE_EQUAL = 10,
+		TYPE_NOT_EQUAL = 11,
+		TYPE_LESS = 12,
+		TYPE_GREATER = 13,
+		TYPE_LESS_EQUAL = 14,
+		TYPE_GREATER_EQUAL = 15,
+		TYPE_SHIFT_LEFT = 16,
+		TYPE_SHIFT_RIGHT = 17,
+		TYPE_ADD = 18,
+		TYPE_SUBTRACT = 19,
+		TYPE_MULTIPLY = 20,
+		TYPE_DIVIDE = 21,
+		TYPE_MOD = 22,
+		TYPE_TERNARY = 23,
+		TYPE_BOOLEAN_OR = 24,
+		TYPE_BOOLEAN_AND = 25,
+		TYPE_BOOLEAN_XOR = 26,
+		TYPE_ARRAY = 27,
+		TYPE_INDEX = 28,
+		TYPE_CALL = 29,
+		TYPE_MEMBER = 30
+	};
+
 	Operation();
-	Operation(int func, vector<Operand> args, size_t exprIndex=std::numeric_limits<size_t>::max());
+	Operation(OpType func, vector<Operand> args, size_t exprIndex=std::numeric_limits<size_t>::max());
 	~Operation();
 
 	static Operation undef(size_t exprIndex=std::numeric_limits<size_t>::max());
@@ -144,21 +179,21 @@ struct Operation {
 	static int push(Operator op);
 	static void loadOperators();
 
-	int func;
+	OpType func;
 	vector<Operand> operands;
 
 	// The expression index to map this operation to
 	size_t exprIndex;
 
-	static pair<Type, double> funcCost(int func, vector<Type> args);
+	static pair<Type, double> funcCost(OpType func, vector<Type> args);
 
-	void set(int func, vector<Operand> args);
+	void set(OpType func, vector<Operand> args);
 	bool isCommutative() const;
 	bool isReflexive() const;
 	bool isUndef() const;
 
-	static Value evaluate(int func, vector<Value> args);
-	static Value evaluate(int func, vector<Value> args, TypeSet types);
+	static Value evaluate(OpType func, vector<Value> args);
+	static Value evaluate(OpType func, vector<Value> args, TypeSet types);
 	Value evaluate(State values, vector<Value> expressions) const;
 	Value evaluate(State values, vector<Value> expressions, TypeSet types) const;
 	void propagate(State &result, const State &global, vector<Value> &expressions, const vector<Value> gexpressions, Value v) const;

@@ -6,32 +6,32 @@ namespace arithmetic
 {
 
 Value::Value() {
-	type = BOOL;
-	bval = UNSTABLE;
+	type = ValType::BOOL;
+	bval = Bval::UNSTABLE;
 }
 
 Value::Value(bool bval) {
-	this->type = BOOL;
-	this->bval = (bval ? VALID : NEUTRAL);
+	this->type = ValType::BOOL;
+	this->bval = (bval ? Bval::VALID : Bval::NEUTRAL);
 }
 
 Value::Value(int64_t ival) {
-	this->type = INT;
+	this->type = ValType::INT;
 	this->ival = ival;
 }
 
 Value::Value(int ival) {
-	this->type = INT;
+	this->type = ValType::INT;
 	this->ival = (int64_t)ival;
 }
 
 Value::Value(double rval) {
-	this->type = REAL;
+	this->type = ValType::REAL;
 	this->rval = rval;
 }
 
 Value::Value(string sval) {
-	this->type = STRING;
+	this->type = ValType::STRING;
 	this->sval = sval;
 }
 
@@ -39,35 +39,35 @@ Value::~Value() {
 }
 
 bool Value::isValid() const {
-	return ((type == Value::BOOL and bval == Value::VALID)
-		or type == Value::INT
-		or type == Value::REAL);
+	return ((type == ValType::BOOL and bval == Bval::VALID)
+		or type == ValType::INT
+		or type == ValType::REAL);
 }
 
 bool Value::isNeutral() const {
-	return type == Value::BOOL and bval == Value::NEUTRAL;
+	return type == ValType::BOOL and bval == Bval::NEUTRAL;
 }
 
 bool Value::isUnstable() const {
-	return (type == Value::BOOL and bval == Value::UNSTABLE) or type == Value::STRING;
+	return (type == ValType::BOOL and bval == Bval::UNSTABLE) or type == ValType::STRING;
 }
 
 bool Value::isUnknown() const {
-	return type == Value::BOOL and bval == Value::UNKNOWN;
+	return type == ValType::BOOL and bval == Bval::UNKNOWN;
 }
 
 const char *Value::ctypeName() const {
-	if (type == STRING) {
+	if (type == ValType::STRING) {
 		return "string";
-	} else if (type == BOOL) {
+	} else if (type == ValType::BOOL) {
 		return "bool";
-	} else if (type == INT) {
+	} else if (type == ValType::INT) {
 		return "int";
-	} else if (type == REAL) {
+	} else if (type == ValType::REAL) {
 		return "real";
-	} else if (type == ARRAY) {
+	} else if (type == ValType::ARRAY) {
 		return "array";
-	} else if (type >= STRUCT) {
+	} else if (type >= ValType::STRUCT) {
 		return "struct";
 	}
 	return "void";
@@ -79,56 +79,56 @@ string Value::typeName() const {
 
 Value Value::X() {
 	Value v;
-	v.type = BOOL;
-	v.bval = UNSTABLE;
+	v.type = ValType::BOOL;
+	v.bval = Bval::UNSTABLE;
 	return v;
 }
 
 Value Value::U() {
 	Value v;
-	v.type = BOOL;
-	v.bval = UNKNOWN;
+	v.type = ValType::BOOL;
+	v.bval = Bval::UNKNOWN;
 	return v;
 }
 
 Value Value::stringOf(string sval) {
 	Value v;
-	v.type = STRING;
+	v.type = ValType::STRING;
 	v.sval = sval;
 	return v;
 }
 
 Value Value::boolOf(bool bval) {
 	Value v;
-	v.type = BOOL;
-	v.bval = (bval ? VALID : NEUTRAL);
+	v.type = ValType::BOOL;
+	v.bval = (bval ? Bval::VALID : Bval::NEUTRAL);
 	return v;
 }
 
 Value Value::intOf(int64_t ival) {
 	Value v;
-	v.type = INT;
+	v.type = ValType::INT;
 	v.ival = ival;
 	return v;
 }
 
 Value Value::realOf(double rval) {
 	Value v;
-	v.type = REAL;
+	v.type = ValType::REAL;
 	v.rval = rval;
 	return v;
 }
 
 Value Value::arrOf(vector<Value> arr) {
 	Value v;
-	v.type = ARRAY;
+	v.type = ValType::ARRAY;
 	v.arr = arr;
 	return v;
 }
 
 Value Value::structOf(vector<Value> arr) {
 	Value v;
-	v.type = STRUCT;
+	v.type = ValType::STRUCT;
 	v.arr = arr;
 	return v;
 }
@@ -144,16 +144,16 @@ Value Value::structOf(vector<Value> arr) {
 //       v   v     .
 //      unknown    .
 bool Value::isSubsetOf(Value v) const {
-	if ((v.type == BOOL and v.bval == UNKNOWN)
-		or (type == INT and v.type == INT and ival == v.ival)
-		or (type == REAL and v.type == REAL and rval == v.rval)
-		or (type == BOOL and v.type == BOOL and bval == v.bval)
-		or (type == BOOL and bval == UNSTABLE
-			and (v.type == INT
-				or v.type == REAL
-				or (v.type == BOOL
-					and (v.bval == VALID
-						or v.bval == NEUTRAL))))) {
+	if ((v.type == ValType::BOOL and v.bval == Bval::UNKNOWN)
+		or (type == ValType::INT and v.type == ValType::INT and ival == v.ival)
+		or (type == ValType::REAL and v.type == ValType::REAL and rval == v.rval)
+		or (type == ValType::BOOL and v.type == ValType::BOOL and bval == v.bval)
+		or (type == ValType::BOOL and bval == Bval::UNSTABLE
+			and (v.type == ValType::INT
+				or v.type == ValType::REAL
+				or (v.type == ValType::BOOL
+					and (v.bval == Bval::VALID
+						or v.bval == Bval::NEUTRAL))))) {
 		return true;
 	}
 

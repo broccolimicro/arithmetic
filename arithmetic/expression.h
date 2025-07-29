@@ -16,8 +16,8 @@ namespace arithmetic {
 // 3. operations[1]+operations[2]
 struct Expression {
 	Expression(Operand top = Operand::undef());
-	Expression(int func, vector<Operand> args);
-	Expression(int func, vector<Expression> args);
+	Expression(Operation::OpType func, vector<Operand> args);
+	Expression(Operation::OpType func, vector<Expression> args);
 	~Expression();
 
 	SimpleOperationSet sub;
@@ -33,7 +33,7 @@ struct Expression {
 	static Expression structOf(vector<Value> arr);
 	static Expression stringOf(string sval);
 	static Expression varOf(size_t index);
-	static Expression typeOf(int type);
+	static Expression typeOf(Operand::Type type);
 
 	vector<Operand> exprIndex() const;
 	const Operation *getExpr(size_t index) const;
@@ -47,7 +47,7 @@ struct Expression {
 
 	Operand append(Expression arg);
 	vector<Operand> append(vector<Expression> arg);
-	Expression &push(int func, vector<Operand> args);
+	Expression &push(Operation::OpType func, vector<Operand> args);
 
 	bool isNull() const;
 	bool isConstant() const;
@@ -152,7 +152,7 @@ Expression bitwiseXor(vector<Expression> e0);
 Expression add(vector<Expression> e0);
 Expression mult(vector<Expression> e0);
 
-Expression call(int func, vector<Expression> args);
+Expression call(Operand::Type func, vector<Expression> args);
 
 int passesGuard(const State &encoding, const State &global, const Expression &guard, State *total);
 Expression weakestGuard(const Expression &guard, const Expression &exclude);

@@ -44,7 +44,7 @@ void SimpleOperationSet::clear() {
 }
 
 size_t SimpleOperationSet::size() const {
-	return elems.size();
+	return elems.count();
 }
 
 string SimpleOperationSet::to_string() const {

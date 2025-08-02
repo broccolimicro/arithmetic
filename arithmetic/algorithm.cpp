@@ -480,7 +480,7 @@ Expression subExpr(ConstOperationSet e0, Operand top) {
 // 2. remove reflexive operations
 // 3. remove unitary commutative operations (if not rules)
 // 4. remove dangling operations
-// ------------ 5. merge successive commutative operations
+// 5. merge successive commutative operations
 // 6. sort operands into a canonical order for commutative operations
 Mapping tidy(OperationSet expr, vector<Operand> top, bool rules) {
 	// Start from the top and do depth first search. That zips up the graph for
@@ -495,6 +495,7 @@ Mapping tidy(OperationSet expr, vector<Operand> top, bool rules) {
 
 	Mapping result;
 	vector<size_t> keep;
+	vector<size_t> refcount;
 
 	// cout << ::to_string(exprMap) << " " << exprMapIsDirty << endl;
 	// cout << *this << endl;
@@ -503,7 +504,29 @@ Mapping tidy(OperationSet expr, vector<Operand> top, bool rules) {
 		Operation curr = *currIter;
 		// cout << "start: " << curr.get() << endl;
 		curr.apply(result);
+
+		bool squish = false;
+		for (int i = (int)curr.operands.size()-1; i >= 0; i--) {
+			Operand op = curr.operands[i];
+			if (op.isExpr()) {
+				auto opExpr = expr.getExpr(op.index);
+				if (curr.isCommutative() and opExpr->func == curr.func) {
+					curr.operands.erase(curr.operands.begin() + i);
+					curr.operands.insert(curr.operands.begin() + i, opExpr->operands.begin(), opExpr->operands.end());
+					squish = true;
+				} else {
+					if (op.index >= refcount.size()) {
+						refcount.resize(op.index+1, 0u);
+					}
+					refcount[op.index]++;
+				}
+			}
+		}
+
 		curr.tidy();
+		if (squish) {
+			expr.setExpr(curr);
+		}
 		// cout << "replaced: " << curr.get() << endl;
 
 		if (curr.operands.size() == 1u and curr.operands[0].isConst()) {
@@ -529,8 +552,19 @@ Mapping tidy(OperationSet expr, vector<Operand> top, bool rules) {
 			expr.setExpr(curr);
 			keep.push_back(curr.exprIndex);
 		}
+
 		// cout << ::to_string(curr.seen) << endl;
 		// cout << *this << endl;
+	}
+
+	top = result.map(top);
+	for (auto i = top.begin(); i != top.end(); i++) {
+		if (i->isExpr()) {
+			if (i->index >= refcount.size()) {
+				refcount.resize(i->index+1, 0u);
+			}
+			refcount[i->index]++;
+		}
 	}
 
 	// TODO(edward.bingham) This ends up being an N^2 algorithm because each
@@ -539,7 +573,7 @@ Mapping tidy(OperationSet expr, vector<Operand> top, bool rules) {
 	for (auto i = index.begin(); i != index.end(); i++) {
 		if (result.has(*i)) {
 			expr.eraseExpr(i->index);
-		} else if (i->index >= currIter.seen.size() or not currIter.seen[i->index]) {
+		} else if (i->index >= currIter.seen.size() or not currIter.seen[i->index] or i->index >= refcount.size() or refcount[i->index] == 0u) {
 			expr.eraseExpr(i->index);
 			result.set(*i, Operand::undef());
 		}
@@ -618,6 +652,7 @@ Mapping tidy(OperationSet expr, vector<Operand> top, bool rules) {
 // top of the match. These must be preserved through a replace.
 vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const Expression &rules, size_t count, bool fwd, bool bwd) {
 	if (not verifyRulesFormat(rules, rules.top, true)) {
+		//cout << rules << endl;
 		return vector<Match>();
 	}
 
@@ -915,14 +950,14 @@ Mapping minimize(OperationSet expr, vector<Operand> top, Expression rules) {
 	result.apply(tidy(expr, top));
 	vector<Match> tokens = search(expr, top, rules, 1u);
 	while (not tokens.empty()) {
-		//cout << "Expr: " << ::to_string(top) << " " << expr.cast<Expression>() << endl;
-		//cout << "Match: " << ::to_string(tokens) << endl;
+		// cout << "Expr: " << ::to_string(top) << " " << expr.cast<Expression>() << endl;
+		// cout << "Match: " << ::to_string(tokens) << endl;
 		Mapping sub = replace(expr, rules, tokens.back());
-		//cout << "Replace: " << expr.cast<Expression>() << endl;
+		// cout << "Replace: " << expr.cast<Expression>() << endl;
 		sub.apply(tidy(expr, top));
 		top = sub.map(top);
 		result.apply(sub);
-		//cout << "Canon: " << ::to_string(top) << " " << expr.cast<Expression>() << endl << endl;
+		// cout << "Canon: " << ::to_string(top) << " " << expr.cast<Expression>() << endl << endl;
 		tokens = search(expr, top, rules, 1u);
 	}
 

@@ -16,8 +16,8 @@ namespace arithmetic {
 // 3. operations[1]+operations[2]
 struct Expression {
 	Expression(Operand top = Operand::undef());
-	Expression(Operation::OpType func, vector<Operand> args);
-	Expression(Operation::OpType func, vector<Expression> args);
+	Expression(int func, vector<Operand> args);
+	Expression(int func, vector<Expression> args);
 	~Expression();
 
 	SimpleOperationSet sub;
@@ -47,7 +47,7 @@ struct Expression {
 
 	Operand append(Expression arg);
 	vector<Operand> append(vector<Expression> arg);
-	Expression &push(Operation::OpType func, vector<Operand> args);
+	Expression &push(int func, vector<Operand> args);
 
 	bool isNull() const;
 	bool isConstant() const;
@@ -59,6 +59,13 @@ struct Expression {
 	Expression &apply(Mapping m);
 
 	string to_string() const;
+
+	Expression operator()(Expression idx) const;
+	Expression operator()(Expression from, Expression to) const;
+	Expression operator()(Operand idx) const;
+	Expression operator()(Operand from, Operand to) const;
+	Expression operator()(Operand from, Expression to) const;
+	Expression operator()(Expression from, Operand to) const;
 };
 
 bool areSame(Expression e0, Expression e1);

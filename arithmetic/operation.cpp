@@ -324,10 +324,10 @@ Operator::~Operator() {
 
 Operation::Operation() {
 	exprIndex = std::numeric_limits<size_t>::max();
-	func = OpType::TYPE_IDENTITY;
+	func = (OpType)IDENTITY;
 }
 
-Operation::Operation(OpType func, vector<Operand> args, size_t exprIndex) {
+Operation::Operation(int func, vector<Operand> args, size_t exprIndex) {
 	this->exprIndex = exprIndex;
 	set(func, args);
 }
@@ -336,7 +336,7 @@ Operation::~Operation() {
 }
 
 Operation Operation::undef(size_t exprIndex) {
-	return Operation(Operation::OpType::TYPE_UNDEF, vector<Operand>(), exprIndex);
+	return Operation(Operation::UNDEF, vector<Operand>(), exprIndex);
 }
 
 int Operation::push(Operator op) {
@@ -394,7 +394,7 @@ void Operation::loadOperators() {
 	} 
 }
 
-pair<Type, double> Operation::funcCost(OpType func, vector<Type> args) {
+pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
 	// If I have two fixed-point inputs, then the offset determines the
 	// complexity of the operator because it can affect the overlap of the two
 	// inputs. Again, because encodings may not be base-2, the offset may not be
@@ -404,35 +404,35 @@ pair<Type, double> Operation::funcCost(OpType func, vector<Type> args) {
 	Type result(0.0, 0.0, 0.0);
 	double cost = 0.0;
 	std::array<double, 2> ovr;
-	if (func == Operation::OpType::TYPE_BITWISE_NOT) { // bitwise not (!) -- rotate digit for non-base-2
+	if (func == Operation::BITWISE_NOT) { // bitwise not (!) -- rotate digit for non-base-2
 		result = args[0];
 		result.delay += 1.0;
 		cost = args[0].width;
 		return {result, cost};
-	} else if (func == Operation::OpType::TYPE_IDENTITY) { // identity
+	} else if (func == Operation::IDENTITY) { // identity
 		result = args[0];
 		cost = 0.0;
 		return {result, cost};
-	} else if (func == Operation::OpType::TYPE_NEGATION) { // negation (-)
+	} else if (func == Operation::NEGATION) { // negation (-)
 		result = args[0];
 		result.delay += args[0].width;
 		cost = args[0].width;
 		return {result, cost};
-	} else if (func == Operation::OpType::TYPE_NEGATIVE) {
+	} else if (func == Operation::NEGATIVE) {
 		result = Type(0.0, 0.0, 0.0);
 		cost = 0.0;
 		return {result, cost};
-	} else if (func == Operation::OpType::TYPE_INVERSE) { // 1/x
+	} else if (func == Operation::INVERSE) { // 1/x
 		// TODO(edward.bingham) I'm really not sure about this
 		result = Type(1.0/args[0].coeff, args[0].width, args[0].delay + args[0].width);
 		cost = args[0].width*args[0].width;
 		return {result, cost};
-	} else if (func == Operation::OpType::TYPE_VALIDITY
-		or func == Operation::OpType::TYPE_BOOLEAN_NOT) { // boolean not (~)
+	} else if (func == Operation::VALIDITY
+		or func == Operation::BOOLEAN_NOT) { // boolean not (~)
 		result = Type(0.0, 0.0, log2(args[0].width));
 		cost = args[0].width;
 		return {result, cost};
-	} else if (func == Operation::OpType::TYPE_BITWISE_OR) { // bitwise or (||) -- max of digit for non-base-2
+	} else if (func == Operation::BITWISE_OR) { // bitwise or (||) -- max of digit for non-base-2
 		result = args[0];
 		for (i = 1; i < (int)args.size(); i++) {
 			ovr = overlap(result, args[i]);
@@ -445,7 +445,7 @@ pair<Type, double> Operation::funcCost(OpType func, vector<Type> args) {
 		}
 		result.delay += (double)args.size() - 1.0;
 		return {result, cost};
-	} else if (func == Operation::OpType::TYPE_BITWISE_AND) { // bitwise and (&&)
+	} else if (func == Operation::BITWISE_AND) { // bitwise and (&&)
 		result = args[0];
 		for (i = 1; i < (int)args.size(); i++) {
 			ovr = overlap(result, args[i]);
@@ -458,35 +458,35 @@ pair<Type, double> Operation::funcCost(OpType func, vector<Type> args) {
 		result.delay += (double)args.size() - 1.0;
 		cost = result.width*(double)(args.size()-1);
 		return {result, cost};
-	} else if (func == Operation::OpType::TYPE_EQUAL
-		or func == Operation::OpType::TYPE_NOT_EQUAL) { // inequality (!=)
+	} else if (func == Operation::EQUAL
+		or func == Operation::NOT_EQUAL) { // inequality (!=)
 		result = Type(0.0, 0.0, 0.0);
 		ovr = overlap(args[0], args[1]);
 		result.delay = max(args[0].delay, args[1].delay) + log2(ovr[1]);
 		cost = ovr[1];
 		return {result, cost};
-	} else if (func == Operation::OpType::TYPE_LESS
-		or func == Operation::OpType::TYPE_GREATER
-		or func == Operation::OpType::TYPE_LESS_EQUAL
-		or func == Operation::OpType::TYPE_GREATER_EQUAL) { // ">=";
+	} else if (func == Operation::LESS
+		or func == Operation::GREATER
+		or func == Operation::LESS_EQUAL
+		or func == Operation::GREATER_EQUAL) { // ">=";
 		result = Type(0.0, 0.0, 0.0);
 		ovr = overlap(args[0], args[1]);
 		result.delay = max(args[0].delay, args[1].delay) + ovr[1];
 		cost = ovr[1];
 		return {result, cost};
-	} else if (func == Operation::OpType::TYPE_SHIFT_LEFT) { // shift left  "<<" (arithmetic/logical based on type?)
+	} else if (func == Operation::SHIFT_LEFT) { // shift left  "<<" (arithmetic/logical based on type?)
 		result = Type(args[0].coeff*pow(2.0, args[1].coeff),
 		              args[0].width + args[1].coeff*pow(2.0, args[1].width) - args[1].coeff,
 									max(args[0].delay, args[1].delay)+args[1].width);
 		cost = args[0].width*args[1].width;
 		return {result, cost};
-	} else if (func == Operation::OpType::TYPE_SHIFT_RIGHT) { // shift right ">>" (arithmetic/logical based on type?)
+	} else if (func == Operation::SHIFT_RIGHT) { // shift right ">>" (arithmetic/logical based on type?)
 		result = Type(args[0].coeff/pow(2.0, args[1].coeff*pow(2.0, args[1].width)),
 		              args[0].width + args[1].coeff*pow(2.0, args[1].width) - args[1].coeff,
 									max(args[0].delay, args[1].delay)+args[1].width);
 		cost = args[0].width*args[1].width;
 		return {result, cost};
-	} else if (func == Operation::OpType::TYPE_ADD or func == Operation::OpType::TYPE_SUBTRACT) { // subtraction "-"
+	} else if (func == Operation::ADD or func == Operation::SUBTRACT) { // subtraction "-"
 		// TODO(edward.bingham) I should really keep track of overlapping intervals
 		// here and then the critical path is the total overlap at the bit with
 		// maximum overlap. If there are multiple bits with the same maximum
@@ -511,7 +511,7 @@ pair<Type, double> Operation::funcCost(OpType func, vector<Type> args) {
 		}
 		result.delay += (double)args.size() + result.width;
 		return {result, cost};
-	} else if (func == Operation::OpType::TYPE_MULTIPLY) { // multiply "*"
+	} else if (func == Operation::MULTIPLY) { // multiply "*"
 		// TODO(edward.bingham) This assumes a set of N sequental multiplications.
 		// Doing so completely ignores multiplication trees and bit-level
 		// parallelism. It's likely going to make iterative multiplication look
@@ -526,7 +526,7 @@ pair<Type, double> Operation::funcCost(OpType func, vector<Type> args) {
 		}
 		result.delay += result.width;
 		return {result, cost};
-	} else if (func == Operation::OpType::TYPE_DIVIDE or func == Operation::OpType::TYPE_MOD) { // modulus "%"
+	} else if (func == Operation::DIVIDE or func == Operation::MOD) { // modulus "%"
 		// TODO(edward.bingham) I'm really not sure about this
 		result = args[0];
 		cost = 0.0;
@@ -536,23 +536,23 @@ pair<Type, double> Operation::funcCost(OpType func, vector<Type> args) {
 			result.coeff /= args[i].coeff;
 		}
 		return {result, cost};
-	} else if (func == Operation::OpType::TYPE_TERNARY) { // ternary operator "a ? b : c"
+	} else if (func == Operation::TERNARY) { // ternary operator "a ? b : c"
 		ovr = overlap(args[1], args[2]);
 		result.coeff = min(args[1].coeff, args[2].coeff);
 		result.width = ovr[1];
 		result.delay = max(max(args[0].delay, args[1].delay), args[2].delay) + 1.0;
 		cost = ovr[1];
 		return {result, cost};
-	} else if (func == Operation::OpType::TYPE_BOOLEAN_AND
-		or func == Operation::OpType::TYPE_BOOLEAN_OR
-		or func == Operation::OpType::TYPE_BOOLEAN_XOR) { // boolean AND "&"
+	} else if (func == Operation::BOOLEAN_AND
+		or func == Operation::BOOLEAN_OR
+		or func == Operation::BOOLEAN_XOR) { // boolean AND "&"
 		result = Type(0.0, 0.0, args[0].delay);
 		for (i = 1; i < (int)args.size(); i++) {
 			result.delay = max(result.delay, args[i].delay);
 		}
 		cost = 0.0;
 		return {result, cost};
-	} else if (func == Operation::OpType::TYPE_ARRAY) { // array ","
+	} else if (func == Operation::ARRAY) { // array ","
 		// TODO(edward.bingham) we need to create a way to handle arrayed types
 		result = args[0];
 		for (i = 1; i < (int)args.size(); i++) {
@@ -561,7 +561,7 @@ pair<Type, double> Operation::funcCost(OpType func, vector<Type> args) {
 		result.bounds.push_back((int)args.size());
 		cost = 0.0;
 		return {result, cost};
-	} else if (func == Operation::OpType::TYPE_INDEX) { // index "."
+	} else if (func == Operation::INDEX) { // index "."
 		// Need to select the appropriate type from the array
 		// but we can compute cost
 		result = args[0];
@@ -573,8 +573,8 @@ pair<Type, double> Operation::funcCost(OpType func, vector<Type> args) {
 	return {result, cost};
 }
 
-void Operation::set(OpType func, vector<Operand> args) {
-	this->func = func;
+void Operation::set(int func, vector<Operand> args) {
+	this->func = (OpType)func;
 	this->operands = args;
 }
 
@@ -596,128 +596,130 @@ bool Operation::isUndef() const {
 	return func == Operation::UNDEF;
 }
 
-Value Operation::evaluate(OpType func, vector<Value> args) {
-	if (func == Operation::OpType::TYPE_BITWISE_NOT) {
+Value Operation::evaluate(int func, vector<Value> args) {
+	if (func == Operation::BITWISE_NOT) {
 		return !args[0];
-	} else if (func == Operation::OpType::TYPE_IDENTITY) {
+	} else if (func == Operation::IDENTITY) {
 		return args[0];
-	} else if (func == Operation::OpType::TYPE_NEGATION) {
+	} else if (func == Operation::NEGATION) {
 		return -args[0];
-	} else if (func == Operation::OpType::TYPE_NEGATIVE) {
+	} else if (func == Operation::NEGATIVE) {
 		return args[0] < Value(0);
-	} else if (func == Operation::OpType::TYPE_VALIDITY) {
+	} else if (func == Operation::VALIDITY) {
 		return valid(args[0]);
-	} else if (func == Operation::OpType::TYPE_BOOLEAN_NOT) {
+	} else if (func == Operation::BOOLEAN_NOT) {
 		return ~args[0];
-	} else if (func == Operation::OpType::TYPE_INVERSE) {
+	} else if (func == Operation::INVERSE) {
 		return inv(args[0]);
-	} else if (func == Operation::OpType::TYPE_BITWISE_OR) {
+	} else if (func == Operation::BITWISE_OR) {
 		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] || args[i];
 		}
 		return args[0];
-	} else if (func == Operation::OpType::TYPE_BITWISE_AND) {
+	} else if (func == Operation::BITWISE_AND) {
 		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] && args[i];
 		}
 		return args[0];
-	} else if (func == Operation::OpType::TYPE_BOOLEAN_XOR) {
+	} else if (func == Operation::BOOLEAN_XOR) {
 		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] ^ args[i];
 		}
 		return args[0];
-	} else if (func == Operation::OpType::TYPE_EQUAL) {
+	} else if (func == Operation::EQUAL) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] == args[1]);
-	} else if (func == Operation::OpType::TYPE_NOT_EQUAL) {
+	} else if (func == Operation::NOT_EQUAL) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] != args[1]);
-	} else if (func == Operation::OpType::TYPE_LESS) {
+	} else if (func == Operation::LESS) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] <  args[1]);
-	} else if (func == Operation::OpType::TYPE_GREATER) {
+	} else if (func == Operation::GREATER) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] >  args[1]);
-	} else if (func == Operation::OpType::TYPE_LESS_EQUAL) {
+	} else if (func == Operation::LESS_EQUAL) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] <= args[1]);
-	} else if (func == Operation::OpType::TYPE_GREATER_EQUAL) {
+	} else if (func == Operation::GREATER_EQUAL) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] >= args[1]);
-	} else if (func == Operation::OpType::TYPE_SHIFT_LEFT) {
+	} else if (func == Operation::SHIFT_LEFT) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] << args[1]);
-	} else if (func == Operation::OpType::TYPE_SHIFT_RIGHT) { 
+	} else if (func == Operation::SHIFT_RIGHT) { 
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] >> args[1]);
-	} else if (func == Operation::OpType::TYPE_ADD) { 
+	} else if (func == Operation::ADD) { 
 		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] + args[i];
 		}
 		return args[0];
-	} else if (func == Operation::OpType::TYPE_SUBTRACT) { 
+	} else if (func == Operation::SUBTRACT) { 
 		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] - args[i];
 		}
 		return args[0];
-	} else if (func == Operation::OpType::TYPE_MULTIPLY) { 
+	} else if (func == Operation::MULTIPLY) { 
 		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] * args[i];
 		}
 		return args[0];
-	} else if (func == Operation::OpType::TYPE_DIVIDE) { 
+	} else if (func == Operation::DIVIDE) { 
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] /  args[1]);
-	} else if (func == Operation::OpType::TYPE_MOD) { 
+	} else if (func == Operation::MOD) { 
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] %  args[1]);
-	} else if (func == Operation::OpType::TYPE_TERNARY) { // ternary operator
+	} else if (func == Operation::TERNARY) { // ternary operator
 		if (args.size() == 1u) {
 			return args[0];
 		} else if (args.size() == 2u) {
 			args.push_back(Value::X());
 		}
 		return args[0] ? args[1] : args[2];
-	} else if (func == Operation::OpType::TYPE_BOOLEAN_AND) { 
+	} else if (func == Operation::BOOLEAN_AND) { 
 		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] & args[i];
 		}
 		return args[0];
-	} else if (func == Operation::OpType::TYPE_BOOLEAN_OR) { 
+	} else if (func == Operation::BOOLEAN_OR) { 
 		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] | args[i];
 		}
 		return args[0];
-	} else if (func == Operation::OpType::TYPE_ARRAY) { // concat arrays
+	} else if (func == Operation::ARRAY) { // concat arrays
 		return Value::arrOf(args);
-	} else if (func == Operation::OpType::TYPE_INDEX) { // index
+	} else if (func == Operation::INDEX and args.size() == 2) { // index
 		return index(args[0], args[1]);
+	} else if (func == Operation::INDEX and args.size() == 3) { // slice
+		return index(args[0], args[1], args[1]);
 	}
 	printf("internal: function %d not implemented\n", func);
 	return args[0];
 }
 
-Value Operation::evaluate(OpType func, vector<Value> args, TypeSet types) {
+Value Operation::evaluate(int func, vector<Value> args, TypeSet types) {
 	if (func == Operation::MEMBER) {
 		return member(args[0], args[1], types);
 	}

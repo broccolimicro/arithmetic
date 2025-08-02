@@ -277,9 +277,8 @@ TEST(Expression, TidyCommutative) {
 	e.top = tidy(e, {e.top}).map(e.top);
 	cout << e << endl;
 	ASSERT_EQ(e.size(), 1u);
-	EXPECT_TRUE(e.top.isConst());
-	EXPECT_EQ(e.top.cnst.type, Value::INT);
-	EXPECT_EQ(e.top.cnst.ival, 12);
+	EXPECT_TRUE(e.top.isExpr());
+	EXPECT_EQ(e.getExpr(e.top.index)->operands.size(), 4u);
 }
 
 TEST(Expression, Simplify) {

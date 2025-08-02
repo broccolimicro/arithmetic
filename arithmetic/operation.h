@@ -137,7 +137,7 @@ struct Operation {
 	};
 
 	Operation();
-	Operation(OpType func, vector<Operand> args, size_t exprIndex=std::numeric_limits<size_t>::max());
+	Operation(int func, vector<Operand> args, size_t exprIndex=std::numeric_limits<size_t>::max());
 	~Operation();
 
 	static Operation undef(size_t exprIndex=std::numeric_limits<size_t>::max());
@@ -185,15 +185,15 @@ struct Operation {
 	// The expression index to map this operation to
 	size_t exprIndex;
 
-	static pair<Type, double> funcCost(OpType func, vector<Type> args);
+	static pair<Type, double> funcCost(int func, vector<Type> args);
 
-	void set(OpType func, vector<Operand> args);
+	void set(int func, vector<Operand> args);
 	bool isCommutative() const;
 	bool isReflexive() const;
 	bool isUndef() const;
 
-	static Value evaluate(OpType func, vector<Value> args);
-	static Value evaluate(OpType func, vector<Value> args, TypeSet types);
+	static Value evaluate(int func, vector<Value> args);
+	static Value evaluate(int func, vector<Value> args, TypeSet types);
 	Value evaluate(State values, vector<Value> expressions) const;
 	Value evaluate(State values, vector<Value> expressions, TypeSet types) const;
 	void propagate(State &result, const State &global, vector<Value> &expressions, const vector<Value> gexpressions, Value v) const;

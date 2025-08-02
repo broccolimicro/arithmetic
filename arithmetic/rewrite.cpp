@@ -59,9 +59,6 @@ Expression rewriteBasic() {
 		(isValid(a)|b) > (a|b),
 		(isValid(a|b)) > (a|b),
 		
-		(a & booleanAnd(b)) > (a & b),
-		(a | booleanOr(b)) > (a | b),
-
 		(a-b) > (a+(-b)),
 		(a+a) > (2*a),
 		(a+(-a)) > (0),
@@ -71,7 +68,6 @@ Expression rewriteBasic() {
 		(true+a) > (a),
 		(isValid(a+b)) > (a&b),
 		(~(a+b)) > (~a|~b),
-		(a + add(b)) > (a + b),
 		(isValid(-a)) > (isValid(a)),
 
 		(a*inv(a)) > (1),
@@ -84,7 +80,6 @@ Expression rewriteBasic() {
 		(true+a) > (a),
 		(isValid(a*b)) > (a&b),
 		(~(a*b)) > (~a|~b),
-		(a * mult(b)) > (a * b),
 		(isValid(inv(a))) > (isValid(a)),
 	
 		(a > b) > (b < a),
@@ -98,9 +93,7 @@ Expression rewriteBasic() {
 		(0 || a) > (a),
 		(-1 && a) > (a),
 		(-1 || a) > (-1),
-		(a && bitwiseAnd(b)) > (a && b),
 		(a || a) > (a),
-		(a || bitwiseOr(b)) > (a || b),
 		(!!a) > (a)
 	}));
 
@@ -172,9 +165,6 @@ Expression rewriteHuman() {
 		(isValid(a)|b) > (a|b),
 		(isValid(a|b)) > (a|b),
 		
-		(a & booleanAnd(b)) > (a & b),
-		(a | booleanOr(b)) > (a | b),
-
 		(a+a) > (2*a),
 		(a+(-a)) > (0),
 		(false+a) > (false),
@@ -183,7 +173,6 @@ Expression rewriteHuman() {
 		(true+a) > (a),
 		(isValid(a+b)) > (a&b),
 		(~(a+b)) > (~a|~b),
-		(a + add(b)) > (a + b),
 		(isValid(-a)) > (isValid(a)),
 
 		(a*inv(a)) > (1),
@@ -195,7 +184,6 @@ Expression rewriteHuman() {
 		(true+a) > (a),
 		(isValid(a*b)) > (a&b),
 		(~(a*b)) > (~a|~b),
-		(a * mult(b)) > (a * b),
 		(isValid(inv(a))) > (isValid(a)),
 	
 		(a > b) > (b < a),
@@ -207,9 +195,7 @@ Expression rewriteHuman() {
 		(0 || a) > (a),
 		(-1 && a) > (a),
 		(-1 || a) > (-1),
-		(a && bitwiseAnd(b)) > (a && b),
 		(a || a) > (a),
-		(a || bitwiseOr(b)) > (a || b),
 		(!!a) > (a)
 	}));
 

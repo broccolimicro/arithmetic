@@ -128,6 +128,7 @@ Value boolOf(Value v);
 Value realOf(Value v);
 Value intOf(Value v);
 Value index(Value v, Value i);
+Value index(Value v, Value f, Value t);
 
 _CONST_INTERFACE_ARG(TypeSet,
 	(int, memberIndex, (Value::ValType type, string name) const, (type, name)));

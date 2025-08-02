@@ -702,10 +702,29 @@ Value index(Value v, Value i) {
 		if (i.ival >= 0 and i.ival < (int)v.arr.size()) {
 			return v.arr[i.ival];
 		}
-		printf("error: index %zu out of bounds for array of size %ld\n", v.arr.size(), (long)i.ival);
+		printf("error: index %ld out of bounds for array of size %zu\n", (long)i.ival, v.arr.size());
 		return Value::X();
 	}
 	printf("error: 'operator[]' not defined for '%s' and '%s'\n", v.ctypeName(), i.ctypeName());
+	return Value::X();
+}
+
+Value index(Value v, Value f, Value t) {
+	if (v.isUnstable() or f.isUnstable() or t.isUnstable()) {
+		return Value::X();
+	} else if (v.isNeutral() or f.isNeutral() or t.isNeutral()) {
+		return Value::boolOf(false);
+	} else if (v.isUnknown() or f.isUnknown() or t.isUnknown()) {
+		return Value::U();
+	} else if (v.type == Value::ARRAY and f.type == Value::INT and t.type == Value::INT) {
+		if (f.ival >= 0 and f.ival < (int)v.arr.size() and t.ival >= 0 and t.ival <= (int)v.arr.size()) {
+			v.arr = vector<Value>(v.arr.begin()+f.ival, v.arr.begin()+t.ival);
+			return v;
+		}
+		printf("error: range [%ld, %ld) out of bounds for array of size %zu\n", (long)f.ival, (long)t.ival, v.arr.size());
+		return Value::X();
+	}
+	printf("error: 'operator[]' not defined for '%s', '%s', and '%s'\n", v.ctypeName(), f.ctypeName(), t.ctypeName());
 	return Value::X();
 }
 

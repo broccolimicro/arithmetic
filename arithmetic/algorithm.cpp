@@ -502,7 +502,7 @@ Mapping tidy(OperationSet expr, vector<Operand> top, bool rules) {
 	auto currIter = UpIterator(expr, top);
 	for (; not currIter.done(); ++currIter) {
 		Operation curr = *currIter;
-		// cout << "start: " << curr.get() << endl;
+		// cout << "start: " << curr << endl;
 		curr.apply(result);
 
 		bool squish = false;
@@ -522,15 +522,18 @@ Mapping tidy(OperationSet expr, vector<Operand> top, bool rules) {
 				}
 			}
 		}
+		// cout << "squish: " << curr << endl;
 
 		curr.tidy();
+		// cout << "tidy: " << curr << endl;
 		if (squish) {
+			// cout << "setting expr" << endl;
 			expr.setExpr(curr);
 		}
-		// cout << "replaced: " << curr.get() << endl;
+		// cout << "replaced: " << curr << endl;
 
 		if (curr.operands.size() == 1u and curr.operands[0].isConst()) {
-			// cout << "found const " << curr.op() << " = " << v << endl;
+			// cout << "found const " << curr.op() << " = " << curr << endl;
 			result.set(curr.op(), Operation::evaluate(curr.func, {curr.operands[0].get()}));
 		}	else if (curr.operands.size() == 1u and (curr.isReflexive()
 			or (not rules and curr.isCommutative()))) {
@@ -552,9 +555,6 @@ Mapping tidy(OperationSet expr, vector<Operand> top, bool rules) {
 			expr.setExpr(curr);
 			keep.push_back(curr.exprIndex);
 		}
-
-		// cout << ::to_string(curr.seen) << endl;
-		// cout << *this << endl;
 	}
 
 	top = result.map(top);
@@ -948,6 +948,7 @@ Mapping minimize(OperationSet expr, vector<Operand> top, Expression rules) {
 
 	Mapping result;
 	result.apply(tidy(expr, top));
+	top = result.map(top);
 	vector<Match> tokens = search(expr, top, rules, 1u);
 	while (not tokens.empty()) {
 		// cout << "Expr: " << ::to_string(top) << " " << expr.cast<Expression>() << endl;

@@ -11,7 +11,7 @@ SimpleOperationSet::~SimpleOperationSet() {
 
 vector<Operand> SimpleOperationSet::exprIndex() const {
 	vector<Operand> result;
-	result.reserve(elems.size());
+	result.reserve(elems.count());
 	for (auto i = elems.begin(); i != elems.end(); i++) {
 		result.push_back(i->op());
 	}

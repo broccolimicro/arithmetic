@@ -403,8 +403,8 @@ Expression bitwiseXor(vector<Expression> e0) { Expression e; return e.push(Opera
 Expression add(vector<Expression> e0)        { Expression e; return e.push(Operation::ADD,         e.append(e0)); }
 Expression mult(vector<Expression> e0)       { Expression e; return e.push(Operation::MULTIPLY,    e.append(e0)); }
 
-Expression call(Operand::Type func, vector<Expression> args) {
-	args.insert(args.begin(), Expression::typeOf(func));
+Expression call(string func_name, vector<Expression> args) {
+	args.insert(args.begin(), Expression::stringOf(func_name));
 
 	Expression result;
 	return result.push(Operation::CALL, result.append(args));

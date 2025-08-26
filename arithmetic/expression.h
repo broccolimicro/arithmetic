@@ -159,7 +159,7 @@ Expression bitwiseXor(vector<Expression> e0);
 Expression add(vector<Expression> e0);
 Expression mult(vector<Expression> e0);
 
-Expression call(Operand::Type func, vector<Expression> args);
+Expression call(string func_name, vector<Expression> args);
 
 int passesGuard(const State &encoding, const State &global, const Expression &guard, State *total);
 Expression weakestGuard(const Expression &guard, const Expression &exclude);

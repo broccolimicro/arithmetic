@@ -361,7 +361,7 @@ TEST(Expression, Function) {
 	Expression e = Expression::varOf(4);
 	Expression f = Expression::varOf(5);
 
-	Expression dut = call(Operand::Type::CONST, {a+b, c, d+e+f});
+	Expression dut = call("ident", {a+b, c, d+e+f});
 	cout << dut << endl;
 	dut.top = minimize(dut, {dut.top}).map(dut.top);
 	cout << dut << endl;

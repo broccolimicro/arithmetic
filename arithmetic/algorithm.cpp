@@ -794,12 +794,9 @@ Mapping replace(OperationSet expr, const Expression &rules, Match match) {
 	Mapping result;
 
 	if (not match.replace.isExpr()) {
-		size_t ins = 0;
-		size_t slotIndex = match.expr;
-
-		auto slotPtr = expr.getExpr(slotIndex);
+		auto slotPtr = expr.getExpr(match.expr);
 		if (slotPtr == nullptr) {
-			printf("internal:%s:%d: expression %lu not found\n", __FILE__, __LINE__, slotIndex);
+			printf("internal:%s:%d: expression %lu not found\n", __FILE__, __LINE__, match.expr);
 			return result;
 		}
 		Operation slot = *slotPtr;
@@ -807,30 +804,30 @@ Mapping replace(OperationSet expr, const Expression &rules, Match match) {
 		if (match.top.empty()) {
 			slot.operands.clear();
 			slot.func = Operation::OpType::TYPE_UNDEF;
+			match.top.push_back(0);
 		} else {
 			// If this match doesn't cover all operands, we only want to replace
 			// the ones that are covered.
 			for (int i = (int)match.top.size()-1; i >= 0; i--) {
 				slot.operands.erase(slot.operands.begin() + match.top[i]);
 			}
-			ins = match.top[0];
+			match.top.erase(match.top.begin()+1, match.top.end());
 		}
 
 		if (match.replace.isVar()) {
 			auto v = match.vars.find(match.replace.index);
 			if (v != match.vars.end()) {
 				slot.operands.insert(
-					slot.operands.begin()+ins,
+					slot.operands.begin()+match.top[0],
 					v->second.begin(), v->second.end());
 			} else {
 				printf("variable not mapped\n");
 			}
 		} else {
 			slot.operands.insert(
-				slot.operands.begin()+ins,
+				slot.operands.begin()+match.top[0],
 				match.replace);
 		}
-		match.top.clear();
 
 		expr.setExpr(slot);
 	} else {
@@ -916,9 +913,6 @@ Mapping replace(OperationSet expr, const Expression &rules, Match match) {
 	//cout << "after mapping: " << expr.cast<Expression>() << endl;
 
 	// Let tidy handle the cleanup. There may be other references to these in the DAG
-	//for (auto i = match.expr.begin(); i != match.expr.end(); i++) {
-	//	expr.eraseExpr(*i);
-	//}
 
 	return result;
 	// cout << "after erase: " << *this << endl;

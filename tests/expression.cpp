@@ -394,3 +394,32 @@ TEST(Expression, Apply) {
 	EXPECT_TRUE(areSame(reality, expected));
 	cout << reality << "... vs ..." << endl << expected << endl;
 }
+
+TEST(Expression, DanglingExpression) {
+	// top: e8
+	// e8 = e0&e7  (25)
+	// e7 = e6&v2  (25)
+	// e6 = e5&e5  (25)
+	// e5 = true&e4  (25)
+	// e4 = e3|v7  (24)
+	// e3 = ~v6  (5)
+	// e2 = e1|v13  (24)
+	// e1 = ~v12  (5)
+	// e0 = +true  (1)
+
+	Expression dut;
+	dut.push(Operation::IDENTITY, {Operand::boolOf(true)});
+	dut.push(Operation::BOOLEAN_NOT, {Operand::varOf(12)});
+	dut.push(Operation::BOOLEAN_OR, {Operand::exprOf(1), Operand::varOf(13)});
+	dut.push(Operation::BOOLEAN_NOT, {Operand::varOf(6)});
+	dut.push(Operation::BOOLEAN_OR, {Operand::exprOf(3), Operand::varOf(7)});
+	dut.push(Operation::BOOLEAN_AND, {Operand::boolOf(true), Operand::exprOf(4)});
+	dut.push(Operation::BOOLEAN_AND, {Operand::exprOf(5), Operand::exprOf(5)});
+	dut.push(Operation::BOOLEAN_AND, {Operand::exprOf(6), Operand::varOf(2)});
+	dut.push(Operation::BOOLEAN_AND, {Operand::exprOf(0), Operand::exprOf(7)});
+	dut.top = Operand::exprOf(8);
+
+	cout << dut << endl;
+	dut.minimize();
+	cout << dut << endl;
+}

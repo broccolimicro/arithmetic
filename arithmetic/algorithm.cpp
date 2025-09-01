@@ -677,6 +677,7 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const Expressio
 				Match match;
 				vector<Leaf> leaves;
 				if (canMap({*i}, *lhs, ops, rules, true, &match.vars)) {
+					match.expr = i->index;
 					match.replace = *rhs;
 					leaves.push_back({*i, *lhs});
 					stack.push_back({leaves, match});
@@ -688,6 +689,7 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const Expressio
 				Match match;
 				vector<Leaf> leaves;
 				if (canMap({*i}, *rhs, ops, rules, true, &match.vars)) {
+					match.expr = i->index;
 					match.replace = *lhs;
 					leaves.push_back({*i, *rhs});
 					stack.push_back({leaves, match});
@@ -709,9 +711,6 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const Expressio
 
 		Operand from = leaves.back().first;
 		Operand to = leaves.back().second;
-		if (from.isExpr() and to.isExpr()) {
-			curr.expr.push_back(from.index);
-		}
 		leaves.pop_back();
 
 		//cout << "Curr: " << curr << " from=" << from << " to=" << to << endl;
@@ -778,7 +777,6 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const Expressio
 			}
 		} else if (leaves.empty()) {
 			//cout << "Found " << curr << endl;
-			reverse(curr.expr.begin(), curr.expr.end());
 			result.push_back(curr);
 			if (count != 0 and result.size() >= count) {
 				return result;
@@ -794,14 +792,10 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const Expressio
 
 Mapping replace(OperationSet expr, const Expression &rules, Match match) {
 	Mapping result;
-	for (int i = 0; i < ((int)match.expr.size())-1; i++) {
-		result.set(Operand::exprOf(match.expr[i]), Operand::undef());
-	}
 
 	if (not match.replace.isExpr()) {
 		size_t ins = 0;
-		size_t slotIndex = match.expr.back();
-		match.expr.pop_back();
+		size_t slotIndex = match.expr;
 
 		auto slotPtr = expr.getExpr(slotIndex);
 		if (slotPtr == nullptr) {
@@ -839,19 +833,23 @@ Mapping replace(OperationSet expr, const Expression &rules, Match match) {
 		match.top.clear();
 
 		expr.setExpr(slot);
-	} else if (not match.expr.empty()) {
-		//cout << "top=" << match.expr.back() << " expr=" << ::to_string(match.expr) << endl;
+	} else {
+		//cout << "top=e" << match.expr << endl;
 		if (match.replace.isExpr()
-			and rules.getExpr(match.replace.index)->func != expr.getExpr(match.expr.back())->func
-			and match.top.size() < expr.getExpr(match.expr.back())->operands.size()) {
+			and rules.getExpr(match.replace.index)->func != expr.getExpr(match.expr)->func
+			and match.top.size() < expr.getExpr(match.expr)->operands.size()) {
 			// We matched to a commutative operation and we need to collapse the
 			// matched operands to the output of our expression.
-			match.expr.back() = extract(expr, match.expr.back(), match.top).index;
+			match.expr = extract(expr, match.expr, match.top).index;
+			int sz = match.top.size();
 			match.top.clear();
+			for (int i = 0; i < sz; i++) {
+				match.top.push_back(i);
+			}
 		}
 
-		//cout << "top=" << match.expr.back() << " expr=" << ::to_string(match.expr) << endl;
-		//cout << "after insert: " << *this << endl;
+		//cout << "top=e" << match.expr << endl;
+		//cout << "after insert: " << expr.cast<Expression>() << endl;
 
 		// Iterate over the replacement expression
 		map<size_t, size_t> exprMap;
@@ -859,11 +857,10 @@ Mapping replace(OperationSet expr, const Expression &rules, Match match) {
 			// Along the way, compute the exprIndex mapping
 			auto pos = exprMap.insert({curr->exprIndex, 0});
 			if (pos.second) {
-				if (match.expr.empty()) {
+				if (match.top.empty()) {
 					pos.first->second = expr.pushExpr(Operation()).index;
 				} else {
-					pos.first->second = match.expr.back();
-					match.expr.pop_back();
+					pos.first->second = match.expr;
 				}
 			}
 			auto slotPtr = expr.getExpr(pos.first->second);
@@ -878,28 +875,17 @@ Mapping replace(OperationSet expr, const Expression &rules, Match match) {
 			if (match.top.empty()) {
 				slot.operands.clear();
 			} else {
-				// TODO(edward.bingham) this is causing a out of bounds exception --
-				//           may have been fixed by clearing match.top on line 845.
-
-				// If this match doesn't cover all operands, we only want to replace
-				// the ones that are covered.
 				for (int i = (int)match.top.size()-1; i >= 0; i--) {
 					slot.operands.erase(slot.operands.begin() + match.top[i]);
 				}
 				ins = match.top[0];
 			}
 
-
 			for (auto op = curr->operands.begin(); op != curr->operands.end(); op++) {
 				if (op->isExpr()) {
 					pos = exprMap.insert({op->index, 0});
 					if (pos.second) {
-						if (match.expr.empty()) {
-							pos.first->second = expr.pushExpr(Operation()).index;
-						} else {
-							pos.first->second = match.expr.back();
-							match.expr.pop_back();
-						}
+						pos.first->second = expr.pushExpr(Operation()).index;
 					}
 					
 					slot.operands.insert(
@@ -927,12 +913,12 @@ Mapping replace(OperationSet expr, const Expression &rules, Match match) {
 			expr.setExpr(slot);
 		}
 	}
-	//cout << "expr=" << ::to_string(match.expr) << endl;
-	//cout << "after mapping: " << *this << endl;
+	//cout << "after mapping: " << expr.cast<Expression>() << endl;
 
-	for (auto i = match.expr.begin(); i != match.expr.end(); i++) {
-		expr.eraseExpr(*i);
-	}
+	// Let tidy handle the cleanup. There may be other references to these in the DAG
+	//for (auto i = match.expr.begin(); i != match.expr.end(); i++) {
+	//	expr.eraseExpr(*i);
+	//}
 
 	return result;
 	// cout << "after erase: " << *this << endl;
@@ -951,14 +937,14 @@ Mapping minimize(OperationSet expr, vector<Operand> top, Expression rules) {
 	top = result.map(top);
 	vector<Match> tokens = search(expr, top, rules, 1u);
 	while (not tokens.empty()) {
-		// cout << "Expr: " << ::to_string(top) << " " << expr.cast<Expression>() << endl;
-		// cout << "Match: " << ::to_string(tokens) << endl;
+		//cout << "Expr: " << ::to_string(top) << " " << expr.cast<Expression>() << endl;
+		//cout << "Match: " << ::to_string(tokens) << endl;
 		Mapping sub = replace(expr, rules, tokens.back());
-		// cout << "Replace: " << expr.cast<Expression>() << endl;
+		//cout << "Replace: " << expr.cast<Expression>() << endl;
 		sub.apply(tidy(expr, top));
 		top = sub.map(top);
 		result.apply(sub);
-		// cout << "Canon: " << ::to_string(top) << " " << expr.cast<Expression>() << endl << endl;
+		//cout << "Canon: " << ::to_string(top) << " " << expr.cast<Expression>() << endl << endl;
 		tokens = search(expr, top, rules, 1u);
 	}
 

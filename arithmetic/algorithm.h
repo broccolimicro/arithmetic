@@ -94,9 +94,9 @@ bool operator!=(const ConstDownIterator &i0, const ConstDownIterator &i1);
 struct Match {
 	// what to replace this match with from the rules
 	Operand replace;
-	// exprIndex of matched operations. These are things we can replace.
-	vector<size_t> expr;
-	// index into operands for expr.back(). Some operations are commutative and
+	// exprIndex of the top matched operation.
+	size_t expr;
+	// index into operands for expr. Some operations are commutative and
 	// commutative operations are rolled up into a single operation with more
 	// than two operands to help deal with the search space. top is the index
 	// of the operands that were matched. In most cases it will be every

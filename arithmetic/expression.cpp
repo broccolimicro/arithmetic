@@ -481,4 +481,8 @@ void Expression::minimize() {
 	this->top = arithmetic::minimize(*this, {this->top}).map(this->top);
 }
 
+void Expression::tidy() {
+	this->top = arithmetic::tidy(*this, {this->top}).map(this->top);
+}
+
 }

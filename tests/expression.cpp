@@ -291,7 +291,7 @@ TEST(Expression, Simplify) {
 	Expression dut = (a*c+b*c-c*a)/c;
 	Cost cost = arithmetic::cost(dut, dut.top, vars);
 	cout << "Before: cost=" << cost.complexity << " del=" << cost.critical << endl << dut << endl;
-	dut.top = minimize(dut, {dut.top}).map(dut.top);
+	dut.minimize();
 	EXPECT_TRUE(areSame(dut, b));
 
 	Cost cost2 = arithmetic::cost(dut, dut.top, vars);
@@ -310,7 +310,7 @@ TEST(Expression, ChainOfAdds) {
 	Expression g = Expression::varOf(6);
 	
 	Expression dut = a+b+c+d+e+f+g;
-	dut.top = minimize(dut, {dut.top}).map(dut.top);
+	dut.minimize();
 }
 
 TEST(Expression, ElasticRewrite) {
@@ -339,7 +339,7 @@ TEST(Expression, Boolean) {
 	//Expression dut = ((false|c)|d);
 	Expression dut = (false|c)|d;
 	cout << dut << endl;
-	dut.top = minimize(dut, {dut.top}).map(dut.top);
+	dut.minimize();
 	cout << dut << endl;
 }
 
@@ -349,7 +349,7 @@ TEST(Expression, Identity) {
 	Expression dut = a;
 	dut.push(Operation::OpType::TYPE_BOOLEAN_NOT, {dut.top});
 	cout << dut << endl;
-	dut.top = minimize(dut, {dut.top}).map(dut.top);
+	dut.minimize();
 	cout << dut << endl;
 }
 
@@ -363,7 +363,7 @@ TEST(Expression, Function) {
 
 	Expression dut = call("ident", {a+b, c, d+e+f});
 	cout << dut << endl;
-	dut.top = minimize(dut, {dut.top}).map(dut.top);
+	dut.minimize();
 	cout << dut << endl;
 }
 

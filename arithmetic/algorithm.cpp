@@ -315,6 +315,78 @@ bool operator!=(const ConstDownIterator &i0, const ConstDownIterator &i1) {
 	return i0.stack != i1.stack;
 }
 
+PostOrderDFSIterator::PostOrderDFSIterator(ConstOperationSet root, vector<Operand> start) : root(root), current(-1) {
+	// Initialize with all root expressions
+	for (auto &op : start) {
+		if (op.isExpr()) {
+			stack.push_back(op.index);
+		}
+	}
+	// Start the traversal
+	if (!stack.empty()) {
+		++*this;
+	}
+}
+
+PostOrderDFSIterator::~PostOrderDFSIterator() {}
+
+const Operation &PostOrderDFSIterator::get() {
+	return *root.getExpr(current);
+}
+
+const Operation &PostOrderDFSIterator::operator*() {
+	return *root.getExpr(current);
+}
+
+const Operation *PostOrderDFSIterator::operator->() {
+	return root.getExpr(current);
+}
+
+PostOrderDFSIterator &PostOrderDFSIterator::operator++() {
+	while (!stack.empty()) {
+		size_t idx = stack.back();
+
+		// Resize visited vector if needed
+		if (idx >= visited.size()) {
+			visited.resize(idx + 1, false);
+		}
+
+		if (!visited[idx]) {
+			// Mark as visited
+			visited[idx] = true;
+
+			// Push children in reverse order to process them in order
+			const Operation *op = root.getExpr(idx);
+			for (auto it = op->operands.rbegin(); it != op->operands.rend(); ++it) {
+				if (it->isExpr()) {
+					stack.push_back(it->index);
+				}
+			}
+		} else {
+			// All children processed, this is the next node in post-order
+			stack.pop_back();
+			current = idx;
+			return *this;
+		}
+	}
+
+	// No more nodes to process
+	current = -1;
+	return *this;
+}
+
+bool PostOrderDFSIterator::done() const {
+	return current == (size_t)-1;
+}
+
+bool operator==(const PostOrderDFSIterator &i0, const PostOrderDFSIterator &i1) {
+	return i0.current == i1.current && i0.stack == i1.stack;
+}
+
+bool operator!=(const PostOrderDFSIterator &i0, const PostOrderDFSIterator &i1) {
+	return !(i0 == i1);
+}
+
 ostream &operator<<(ostream &os, Match m) {
 	os << m.replace << " expr=" << ::to_string(m.expr) << " top=" << ::to_string(m.top) << " vars=" << ::to_string(m.vars);
 	return os;

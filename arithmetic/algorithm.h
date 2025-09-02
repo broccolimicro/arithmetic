@@ -91,6 +91,25 @@ struct ConstDownIterator {
 bool operator==(const ConstDownIterator &i0, const ConstDownIterator &i1);
 bool operator!=(const ConstDownIterator &i0, const ConstDownIterator &i1);
 
+struct PostOrderDFSIterator {
+    PostOrderDFSIterator(ConstOperationSet root, vector<Operand> start=vector<Operand>());
+    ~PostOrderDFSIterator();
+
+    ConstOperationSet root;
+    vector<bool> visited;
+    vector<size_t> stack;
+    size_t current;
+
+    const Operation &get();
+    const Operation &operator*();
+    const Operation *operator->();
+    PostOrderDFSIterator &operator++();
+    bool done() const;
+};
+
+bool operator==(const PostOrderDFSIterator &i0, const PostOrderDFSIterator &i1);
+bool operator!=(const PostOrderDFSIterator &i0, const PostOrderDFSIterator &i1);
+
 struct Match {
 	// what to replace this match with from the rules
 	Operand replace;

@@ -403,3 +403,46 @@ TEST(Expression, DanglingExpression) {
 	dut.minimize();
 	cout << dut << endl;
 }
+
+TEST(Expression, Iteration) {
+	Operand oA = Operand::intOf(0);
+	Operand oB = Operand::intOf(1);
+	Operand oC = Operand::intOf(2);
+	Operand oD = Operand::intOf(3);
+
+	Expression eA = Expression(oA);
+	Expression eB = Expression(oB);
+	Expression eC = Expression(oC);
+	Expression eD = Expression(oD);
+	Expression eE = eA + eB;
+	Expression eF = eC + eD;
+	Expression eG = eF - eE;
+	cout << eG << endl;
+
+	// Operation indexing is based on order of operands referenced in target expr, eG
+	vector<Operation> expected_operations = {
+		Operation(Operation::ADD, {oC, oD}, 1),  // eF
+		Operation(Operation::ADD, {oA, oB}, 0),  // eE
+		Operation(Operation::SUBTRACT, {Operand::exprOf(0), Operand::exprOf(1)}, 2),
+	};
+
+	EXPECT_EQ(eG.size(), expected_operations.size());
+	for (size_t operation_idx = 0; operation_idx < eG.size(); operation_idx++) {
+		const Operation &real_operation = *eG.getExpr(operation_idx);
+		EXPECT_EQ(real_operation, expected_operations[operation_idx]);
+	}
+
+	size_t operation_idx = 0;
+	for (const Operand &operand : eG.exprIndex()) {
+		const Operation &real_operation = *eG.getExpr(operand.index);
+		EXPECT_EQ(real_operation, expected_operations[operation_idx]);
+		operation_idx++;
+	}
+
+	Expression expected;
+	for (const Operation &operation : expected_operations) {
+		expected.pushExpr(operation);
+	}
+	expected.top = Operand::exprOf(2);
+	EXPECT_TRUE(areSame(eG, expected)) << expected << endl;
+}

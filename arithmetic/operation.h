@@ -54,7 +54,7 @@ struct Operand {
 	static Operand intOf(int64_t ival);
 	static Operand realOf(double rval);
 	static Operand arrOf(vector<Value> arr);
-	static Operand structOf(vector<Value> arr);
+	static Operand structOf(string name, vector<Value> arr);
 	static Operand stringOf(string sval);
 
 	static Operand exprOf(size_t index);
@@ -102,38 +102,39 @@ struct Operator {
 
 struct Operation {
 	enum OpType : int {
-		TYPE_UNDEF = -1,
-		TYPE_BITWISE_NOT = 0,
-		TYPE_IDENTITY = 1,
-		TYPE_NEGATION = 2,
-		TYPE_NEGATIVE = 3,
-		TYPE_VALIDITY = 4,
-		TYPE_BOOLEAN_NOT = 5,
-		TYPE_INVERSE = 6,
-		TYPE_BITWISE_OR = 7,
-		TYPE_BITWISE_AND = 8,
-		TYPE_BITWISE_XOR = 9,
-		TYPE_EQUAL = 10,
-		TYPE_NOT_EQUAL = 11,
-		TYPE_LESS = 12,
-		TYPE_GREATER = 13,
-		TYPE_LESS_EQUAL = 14,
-		TYPE_GREATER_EQUAL = 15,
-		TYPE_SHIFT_LEFT = 16,
-		TYPE_SHIFT_RIGHT = 17,
-		TYPE_ADD = 18,
-		TYPE_SUBTRACT = 19,
-		TYPE_MULTIPLY = 20,
-		TYPE_DIVIDE = 21,
-		TYPE_MOD = 22,
-		TYPE_TERNARY = 23,
-		TYPE_BOOLEAN_OR = 24,
-		TYPE_BOOLEAN_AND = 25,
-		TYPE_BOOLEAN_XOR = 26,
-		TYPE_ARRAY = 27,
-		TYPE_INDEX = 28,
-		TYPE_CALL = 29,
-		TYPE_MEMBER = 30
+		UNDEF = -1,
+		WIRE_NOT = 0,
+		IDENTITY = 1,
+		NEGATION = 2,
+		NEGATIVE = 3,
+		VALIDITY = 4,
+		BOOLEAN_NOT = 5,
+		INVERSE = 6,
+		WIRE_OR = 7,
+		WIRE_AND = 8,
+		WIRE_XOR = 9,
+		EQUAL = 10,
+		NOT_EQUAL = 11,
+		LESS = 12,
+		GREATER = 13,
+		LESS_EQUAL = 14,
+		GREATER_EQUAL = 15,
+		SHIFT_LEFT = 16,
+		SHIFT_RIGHT = 17,
+		ADD = 18,
+		SUBTRACT = 19,
+		MULTIPLY = 20,
+		DIVIDE = 21,
+		MOD = 22,
+		TERNARY = 23,
+		BOOLEAN_OR = 24,
+		BOOLEAN_AND = 25,
+		BOOLEAN_XOR = 26,
+		ARRAY = 27,
+		INDEX = 28,
+		CALL = 29,
+		MEMBER = 30,
+		STRUCT = 31
 	};
 
 	Operation();
@@ -142,41 +143,8 @@ struct Operation {
 
 	static Operation undef(size_t exprIndex=std::numeric_limits<size_t>::max());
 
-	static vector<Operator> operators;
-	static const int UNDEF = -1;
-	static int BITWISE_NOT;
-	static int IDENTITY;
-	static int NEGATION;
-	static int NEGATIVE;
-	static int VALIDITY;
-	static int BOOLEAN_NOT;
-	static int INVERSE;
-	static int BITWISE_OR;
-	static int BITWISE_AND;
-	static int BITWISE_XOR;
-	static int EQUAL;
-	static int NOT_EQUAL;
-	static int LESS;
-	static int GREATER;
-	static int LESS_EQUAL;
-	static int GREATER_EQUAL;
-	static int SHIFT_LEFT;
-	static int SHIFT_RIGHT;
-	static int ADD;
-	static int SUBTRACT;
-	static int MULTIPLY;
-	static int DIVIDE;
-	static int MOD;
-	static int TERNARY;
-	static int BOOLEAN_OR;
-	static int BOOLEAN_AND;
-	static int BOOLEAN_XOR;
-	static int ARRAY;
-	static int INDEX;
-	static int CALL;
-	static int MEMBER;
-
-	static int push(Operator op);
+	static index_vector<Operator> operators;
+	static void set(OpType, Operator op);
 	static void loadOperators();
 
 	OpType func;

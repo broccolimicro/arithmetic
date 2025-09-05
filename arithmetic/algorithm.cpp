@@ -486,10 +486,7 @@ bool verifyRulesFormat(ConstOperationSet ops, Operand top, bool msg) {
 bool canMap(vector<Operand> o0, Operand o1, ConstOperationSet e0, ConstOperationSet e1, bool init, map<size_t, vector<Operand> > *vars) {
 	if (o1.isConst()) {
 		for (auto i = o0.begin(); i != o0.end(); i++) {
-			if (not i->isConst() or not (areSame(i->cnst, o1.cnst)
-				or (o1.cnst.type == Value::BOOL
-					and ((o1.cnst.bval == Value::VALID and i->cnst.isValid())
-						or (o1.cnst.bval == Value::NEUTRAL and i->cnst.isNeutral()))))) {
+			if (not i->isConst() or not areSame(i->cnst, o1.cnst)) {
 				return false;
 			}
 		}
@@ -875,7 +872,7 @@ Mapping replace(OperationSet expr, const Expression &rules, Match match) {
 
 		if (match.top.empty()) {
 			slot.operands.clear();
-			slot.func = Operation::OpType::TYPE_UNDEF;
+			slot.func = Operation::OpType::UNDEF;
 			match.top.push_back(0);
 		} else {
 			// If this match doesn't cover all operands, we only want to replace
@@ -1032,7 +1029,7 @@ Mapping minimize(OperationSet expr, vector<Operand> top, Expression rules) {
 	// the unidirectional rules in between
 
 	// TODO(edward.bingham) Create a set of unidirectional rewrite rules to
-	// change bitwise operators into arithmetic operators, and then a set of
+	// change wire operators into arithmetic operators, and then a set of
 	// unidirectional rules to switch them back
 
 	// TODO(edward.bingham) Tie this all together into an easy-to-use

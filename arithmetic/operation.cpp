@@ -10,38 +10,7 @@
 namespace arithmetic
 {
 
-vector<Operator> Operation::operators;
-int Operation::BITWISE_NOT = -1;
-int Operation::IDENTITY = -1;
-int Operation::NEGATION = -1;
-int Operation::NEGATIVE = -1;
-int Operation::VALIDITY = -1;
-int Operation::BOOLEAN_NOT = -1;
-int Operation::INVERSE = -1;
-int Operation::BITWISE_OR = -1;
-int Operation::BITWISE_AND = -1;
-int Operation::BITWISE_XOR = -1;
-int Operation::EQUAL = -1;
-int Operation::NOT_EQUAL = -1;
-int Operation::LESS = -1;
-int Operation::GREATER = -1;
-int Operation::LESS_EQUAL = -1;
-int Operation::GREATER_EQUAL = -1;
-int Operation::SHIFT_LEFT = -1;
-int Operation::SHIFT_RIGHT = -1;
-int Operation::ADD = -1;
-int Operation::SUBTRACT = -1;
-int Operation::MULTIPLY = -1;
-int Operation::DIVIDE = -1;
-int Operation::MOD = -1;
-int Operation::TERNARY = -1;
-int Operation::BOOLEAN_OR = -1;
-int Operation::BOOLEAN_AND = -1;
-int Operation::BOOLEAN_XOR = -1;
-int Operation::ARRAY = -1;
-int Operation::INDEX = -1;
-int Operation::CALL = -1;
-int Operation::MEMBER = -1;
+index_vector<Operator> Operation::operators;
 
 Operand::Operand(Value v) {
 	Operation::loadOperators();
@@ -171,8 +140,8 @@ Operand Operand::arrOf(vector<Value> arr) {
 	return Operand(Value::arrOf(arr));
 }
 
-Operand Operand::structOf(vector<Value> arr) {
-	return Operand(Value::structOf(arr));
+Operand Operand::structOf(string name, vector<Value> arr) {
+	return Operand(Value::structOf(name, arr));
 }
 
 Operand Operand::stringOf(string sval) {
@@ -339,14 +308,12 @@ Operation Operation::undef(size_t exprIndex) {
 	return Operation(Operation::UNDEF, vector<Operand>(), exprIndex);
 }
 
-int Operation::push(Operator op) {
-	int result = (int)operators.size();
-	operators.push_back(op);
-	return result;
+void Operation::set(Operation::OpType index, Operator op) {
+	operators.emplace_at(index, op);
 }
 
 void Operation::loadOperators() {
-	// DESIGN(edward.bingham) bitwise and boolean operations have been switched
+	// DESIGN(edward.bingham) wire and boolean operations have been switched
 	// to be consistent with HSE and boolean logic expressions
 
 	// DESIGN(edward.bingham) order of these operations matters for the propagate function!
@@ -355,40 +322,41 @@ void Operation::loadOperators() {
 	// the expression engine. Channel actions should be decomposed into their
 	// appropriate protocols while expanding the CHP.
 
-	if (Operation::operators.empty()) {
+	if (Operation::operators.count() == 0) {
 		//printf("loading operators\n");
 
-		BITWISE_NOT   = push(Operator("!", "", "", ""));
-		IDENTITY      = push(Operator("+", "", "", "", false, true));
-		NEGATION      = push(Operator("-", "", "", ""));
-		NEGATIVE      = push(Operator("ltz(", "", "", ")"));
-		VALIDITY      = push(Operator("val(", "", "", ")"));
-		BOOLEAN_NOT   = push(Operator("~", "", "", ""));
-		INVERSE       = push(Operator("inv(", "", "", ")"));
-		BITWISE_OR    = push(Operator("", "", "||", "", true));
-		BITWISE_AND   = push(Operator("", "", "&&", "", true));
-		BITWISE_XOR   = push(Operator("", "", "^^", "", true));
-		EQUAL         = push(Operator("", "", "==", ""));
-		NOT_EQUAL     = push(Operator("", "", "~=", ""));
-		LESS          = push(Operator("", "", "<", ""));
-		GREATER       = push(Operator("", "", ">", ""));
-		LESS_EQUAL    = push(Operator("", "", "<=", ""));
-		GREATER_EQUAL = push(Operator("", "", ">=", ""));
-		SHIFT_LEFT    = push(Operator("", "", "<<", ""));
-		SHIFT_RIGHT   = push(Operator("", "", ">>", ""));
-		ADD           = push(Operator("", "", "+", "", true));
-		SUBTRACT      = push(Operator("", "", "-", ""));
-		MULTIPLY      = push(Operator("", "", "*", "", true));
-		DIVIDE        = push(Operator("", "", "/", ""));
-		MOD           = push(Operator("", "", "%", ""));
-		TERNARY       = push(Operator("", "?", ":", ""));
-		BOOLEAN_OR    = push(Operator("", "", "|", "", true));
-		BOOLEAN_AND   = push(Operator("", "", "&", "", true));
-		BOOLEAN_XOR   = push(Operator("", "", "^", "", true));
-		ARRAY         = push(Operator("[", "", ",", "]"));
-		INDEX         = push(Operator("", "[", ":", "]"));
-		CALL          = push(Operator("", "(", ",", ")"));
-		MEMBER        = push(Operator("", ".", "", ""));
+		set(OpType::WIRE_NOT, Operator("!", "", "", ""));
+		set(OpType::IDENTITY, Operator("+", "", "", "", false, true));
+		set(OpType::NEGATION, Operator("-", "", "", ""));
+		set(OpType::NEGATIVE, Operator("ltz(", "", "", ")"));
+		set(OpType::VALIDITY, Operator("val(", "", "", ")"));
+		set(OpType::BOOLEAN_NOT, Operator("~", "", "", ""));
+		set(OpType::INVERSE, Operator("inv(", "", "", ")"));
+		set(OpType::WIRE_OR, Operator("", "", "|", "", true));
+		set(OpType::WIRE_AND, Operator("", "", "&", "", true));
+		set(OpType::WIRE_XOR, Operator("", "", "^", "", true));
+		set(OpType::EQUAL, Operator("", "", "==", ""));
+		set(OpType::NOT_EQUAL, Operator("", "", "~=", ""));
+		set(OpType::LESS, Operator("", "", "<", ""));
+		set(OpType::GREATER, Operator("", "", ">", ""));
+		set(OpType::LESS_EQUAL, Operator("", "", "<=", ""));
+		set(OpType::GREATER_EQUAL, Operator("", "", ">=", ""));
+		set(OpType::SHIFT_LEFT, Operator("", "", "<<", ""));
+		set(OpType::SHIFT_RIGHT, Operator("", "", ">>", ""));
+		set(OpType::ADD, Operator("", "", "+", "", true));
+		set(OpType::SUBTRACT, Operator("", "", "-", ""));
+		set(OpType::MULTIPLY, Operator("", "", "*", "", true));
+		set(OpType::DIVIDE, Operator("", "", "/", ""));
+		set(OpType::MOD, Operator("", "", "%", ""));
+		set(OpType::TERNARY, Operator("", "?", ":", ""));
+		set(OpType::BOOLEAN_OR, Operator("", "", "||", "", true));
+		set(OpType::BOOLEAN_AND, Operator("", "", "&&", "", true));
+		set(OpType::BOOLEAN_XOR, Operator("", "", "^^", "", true));
+		set(OpType::ARRAY, Operator("[", "", ",", "]"));
+		set(OpType::INDEX, Operator("", "[", ":", "]"));
+		set(OpType::CALL, Operator("", "(", ",", ")"));
+		set(OpType::MEMBER, Operator("", ".", "", ""));
+		set(OpType::STRUCT, Operator("", "{", ",", "}"));
 
 		//printf("loaded %d operators\n", (int)Operation::operators.size());
 	} 
@@ -404,7 +372,7 @@ pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
 	Type result(0.0, 0.0, 0.0);
 	double cost = 0.0;
 	std::array<double, 2> ovr;
-	if (func == Operation::BITWISE_NOT) { // bitwise not (!) -- rotate digit for non-base-2
+	if (func == Operation::WIRE_NOT) { // wire not (!) -- rotate digit for non-base-2
 		result = args[0];
 		result.delay += 1.0;
 		cost = args[0].width;
@@ -432,7 +400,7 @@ pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
 		result = Type(0.0, 0.0, log2(args[0].width));
 		cost = args[0].width;
 		return {result, cost};
-	} else if (func == Operation::BITWISE_OR) { // bitwise or (||) -- max of digit for non-base-2
+	} else if (func == Operation::WIRE_OR) { // wire or (||) -- max of digit for non-base-2
 		result = args[0];
 		for (i = 1; i < (int)args.size(); i++) {
 			ovr = overlap(result, args[i]);
@@ -445,7 +413,7 @@ pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
 		}
 		result.delay += (double)args.size() - 1.0;
 		return {result, cost};
-	} else if (func == Operation::BITWISE_AND) { // bitwise and (&&)
+	} else if (func == Operation::WIRE_AND) { // wire and (&&)
 		result = args[0];
 		for (i = 1; i < (int)args.size(); i++) {
 			ovr = overlap(result, args[i]);
@@ -597,31 +565,31 @@ bool Operation::isUndef() const {
 }
 
 Value Operation::evaluate(int func, vector<Value> args) {
-	if (func == Operation::BITWISE_NOT) {
-		return !args[0];
+	if (func == Operation::WIRE_NOT) {
+		return ~args[0];
 	} else if (func == Operation::IDENTITY) {
 		return args[0];
 	} else if (func == Operation::NEGATION) {
 		return -args[0];
 	} else if (func == Operation::NEGATIVE) {
-		return args[0] < Value(0);
+		return args[0] < Value::intOf(0);
 	} else if (func == Operation::VALIDITY) {
 		return valid(args[0]);
 	} else if (func == Operation::BOOLEAN_NOT) {
-		return ~args[0];
+		return !args[0];
 	} else if (func == Operation::INVERSE) {
 		return inv(args[0]);
-	} else if (func == Operation::BITWISE_OR) {
+	} else if (func == Operation::WIRE_OR) {
 		for (int i = 1; i < (int)args.size(); i++) {
-			args[0] = args[0] || args[i];
+			args[0] = args[0] | args[i];
 		}
 		return args[0];
-	} else if (func == Operation::BITWISE_AND) {
+	} else if (func == Operation::WIRE_AND) {
 		for (int i = 1; i < (int)args.size(); i++) {
-			args[0] = args[0] && args[i];
+			args[0] = args[0] & args[i];
 		}
 		return args[0];
-	} else if (func == Operation::BOOLEAN_XOR) {
+	} else if (func == Operation::WIRE_XOR) {
 		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] ^ args[i];
 		}
@@ -700,12 +668,12 @@ Value Operation::evaluate(int func, vector<Value> args) {
 		return args[0] ? args[1] : args[2];
 	} else if (func == Operation::BOOLEAN_AND) { 
 		for (int i = 1; i < (int)args.size(); i++) {
-			args[0] = args[0] & args[i];
+			args[0] = args[0] and args[i];
 		}
 		return args[0];
 	} else if (func == Operation::BOOLEAN_OR) { 
 		for (int i = 1; i < (int)args.size(); i++) {
-			args[0] = args[0] | args[i];
+			args[0] = args[0] or args[i];
 		}
 		return args[0];
 	} else if (func == Operation::ARRAY) { // concat arrays

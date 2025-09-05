@@ -11,9 +11,9 @@ namespace arithmetic
 // value with a single neutral state. This is purposefully limited
 // for now to keep the CHP language and simulator simple to
 // implement.
-struct Value
-{
-	enum ValType : int {
+struct Value {
+	enum ValType : int32_t {
+		WIRE = -6,
 		// can only be used to dereference a member of a structure
 		STRING = -5,
 		BOOL = -4,
@@ -23,9 +23,21 @@ struct Value
 		// ARRAY and STRUCT have separate validities for each value
 		ARRAY = -1,
 		// By default, all operators on STRUCTs behave like operators on ARRAYs
-		// anything with a type >= 0 is a struct and the type stores the ID of
-		// the struct type in the type system
+		// arr stores all of the members
+		// sval stores the name of the structure type for lookup
 		STRUCT = 0
+	};
+
+	enum StateType : int8_t {
+		// At least one signal in this value is unstable or the encoding is in an
+		// illegal state.
+		UNSTABLE = 0,
+		// neutral state in a delay insensitive encoding.
+		NEUTRAL  = 1,
+		// dataless valid (vdd)
+		VALID    = 2,
+		// The value is not currently known.
+		UNKNOWN  = 3
 	};
 
 	Value();
@@ -37,25 +49,9 @@ struct Value
 	~Value();
 
 	ValType type;
-
-	enum Bval : int16_t {
-		// used by "bval"
-		// At least one signal in this value is unstable or the encoding is in an
-		// illegal state.
-		UNSTABLE = -1,
-		// neutral state in a delay insensitive encoding. This is used to represent
-		// "false" in guard expressions.
-		NEUTRAL  = 0,
-		// The value encodes a valid integer value if it is greater than
-		// or Value::valid or Vdd if it is equal to Value::valid. This is used to
-		// represent "true" in guard expressions.	
-		VALID    = 1,
-		// The value is not currently known.
-		UNKNOWN  = 2
-	};
-
+	StateType state;
 	union {
-		Bval bval;
+		bool bval;
 		int64_t ival;
 		double rval;
 	};
@@ -67,17 +63,20 @@ struct Value
 	bool isNeutral() const;
 	bool isUnstable() const;
 	bool isUnknown() const;
+	bool isTrue() const;
 	const char *ctypeName() const;
 	string typeName() const;
 
-	static Value X();
-	static Value U();
+	static Value X(ValType type=WIRE);
+	static Value U(ValType type=WIRE);
+	static Value gnd(ValType type=WIRE);
+	static Value vdd();
 	static Value stringOf(string sval);
 	static Value boolOf(bool valid);
 	static Value intOf(int64_t ival);
 	static Value realOf(double rval);
 	static Value arrOf(vector<Value> arr);
-	static Value structOf(vector<Value> arr);	
+	static Value structOf(string name, vector<Value> arr);	
 
 	bool isSubsetOf(Value v) const;
 
@@ -91,14 +90,16 @@ int order(Value v0, Value v1);
 
 ostream &operator<<(ostream &os, Value v);
 
+Value castWire(Value v);
+
 // boolean NOT using neutral as false and any valid value as true
 Value operator~(Value v);
 Value operator-(Value v);
 Value valid(Value v);
-// bitwise NOT
+// wire NOT
 Value operator!(Value v);
 Value inv(Value v);
-// bitwise AND, OR, and XOR
+// wire AND, OR, and XOR
 Value operator||(Value v0, Value v1);
 Value operator&&(Value v0, Value v1);
 Value operator^(Value v0, Value v1);
@@ -124,6 +125,7 @@ Value operator&(Value v0, Value v1);
 Value operator|(Value v0, Value v1);
 
 Value stringOf(Value v);
+Value wireOf(Value v);
 Value boolOf(Value v);
 Value realOf(Value v);
 Value intOf(Value v);
@@ -131,7 +133,7 @@ Value index(Value v, Value i);
 Value index(Value v, Value f, Value t);
 
 _CONST_INTERFACE_ARG(TypeSet,
-	(int, memberIndex, (Value::ValType type, string name) const, (type, name)));
+	(int, memberIndex, (string type, string name) const, (type, name)));
 
 Value member(Value v0, Value v1, TypeSet types);
 

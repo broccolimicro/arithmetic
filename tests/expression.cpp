@@ -8,47 +8,43 @@
 using namespace arithmetic;
 using namespace std;
 
-TEST(Expression, OperandBitwiseOr) {
+TEST(Expression, OperandWireOr) {
 	Expression x = Expression::varOf(0);
 	Expression y = Expression::varOf(1);
 	
-	Expression e = x||y;
+	Expression e = x|y;
 	cout << e << endl;
 
 	State s;
-	int xval = rand()%100;
-	int yval = rand()%100;
-
-	s.push_back(xval);
-	s.push_back(yval);
+	s.push_back(10);
+	s.push_back(Value::gnd());
 
 	Value result = evaluate(e, e.top, s);
 
-	EXPECT_EQ(result.type, Value::INT);
-	EXPECT_EQ(result.ival, xval | yval);
+	EXPECT_EQ(result.type, Value::WIRE);
+	EXPECT_TRUE(result.isValid());
+	EXPECT_FALSE(result.isNeutral());
 }
 
-TEST(Expression, OperandBitwiseAnd) {
+TEST(Expression, OperandWireAnd) {
 	Expression x = Expression::varOf(0);
 	Expression y = Expression::varOf(1);
 	
-	Expression e = x&&y;
+	Expression e = x&y;
 	cout << e << endl;
 
 	State s;
-	int xval = rand()%100;
-	int yval = rand()%100;
-
-	s.push_back(xval);
-	s.push_back(yval);
+	s.push_back(10);
+	s.push_back(Value::gnd());
 
 	Value result = evaluate(e, e.top, s);
 
-	EXPECT_EQ(result.type, Value::INT);
-	EXPECT_EQ(result.ival, xval & yval);
+	EXPECT_EQ(result.type, Value::WIRE);
+	EXPECT_FALSE(result.isValid());
+	EXPECT_TRUE(result.isNeutral());
 }
 
-TEST(Expression, OperandBitwiseXor) {
+TEST(Expression, OperandWireXor) {
 	Expression x = Expression::varOf(0);
 	Expression y = Expression::varOf(1);
 	
@@ -56,23 +52,17 @@ TEST(Expression, OperandBitwiseXor) {
 	cout << e << endl;
 
 	State s;
-	int xval = rand()%100;
-	int yval = rand()%100;
-
-	s.push_back(xval);
-	s.push_back(yval);
+	s.push_back(10);
+	s.push_back(Value::gnd());
 
 	Value result = evaluate(e, e.top, s);
 
-	EXPECT_EQ(result.type, Value::INT);
-	EXPECT_EQ(result.ival, xval ^ yval);
+	EXPECT_EQ(result.type, Value::WIRE);
+	EXPECT_TRUE(result.isValid());
+	EXPECT_FALSE(result.isNeutral());
 }
 
 TEST(Expression, OperandEqualTo) {
-	int valid = Value::VALID;
-	int neutral = Value::NEUTRAL;
-	int unstable = Value::UNSTABLE;
-
 	Expression x = Expression::varOf(0);
 	Expression y = Expression::varOf(1);
 	
@@ -84,35 +74,33 @@ TEST(Expression, OperandEqualTo) {
 	s.push_back(4);
 	Value result = evaluate(e, e.top, s);
 	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_EQ(result.bval, neutral);
+	EXPECT_TRUE(result.isValid());
+	EXPECT_FALSE(result.bval);
 
 	s.clear();
 	s.push_back(5);
 	s.push_back(5);
 	result = evaluate(e, e.top, s);
 	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_EQ(result.bval, valid);
+	EXPECT_TRUE(result.isValid());
+	EXPECT_TRUE(result.bval);
 
 	s.clear();
 	s.push_back(Value::X());
 	s.push_back(4);
 	result = evaluate(e, e.top, s);
 	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_EQ(result.bval, unstable);
+	EXPECT_TRUE(result.isUnstable());
 
 	s.clear();
 	s.push_back(false);
 	s.push_back(4);
 	result = evaluate(e, e.top, s);
 	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_EQ(result.bval, neutral);
+	EXPECT_TRUE(result.isUnstable());
 }
 
 TEST(Expression, OperandNotEqualTo) {
-	int valid = Value::VALID;
-	int neutral = Value::NEUTRAL;
-	int unstable = Value::UNSTABLE;
-
 	Expression x = Expression::varOf(0);
 	Expression y = Expression::varOf(1);
 	
@@ -124,35 +112,31 @@ TEST(Expression, OperandNotEqualTo) {
 	s.push_back(4);
 	Value result = evaluate(e, e.top, s);
 	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_EQ(result.bval, valid);
+	EXPECT_TRUE(result.bval);
 
 	s.clear();	
 	s.push_back(5);
 	s.push_back(5);
 	result = evaluate(e, e.top, s);
 	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_EQ(result.bval, neutral);
+	EXPECT_FALSE(result.bval);
 
 	s.clear();
 	s.push_back(Value::X());
 	s.push_back(4);
 	result = evaluate(e, e.top, s);
 	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_EQ(result.bval, unstable);
+	EXPECT_TRUE(result.isUnstable());
 
 	s.clear();
 	s.push_back(false);
 	s.push_back(4);
 	result = evaluate(e, e.top, s);
 	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_EQ(result.bval, neutral);
+	EXPECT_TRUE(result.isUnstable());
 }
 
 TEST(Expression, OperandLessThan) {
-	int valid = Value::VALID;
-	int neutral = Value::NEUTRAL;
-	int unstable = Value::UNSTABLE;
-
 	Expression x = Expression::varOf(0);
 	Expression y = Expression::varOf(1);
 	
@@ -164,35 +148,31 @@ TEST(Expression, OperandLessThan) {
 	s.push_back(4);
 	Value result = evaluate(e, e.top, s);
 	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_EQ(result.bval, neutral);
+	EXPECT_FALSE(result.bval);
 
 	s.clear();	
 	s.push_back(4);
 	s.push_back(5);
 	result = evaluate(e, e.top, s);
 	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_EQ(result.bval, valid);
+	EXPECT_TRUE(result.bval);
 
 	s.clear();
 	s.push_back(Value::X());
 	s.push_back(4);
 	result = evaluate(e, e.top, s);
 	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_EQ(result.bval, unstable);
+	EXPECT_TRUE(result.isUnstable());
 
 	s.clear();
 	s.push_back(false);
 	s.push_back(4);
 	result = evaluate(e, e.top, s);
 	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_EQ(result.bval, neutral);
+	EXPECT_TRUE(result.isUnstable());
 }
 
 TEST(Expression, OperandGreaterThan) {
-	int valid = Value::VALID;
-	int neutral = Value::NEUTRAL;
-	int unstable = Value::UNSTABLE;
-
 	Expression x = Expression::varOf(0);
 	Expression y = Expression::varOf(1);
 	
@@ -204,28 +184,28 @@ TEST(Expression, OperandGreaterThan) {
 	s.push_back(4);
 	Value result = evaluate(e, e.top, s);
 	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_EQ(result.bval, valid);
+	EXPECT_TRUE(result.bval);
 
 	s.clear();	
 	s.push_back(4);
 	s.push_back(5);
 	result = evaluate(e, e.top, s);
 	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_EQ(result.bval, neutral);
+	EXPECT_FALSE(result.bval);
 
 	s.clear();
 	s.push_back(Value::X());
 	s.push_back(4);
 	result = evaluate(e, e.top, s);
 	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_EQ(result.bval, unstable);
+	EXPECT_TRUE(result.isUnstable());
 
 	s.clear();
 	s.push_back(false);
 	s.push_back(4);
 	result = evaluate(e, e.top, s);
 	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_EQ(result.bval, neutral);
+	EXPECT_TRUE(result.isUnstable());
 }
 
 TEST(Expression, Compound) {
@@ -335,9 +315,9 @@ TEST(Expression, Boolean) {
 	Expression c = Expression::varOf(2);
 	Expression d = Expression::varOf(3);
 
-	//Expression dut = ((true&~a)&~b)|((false|c)|d);
-	//Expression dut = ((false|c)|d);
-	Expression dut = (false|c)|d;
+	//Expression dut = ((true and not a) and not b) or ((false or c) or d);
+	//Expression dut = ((false or c) or d);
+	Expression dut = (false or c) or d;
 	cout << dut << endl;
 	dut.minimize();
 	cout << dut << endl;
@@ -347,7 +327,7 @@ TEST(Expression, Identity) {
 	Expression a = Expression::varOf(0);
 
 	Expression dut = a;
-	dut.push(Operation::OpType::TYPE_BOOLEAN_NOT, {dut.top});
+	dut.push(Operation::OpType::BOOLEAN_NOT, {dut.top});
 	cout << dut << endl;
 	dut.minimize();
 	cout << dut << endl;

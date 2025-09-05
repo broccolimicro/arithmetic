@@ -338,19 +338,44 @@ Type Value::typeOf() const {
 	return Type();
 }
 
-Value operator~(Value v) {
-	if (v.type == Value::INT) {
-		v.ival = ~v.ival;
-		return v;
-	} else if (v.type == Value::WIRE and v.isValid()) {
+Value vtrue(Value v) {
+	v = boolOf(v);
+	if (v.isUnstable()) {
+		return Value::X();
+	} else if (v.isUnknown()) {
+		return Value::U();
+	} else if (v.isNeutral()) {
 		return Value::gnd();
-	} else if (v.type == Value::WIRE and v.isNeutral()) {
-		return Value::vdd();
-	} else if (v.type == Value::WIRE) {
-		return v;
 	}
-	printf("error: 'operator~' not defined for '%s'\n", v.ctypeName());
-	return Value::X(v.type);
+	return v.bval ? Value::vdd() : Value::gnd();
+}
+
+Value valid(Value v) {
+	v = wireOf(v);
+	if (v.isUnstable()) {
+		return Value::X(Value::BOOL);
+	} else if (v.isUnknown()) {
+		return Value::U(Value::BOOL);
+	}
+	return Value::boolOf(v.isValid());
+}
+
+// Wire NOT
+Value operator~(Value v) {
+	v = wireOf(v);
+	if (v.isValid()) {
+		return Value::gnd();
+	} else if (v.isNeutral()) {
+		return Value::vdd();
+	}
+	return v;
+}
+
+// Boolean NOT
+Value operator!(Value v) {
+	v = boolOf(v);
+	v.bval = not v.bval;
+	return v;
 }
 
 Value operator-(Value v) {
@@ -367,44 +392,6 @@ Value operator-(Value v) {
 	return Value::X(v.type);
 }
 
-Value valid(Value v) {
-	if (v.type == Value::ARRAY or v.type == Value::STRUCT) {
-		Value result = Value::vdd();
-		for (auto i = v.arr.begin(); i != v.arr.end(); i++) {
-			result = result & valid(*i);
-		}
-		return result;
-	} else if (v.isValid()) {
-		return Value::vdd();
-	} else if (v.isNeutral()) {
-		return Value::gnd();
-	} else if (v.isUnstable()) {
-		return Value::X();
-	} else if (v.isUnknown()) {
-		return Value::U();
-	}
-	printf("error: 'valid' not defined for '%s'\n", v.ctypeName());
-	return Value::X();
-}
-
-// Boolean NOT
-Value operator!(Value v) {
-	if (v.type == Value::BOOL) {
-		v.bval = not v.bval;
-		return v;
-	} else if (v.type == Value::INT) {
-		v.type = Value::BOOL;
-		v.bval = (bool)v.ival;
-		return v;
-	} else if (v.type == Value::REAL) {
-		v.type = Value::BOOL;
-		v.bval = (bool)v.rval;
-		return v;
-	}
-	printf("error: 'operator!' not defined for '%s'\n", v.ctypeName());
-	return Value::X(Value::BOOL);
-}
-
 // Inverse
 Value inv(Value v) {
 	if (v.type == Value::INT) {
@@ -418,20 +405,20 @@ Value inv(Value v) {
 	return Value::X(v.type);
 }
 
-
 // Boolean OR
 Value operator||(Value v0, Value v1) {
 	v0 = boolOf(v0);
 	v1 = boolOf(v1);
-
-	if (v0.isUnstable() or v1.isUnstable()) {
+	if ((v0.isValid() and v0.bval) or (v1.isValid() and v1.bval)) {
+		return Value::boolOf(true);
+	} else if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X(Value::BOOL);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U(Value::BOOL);
 	} else if (v0.isNeutral() or v1.isNeutral()) {
 		return Value::gnd(Value::BOOL);
 	} else if (v0.isValid() and v1.isValid()) {
-		return Value::boolOf(v0.bval or v1.bval);
+		return Value::boolOf(false);
 	}
 	printf("error: 'operator||' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
 	return Value::X();
@@ -440,15 +427,16 @@ Value operator||(Value v0, Value v1) {
 Value operator&&(Value v0, Value v1) {
 	v0 = boolOf(v0);
 	v1 = boolOf(v1);
-
-	if (v0.isUnstable() or v1.isUnstable()) {
+	if ((v0.isValid() and not v0.bval) or (v1.isValid() and not v1.bval)) {
+		return Value::boolOf(false);
+	} else if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X(Value::BOOL);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U(Value::BOOL);
 	} else if (v0.isNeutral() or v1.isNeutral()) {
 		return Value::gnd(Value::BOOL);
 	} else if (v0.isValid() and v1.isValid()) {
-		return Value::boolOf(v0.bval and v1.bval);
+		return Value::boolOf(true);
 	}
 	printf("error: 'operator&&' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
 	return Value::X();
@@ -459,11 +447,11 @@ Value operator^(Value v0, Value v1) {
 	v1 = wireOf(v1);
 	if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X();
+	} else if (v0.isUnknown() or v1.isUnknown()) {
+		return Value::U();
 	} else if ((v0.isValid() and v1.isNeutral())
 		or (v0.isNeutral() and v1.isValid())) {
 		return Value::vdd();
-	} else if (v0.isUnknown() or v1.isUnknown()) {
-		return Value::U();
 	} else if ((v0.isValid() and v1.isValid())
 		or (v0.isNeutral() and v1.isNeutral())) {
 		return Value::gnd();
@@ -720,10 +708,10 @@ Value operator>=(Value v0, Value v1) {
 Value operator&(Value v0, Value v1) {
 	v0 = wireOf(v0);
 	v1 = wireOf(v1);
-	if (v0.isUnstable() or v1.isUnstable()) {
-		return Value::X();
-	} else if (v0.isNeutral() or v1.isNeutral()) {
+	if (v0.isNeutral() or v1.isNeutral()) {
 		return Value::gnd();
+	} else if (v0.isUnstable() or v1.isUnstable()) {
+		return Value::X();
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U();
 	} else if (v0.isValid() and v1.isValid()) {
@@ -735,10 +723,10 @@ Value operator&(Value v0, Value v1) {
 Value operator|(Value v0, Value v1) {
 	v0 = wireOf(v0);
 	v1 = wireOf(v1);
-	if (v0.isUnstable() or v1.isUnstable()) {
-		return Value::X();
-	} else if (v0.isValid() or v1.isValid()) {
+	if (v0.isValid() or v1.isValid()) {
 		return Value::vdd();
+	} else if (v0.isUnstable() or v1.isUnstable()) {
+		return Value::X();
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U();
 	} else if (v0.isNeutral() and v1.isNeutral()) {
@@ -756,14 +744,21 @@ Value stringOf(Value v) {
 Value wireOf(Value v) {
 	if (v.type == Value::WIRE) {
 		return v;
+	} else if (v.type == Value::ARRAY
+		or v.type == Value::STRUCT) {
+		Value result = Value::vdd();
+		for (auto i = v.arr.begin(); i != v.arr.end(); i++) {
+			result = result & wireOf(*i);
+		}
+		return result;
 	} else if (v.isUnstable()) {
 		return Value::X();
 	} else if (v.isUnknown()) {
 		return Value::U();
 	} else if (v.isNeutral()) {
 		return Value::gnd();
-	} else {
-		return valid(v);
+	} else if (v.isValid()) {
+		return Value::vdd();
 	}
 	printf("error: 'cast<wire>' not defined for '%s'\n", v.ctypeName());
 	return Value::X(Value::WIRE);

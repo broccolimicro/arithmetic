@@ -270,12 +270,14 @@ TEST(Expression, Simplify) {
 	
 	Expression dut = (a*c+b*c-c*a)/c;
 	Cost cost = arithmetic::cost(dut, dut.top, vars);
-	cout << "Before: cost=" << cost.complexity << " del=" << cost.critical << endl << dut << endl;
+	cout << "Before: dut=" << dut;
+	cout << "\tcost=" << cost.complexity << " del=" << cost.critical << endl;
 	dut.minimize();
+	cout << "After: dut=" << dut;
 	EXPECT_TRUE(areSame(dut, b));
 
 	Cost cost2 = arithmetic::cost(dut, dut.top, vars);
-	cout << "After: cost=" << cost2.complexity << " del=" << cost2.critical << endl << dut << endl;
+	cout << "\tcost=" << cost2.complexity << " del=" << cost2.critical << endl;
 	EXPECT_LE(cost2.complexity, cost.complexity);
 	EXPECT_LE(cost2.critical, cost.critical);
 }
@@ -300,7 +302,7 @@ TEST(Expression, ElasticRewrite) {
 	Expression d = Expression::varOf(3);
 	Expression e = Expression::varOf(4);
 	
-	Expression rules = arithmetic::array({
+	RuleSet rules({
 		a*add(b) > add(a*b),
 	});
 

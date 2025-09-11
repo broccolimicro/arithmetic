@@ -83,7 +83,7 @@ const char *Value::ctypeName() const {
 	} else if (type >= ValType::STRUCT) {
 		return "struct";
 	}
-	return "wire";
+	return "??";
 }
 
 string Value::typeName() const {
@@ -203,6 +203,7 @@ bool Value::isSubsetOf(Value v) const {
 
 bool areSame(Value v0, Value v1) {
 	if (v0.state == v1.state and (not v0.isValid()
+		or (v0.type == Value::WIRE and v1.type == Value::WIRE)
 		or (v0.type == Value::BOOL and v1.type == Value::BOOL and v0.bval == v1.bval)
 		or (v0.type == Value::INT and v1.type == Value::INT and v0.ival == v1.ival)
 		or (v0.type == Value::REAL and v1.type == Value::REAL and v0.rval == v1.rval)
@@ -338,7 +339,7 @@ Type Value::typeOf() const {
 	return Type();
 }
 
-Value vtrue(Value v) {
+Value wtrue(Value v) {
 	v = boolOf(v);
 	if (v.isUnstable()) {
 		return Value::X();
@@ -350,7 +351,7 @@ Value vtrue(Value v) {
 	return v.bval ? Value::vdd() : Value::gnd();
 }
 
-Value valid(Value v) {
+Value bvalid(Value v) {
 	v = wireOf(v);
 	if (v.isUnstable()) {
 		return Value::X(Value::BOOL);
@@ -358,6 +359,10 @@ Value valid(Value v) {
 		return Value::U(Value::BOOL);
 	}
 	return Value::boolOf(v.isValid());
+}
+
+Value valid(Value v) {
+	return wireOf(v);
 }
 
 // Wire NOT
@@ -394,15 +399,9 @@ Value operator-(Value v) {
 
 // Inverse
 Value inv(Value v) {
-	if (v.type == Value::INT) {
-		v.ival = 0;
-		return v;
-	} else if (v.type == Value::REAL) {
-		v.rval = 1.0/v.rval;
-		return v;
-	}
-	printf("error: 'inverse' not defined for '%s'\n", v.ctypeName());
-	return Value::X(v.type);
+	v = realOf(v);
+	v.rval = 1.0/v.rval;
+	return v;
 }
 
 // Boolean OR
@@ -492,6 +491,12 @@ Value operator>>(Value v0, Value v1) {
 }
 
 Value operator+(Value v0, Value v1) {
+	if (v0.type == Value::WIRE
+		or v0.type == Value::BOOL
+		or v0.type == Value::INT
+		or v0.type == Value::REAL) {
+		v1 = cast(v0.type, v1);
+	}
 	if (v0.type == Value::STRING and v1.type == Value::STRING) {
 		return Value::stringOf(v0.sval + v1.sval);
 	} else if (v0.isUnstable() or v1.isUnstable()) {
@@ -516,6 +521,12 @@ Value operator+(Value v0, Value v1) {
 }
 
 Value operator-(Value v0, Value v1) {
+	if (v0.type == Value::WIRE
+		or v0.type == Value::BOOL
+		or v0.type == Value::INT
+		or v0.type == Value::REAL) {
+		v1 = cast(v0.type, v1);
+	}
 	if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X(v0.type);
 	} else if (v0.isNeutral() or v1.isNeutral()) {
@@ -534,6 +545,12 @@ Value operator-(Value v0, Value v1) {
 }
 
 Value operator*(Value v0, Value v1) {
+	if (v0.type == Value::WIRE
+		or v0.type == Value::BOOL
+		or v0.type == Value::INT
+		or v0.type == Value::REAL) {
+		v1 = cast(v0.type, v1);
+	}
 	if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X(v0.type);
 	} else if (v0.isNeutral() or v1.isNeutral()) {
@@ -552,6 +569,12 @@ Value operator*(Value v0, Value v1) {
 }
 
 Value operator/(Value v0, Value v1) {
+	if (v0.type == Value::WIRE
+		or v0.type == Value::BOOL
+		or v0.type == Value::INT
+		or v0.type == Value::REAL) {
+		v1 = cast(v0.type, v1);
+	}
 	if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X(v0.type);
 	} else if (v0.isNeutral() or v1.isNeutral()) {
@@ -560,8 +583,14 @@ Value operator/(Value v0, Value v1) {
 		return Value::U(v0.type);
 	} else if (v0.isValid() and v1.isValid()) {
 		if (v0.type == Value::INT and v1.type == Value::INT) {
+			if (v1.ival == 0) { 
+				throw std::runtime_error("error: attempted to divide by 0\n"); 
+			} 
 			return Value::intOf(v0.ival / v1.ival);
 		} else if (v0.type == Value::REAL and v1.type == Value::REAL) {
+			if (v1.rval == 0.0) { 
+				throw std::runtime_error("error: attempted to divide by 0.0\n"); 
+			} 
 			return Value::realOf(v0.rval / v1.rval);
 		}
 	}
@@ -570,6 +599,12 @@ Value operator/(Value v0, Value v1) {
 }
 
 Value operator%(Value v0, Value v1) {
+	if (v0.type == Value::WIRE
+		or v0.type == Value::BOOL
+		or v0.type == Value::INT
+		or v0.type == Value::REAL) {
+		v1 = cast(v0.type, v1);
+	}
 	if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X(v0.type);
 	} else if (v0.isNeutral() or v1.isNeutral()) {
@@ -578,6 +613,9 @@ Value operator%(Value v0, Value v1) {
 		return Value::U(v0.type);
 	} else if (v0.isValid() and v1.isValid()) {
 		if (v0.type == Value::INT and v1.type == Value::INT) {
+			if (v1.ival == 0) { 
+				throw std::runtime_error("error: attempted to mod by 0\n"); 
+			} 
 			return Value::intOf(v0.ival % v1.ival);
 		}
 	}
@@ -712,10 +750,10 @@ Value operator&(Value v0, Value v1) {
 		return Value::gnd();
 	} else if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X();
-	} else if (v0.isUnknown() or v1.isUnknown()) {
-		return Value::U();
-	} else if (v0.isValid() and v1.isValid()) {
+	} else if (v0.isValid() or v1.isValid()) {
 		return Value::vdd();
+	} else if (v0.isUnknown() and v1.isUnknown()) {
+		return Value::U();
 	}
 	return Value::X();
 }
@@ -785,27 +823,59 @@ Value boolOf(Value v) {
 }
 
 Value realOf(Value v) {
-	if (v.isUnstable() or v.isUnknown() or v.isNeutral() or v.type == Value::REAL) {
+	if (v.type == Value::REAL) {
 		return v;
-	} else if (v.type == Value::BOOL) {
+	} else if (v.isUnstable()) {
+		return Value::X(Value::REAL);
+	} else if (v.isUnknown()) {
+		return Value::U(Value::REAL);
+	} else if (v.isNeutral()) {
+		return Value::gnd(Value::REAL);
+	} else if (v.type == Value::WIRE) {
 		return Value::realOf(0.0);
 	} else if (v.type == Value::INT) {
 		return Value::realOf((double)v.ival);
+	} else if (v.type == Value::BOOL) {
+		return Value::realOf((double)v.bval);
 	}
 	printf("error: cast to 'real' not defined for '%s'\n", v.ctypeName());
 	return Value::X();
 }
 
 Value intOf(Value v) {
-	if (v.isUnstable() or v.isUnknown() or v.isNeutral() or v.type == Value::INT) {
+	if (v.type == Value::INT) {
 		return v;
-	} else if (v.type == Value::BOOL) {
+	} else if (v.isUnstable()) {
+		return Value::X(Value::INT);
+	} else if (v.isUnknown()) {
+		return Value::U(Value::INT);
+	} else if (v.isNeutral()) {
+		return Value::gnd(Value::INT);
+	} else if (v.type == Value::WIRE) {
 		return Value::intOf(0);
 	} else if (v.type == Value::REAL) {
 		return Value::intOf((int64_t)v.rval);
+	} else if (v.type == Value::BOOL) {
+		return Value::intOf((int64_t)v.ival);
 	}
 	printf("error: cast to 'int' not defined for '%s'\n", v.ctypeName());
-	return Value::X();
+	return Value::X(Value::INT);
+}
+
+Value cast(Value::ValType type, Value v) {
+	if (v.type == type) {
+		return v;
+	} else if (type == Value::WIRE) {
+		return wireOf(v);
+	} else if (type == Value::BOOL) {
+		return boolOf(v);
+	} else if (type == Value::INT) {
+		return intOf(v);
+	} else if (type == Value::REAL) {
+		return realOf(v);
+	}
+ 	printf("error: cast to 'int' not defined for '%s'\n", v.ctypeName());
+	return Value::X(type);
 }
 
 Value index(Value v, Value i) {

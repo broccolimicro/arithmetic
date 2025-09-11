@@ -3,6 +3,7 @@
 #include "state.h"
 #include "type.h"
 #include "expression.h"
+#include "rewrite.h"
 #include <ostream>
 
 namespace arithmetic {
@@ -17,6 +18,9 @@ struct UpIterator {
 	vector<bool> expand;
 	vector<bool> seen;
 	vector<size_t> stack;
+
+	void setSeen(size_t index);
+	bool getSeen(size_t index) const;
 
 	const Operation &get();
 	const Operation &operator*();
@@ -39,6 +43,9 @@ struct ConstUpIterator {
 	vector<bool> seen;
 	vector<size_t> stack;
 
+	void setSeen(size_t index);
+	bool getSeen(size_t index) const;
+
 	const Operation &get();
 	const Operation &operator*();
 	const Operation *operator->();
@@ -60,6 +67,9 @@ struct DownIterator {
 	vector<bool> seen;
 	vector<size_t> stack;
 
+	void setSeen(size_t index);
+	bool getSeen(size_t index) const;
+
 	const Operation &get();
 	const Operation &operator*();
 	const Operation *operator->();
@@ -80,6 +90,9 @@ struct ConstDownIterator {
 	vector<bool> expand;
 	vector<bool> seen;
 	vector<size_t> stack;
+
+	void setSeen(size_t index);
+	bool getSeen(size_t index) const;
 
 	const Operation &get();
 	const Operation &operator*();
@@ -140,9 +153,9 @@ Expression subExpr(ConstOperationSet e0, Operand top);
 
 Mapping tidy(OperationSet expr, vector<Operand> top, bool rules=false);
 
-vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const Expression &rules, size_t count=0, bool fwd=true, bool bwd=true);
-Mapping replace(OperationSet expr, const Expression &rules, Match token);
-Mapping minimize(OperationSet expr, vector<Operand> top, Expression rules=Expression());
+vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const RuleSet &rules, size_t count=0, bool fwd=true, bool bwd=true);
+Mapping replace(OperationSet expr, const RuleSet &rules, Match token);
+Mapping minimize(OperationSet expr, vector<Operand> top, RuleSet rules=RuleSet());
 
 //Expression espresso(Expression expr, vector<Type> vars=vector<Type>(), Expression directed=Expression(), Expression undirected=Expression());
 

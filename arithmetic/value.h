@@ -90,12 +90,14 @@ int order(Value v0, Value v1);
 
 ostream &operator<<(ostream &os, Value v);
 
-Value vtrue(Value v); // return a wire which is "valid" when the value is "true" and "neutral" otherwise
-Value valid(Value v); // return a boolean which is "true" when the value is "valid" and "neutral" otherwise
-// boolean NOT
+Value wtrue(Value v); // return a wire which is "valid" when the value is "true" and "neutral" otherwise
+Value bvalid(Value v); // return a boolean which is "true" when the value is "valid" and "neutral" otherwise
+Value valid(Value v);
+	
 
 // wire NOT using neutral as false and any valid value as true
 Value operator~(Value v);
+// boolean NOT
 Value operator!(Value v);
 Value operator-(Value v);
 Value inv(Value v);
@@ -129,6 +131,7 @@ Value stringOf(Value v);
 Value wireOf(Value v); // compute validity
 Value boolOf(Value v); // compute truthiness
 Value realOf(Value v);
+Value cast(Value::ValType type, Value v);
 Value intOf(Value v);
 Value index(Value v, Value i);
 Value index(Value v, Value f, Value t);

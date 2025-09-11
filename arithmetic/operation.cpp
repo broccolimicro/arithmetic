@@ -116,12 +116,20 @@ Operand Operand::undef() {
 	return result;
 }
 
-Operand Operand::X() {
-	return Operand(Value::X());
+Operand Operand::X(Value::ValType type) {
+	return Operand(Value::X(type));
 }
 
-Operand Operand::U() {
-	return Operand(Value::U());
+Operand Operand::U(Value::ValType type) {
+	return Operand(Value::U(type));
+}
+
+Operand Operand::gnd(Value::ValType type) {
+	return Operand(Value::gnd(type));
+}
+
+Operand Operand::vdd() {
+	return Operand(Value::vdd());
 }
 
 Operand Operand::boolOf(bool bval) {
@@ -274,6 +282,13 @@ Mapping &Mapping::apply(Mapping m0) {
 	return *this;
 }
 
+ostream &operator<<(ostream &os, const Mapping &m) {
+	for (auto i = m.m.begin(); i != m.m.end(); i++) {
+		os << i->first << "->" << i->second << endl;
+	}
+	return os;
+}
+
 Operator::Operator() {
 	commutative = false;
 	reflexive = true;
@@ -325,22 +340,31 @@ void Operation::loadOperators() {
 	if (Operation::operators.count() == 0) {
 		//printf("loading operators\n");
 
-		set(OpType::WIRE_NOT, Operator("!", "", "", ""));
-		set(OpType::IDENTITY, Operator("+", "", "", "", false, true));
-		set(OpType::NEGATION, Operator("-", "", "", ""));
-		set(OpType::NEGATIVE, Operator("ltz(", "", "", ")"));
 		set(OpType::VALIDITY, Operator("val(", "", "", ")"));
-		set(OpType::BOOLEAN_NOT, Operator("~", "", "", ""));
-		set(OpType::INVERSE, Operator("inv(", "", "", ")"));
+		set(OpType::WIRE_NOT, Operator("~", "", "", ""));
 		set(OpType::WIRE_OR, Operator("", "", "|", "", true));
 		set(OpType::WIRE_AND, Operator("", "", "&", "", true));
 		set(OpType::WIRE_XOR, Operator("", "", "^", "", true));
+
+		set(OpType::TRUTHINESS, Operator("true(", "", "", ")"));
+		set(OpType::BOOLEAN_NOT, Operator("!", "", "", ""));
+		set(OpType::BOOLEAN_OR, Operator("", "", "||", "", true));
+		set(OpType::BOOLEAN_AND, Operator("", "", "&&", "", true));
+		set(OpType::BOOLEAN_XOR, Operator("", "", "^^", "", true));
+
 		set(OpType::EQUAL, Operator("", "", "==", ""));
 		set(OpType::NOT_EQUAL, Operator("", "", "~=", ""));
 		set(OpType::LESS, Operator("", "", "<", ""));
 		set(OpType::GREATER, Operator("", "", ">", ""));
 		set(OpType::LESS_EQUAL, Operator("", "", "<=", ""));
 		set(OpType::GREATER_EQUAL, Operator("", "", ">=", ""));
+		set(OpType::NEGATIVE, Operator("ltz(", "", "", ")"));
+		set(OpType::TERNARY, Operator("", "?", ":", ""));
+
+		set(OpType::IDENTITY, Operator("+", "", "", "", false, true));
+		set(OpType::NEGATION, Operator("-", "", "", ""));
+		set(OpType::INVERSE, Operator("inv(", "", "", ")"));
+
 		set(OpType::SHIFT_LEFT, Operator("", "", "<<", ""));
 		set(OpType::SHIFT_RIGHT, Operator("", "", ">>", ""));
 		set(OpType::ADD, Operator("", "", "+", "", true));
@@ -348,15 +372,14 @@ void Operation::loadOperators() {
 		set(OpType::MULTIPLY, Operator("", "", "*", "", true));
 		set(OpType::DIVIDE, Operator("", "", "/", ""));
 		set(OpType::MOD, Operator("", "", "%", ""));
-		set(OpType::TERNARY, Operator("", "?", ":", ""));
-		set(OpType::BOOLEAN_OR, Operator("", "", "||", "", true));
-		set(OpType::BOOLEAN_AND, Operator("", "", "&&", "", true));
-		set(OpType::BOOLEAN_XOR, Operator("", "", "^^", "", true));
+
+		set(OpType::CALL, Operator("", "(", ",", ")"));
+
 		set(OpType::ARRAY, Operator("[", "", ",", "]"));
 		set(OpType::INDEX, Operator("", "[", ":", "]"));
-		set(OpType::CALL, Operator("", "(", ",", ")"));
-		set(OpType::MEMBER, Operator("", ".", "", ""));
+
 		set(OpType::STRUCT, Operator("", "{", ",", "}"));
+		set(OpType::MEMBER, Operator("", ".", "", ""));
 
 		//printf("loaded %d operators\n", (int)Operation::operators.size());
 	} 
@@ -565,20 +588,10 @@ bool Operation::isUndef() const {
 }
 
 Value Operation::evaluate(int func, vector<Value> args) {
-	if (func == Operation::WIRE_NOT) {
-		return ~args[0];
-	} else if (func == Operation::IDENTITY) {
-		return args[0];
-	} else if (func == Operation::NEGATION) {
-		return -args[0];
-	} else if (func == Operation::NEGATIVE) {
-		return args[0] < Value::intOf(0);
-	} else if (func == Operation::VALIDITY) {
+	if (func == Operation::VALIDITY) {
 		return valid(args[0]);
-	} else if (func == Operation::BOOLEAN_NOT) {
-		return !args[0];
-	} else if (func == Operation::INVERSE) {
-		return inv(args[0]);
+	} else if (func == Operation::WIRE_NOT) {
+		return ~args[0];
 	} else if (func == Operation::WIRE_OR) {
 		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] | args[i];
@@ -592,6 +605,25 @@ Value Operation::evaluate(int func, vector<Value> args) {
 	} else if (func == Operation::WIRE_XOR) {
 		for (int i = 1; i < (int)args.size(); i++) {
 			args[0] = args[0] ^ args[i];
+		}
+		return args[0];
+	} else if (func == Operation::TRUTHINESS) {
+		return wtrue(args[0]);
+	} else if (func == Operation::BOOLEAN_NOT) {
+		return !args[0];
+	} else if (func == Operation::BOOLEAN_OR) { 
+		for (int i = 1; i < (int)args.size(); i++) {
+			args[0] = args[0] or args[i];
+		}
+		return args[0];
+	} else if (func == Operation::BOOLEAN_AND) { 
+		for (int i = 1; i < (int)args.size(); i++) {
+			args[0] = args[0] and args[i];
+		}
+		return args[0];
+	} else if (func == Operation::BOOLEAN_XOR) { 
+		for (int i = 1; i < (int)args.size(); i++) {
+			args[0] = (args[0] and !args[i]) or (!args[0] and args[i]);
 		}
 		return args[0];
 	} else if (func == Operation::EQUAL) {
@@ -624,6 +656,21 @@ Value Operation::evaluate(int func, vector<Value> args) {
 			return args[0];
 		}
 		return (args[0] >= args[1]);
+	} else if (func == Operation::NEGATIVE) {
+		return args[0] < Value::intOf(0);
+	} else if (func == Operation::TERNARY) { // ternary operator
+		if (args.size() == 1u) {
+			return args[0];
+		} else if (args.size() == 2u) {
+			args.push_back(Value::X());
+		}
+		return args[0] ? args[1] : args[2];
+	} else if (func == Operation::IDENTITY) {
+		return args[0];
+	} else if (func == Operation::NEGATION) {
+		return -args[0];
+	} else if (func == Operation::INVERSE) {
+		return inv(args[0]);
 	} else if (func == Operation::SHIFT_LEFT) {
 		if (args.size() == 1u) {
 			return args[0];
@@ -659,37 +706,33 @@ Value Operation::evaluate(int func, vector<Value> args) {
 			return args[0];
 		}
 		return (args[0] %  args[1]);
-	} else if (func == Operation::TERNARY) { // ternary operator
-		if (args.size() == 1u) {
-			return args[0];
-		} else if (args.size() == 2u) {
-			args.push_back(Value::X());
-		}
-		return args[0] ? args[1] : args[2];
-	} else if (func == Operation::BOOLEAN_AND) { 
-		for (int i = 1; i < (int)args.size(); i++) {
-			args[0] = args[0] and args[i];
-		}
-		return args[0];
-	} else if (func == Operation::BOOLEAN_OR) { 
-		for (int i = 1; i < (int)args.size(); i++) {
-			args[0] = args[0] or args[i];
-		}
-		return args[0];
+	// else if (func == Operation::CALL) {
 	} else if (func == Operation::ARRAY) { // concat arrays
 		return Value::arrOf(args);
 	} else if (func == Operation::INDEX and args.size() == 2) { // index
 		return index(args[0], args[1]);
 	} else if (func == Operation::INDEX and args.size() == 3) { // slice
 		return index(args[0], args[1], args[1]);
+	} else if (func == Operation::STRUCT) { // concat arrays
+		if (args.empty() or args[0].type != Value::STRING) {
+			printf("error: 'struct()' operator expects string name\n");
+			return Value::X();
+		} else {
+			return Value::structOf(args[0].sval, vector<Value>(args.begin()+1, args.end()));
+		}
 	}
 	printf("internal: function %d not implemented\n", func);
-	return args[0];
+	return Value::X();
 }
 
 Value Operation::evaluate(int func, vector<Value> args, TypeSet types) {
 	if (func == Operation::MEMBER) {
-		return member(args[0], args[1], types);
+		if (args.size() == 2u) {
+			return member(args[0], args[1], types);
+		} else {
+			printf("error: '.' operator expects 2 arguments, found %d\n", (int)args.size());
+			return Value::X();
+		}
 	}
 	return evaluate(func, args);
 }

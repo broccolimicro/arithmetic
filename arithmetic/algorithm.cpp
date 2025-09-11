@@ -1,5 +1,4 @@
 #include "algorithm.h"
-#include "rewrite.h"
 
 #include <common/text.h>
 #include <common/combinatoric.h>
@@ -10,12 +9,25 @@ UpIterator::UpIterator(OperationSet root, vector<Operand> start) : root(root) {
 	for (auto i = start.begin(); i != start.end(); i++) {
 		if (i->isExpr()) {
 			stack.push_back(i->index);
+			setSeen(i->index);
 		}
 	}
+	stack.push_back(-1);
 	++*this;
 }
 
 UpIterator::~UpIterator() {
+}
+
+void UpIterator::setSeen(size_t index) {
+	if (index >= seen.size()) {
+		seen.resize(index+1, false);
+	}
+	seen[index] = true;
+}
+
+bool UpIterator::getSeen(size_t index) const {
+	return index < seen.size() and seen[index];
 }
 
 const Operation &UpIterator::get() {
@@ -32,19 +44,10 @@ const Operation *UpIterator::operator->() {
 
 // Depth first from leaves to root
 UpIterator &UpIterator::operator++() {
-	if (stack.empty()) {
-		return *this;
-	}
-
-	if (stack.back() >= seen.size()) {
-		seen.resize(stack.back()+1, false);
-	}
-
-	if (seen[stack.back()]) {
+	if (not stack.empty()) {
 		stack.pop_back();
-	} else {
-		seen[stack.back()] = true;
 	}
+
 	while (not stack.empty()) {
 		if (stack.back() >= expand.size()) {
 			expand.resize(stack.back()+1, false);
@@ -56,14 +59,9 @@ UpIterator &UpIterator::operator++() {
 		expand[stack.back()] = true;
 		auto curr = root.getExpr(stack.back());
 		for (auto i = curr->operands.begin(); i != curr->operands.end(); i++) {
-			if (i->isExpr()) {
-				if (i->index >= seen.size()) {
-					seen.resize(i->index+1, false);
-				}
-				if (i->index >= 0 and not seen[i->index]) {
-					stack.push_back(i->index);
-					seen[i->index] = true;
-				}
+			if (i->isExpr() and not getSeen(i->index)) {
+				stack.push_back(i->index);
+				setSeen(i->index);
 			}
 		}
 	}
@@ -87,12 +85,25 @@ ConstUpIterator::ConstUpIterator(ConstOperationSet root, vector<Operand> start) 
 	for (auto i = start.begin(); i != start.end(); i++) {
 		if (i->isExpr()) {
 			stack.push_back(i->index);
+			setSeen(i->index);
 		}
 	}
+	stack.push_back(-1);
 	++*this;
 }
 
 ConstUpIterator::~ConstUpIterator() {
+}
+
+void ConstUpIterator::setSeen(size_t index) {
+	if (index >= seen.size()) {
+		seen.resize(index+1, false);
+	}
+	seen[index] = true;
+}
+
+bool ConstUpIterator::getSeen(size_t index) const {
+	return index < seen.size() and seen[index];
 }
 
 const Operation &ConstUpIterator::get() {
@@ -108,19 +119,10 @@ const Operation *ConstUpIterator::operator->() {
 }
 
 ConstUpIterator &ConstUpIterator::operator++() {
-	if (stack.empty()) {
-		return *this;
-	}
-
-	if (stack.back() >= seen.size()) {
-		seen.resize(stack.back()+1, false);
-	}
-
-	if (seen[stack.back()]) {
+	if (not stack.empty()) {
 		stack.pop_back();
-	} else {
-		seen[stack.back()] = true;
 	}
+
 	while (not stack.empty()) {
 		if (stack.back() >= expand.size()) {
 			expand.resize(stack.back()+1, false);
@@ -132,14 +134,9 @@ ConstUpIterator &ConstUpIterator::operator++() {
 		expand[stack.back()] = true;
 		auto curr = root.getExpr(stack.back());
 		for (auto i = curr->operands.begin(); i != curr->operands.end(); i++) {
-			if (i->isExpr()) {
-				if (i->index >= seen.size()) {
-					seen.resize(i->index+1, false);
-				}
-				if (i->index >= 0 and not seen[i->index]) {
-					stack.push_back(i->index);
-					seen[i->index] = true;
-				}
+			if (i->isExpr() and not getSeen(i->index)) {
+				stack.push_back(i->index);
+				setSeen(i->index);
 			}
 		}
 	}
@@ -163,12 +160,24 @@ DownIterator::DownIterator(OperationSet root, vector<Operand> start) : root(root
 	for (auto i = start.begin(); i != start.end(); i++) {
 		if (i->isExpr()) {
 			stack.push_back(i->index);
+			setSeen(i->index);
 		}
 	}
 	++*this;
 }
 
 DownIterator::~DownIterator() {
+}
+
+void DownIterator::setSeen(size_t index) {
+	if (index >= seen.size()) {
+		seen.resize(index+1, false);
+	}
+	seen[index] = true;
+}
+
+bool DownIterator::getSeen(size_t index) const {
+	return index < seen.size() and seen[index];
 }
 
 const Operation &DownIterator::get() {
@@ -196,26 +205,14 @@ DownIterator &DownIterator::operator++() {
 		auto curr = root.getExpr(stack.back());
 		stack.pop_back();
 		for (auto i = curr->operands.begin(); i != curr->operands.end(); i++) {
-			if (i->isExpr()) {
-				if (i->index >= seen.size()) {
-					seen.resize(i->index+1, false);
-				}
-
-				if (i->index >= 0 and not seen[i->index]) {
-					stack.push_back(i->index);
-					seen[i->index] = true;
-				}
+			if (i->isExpr() and not getSeen(i->index)) {
+				stack.push_back(i->index);
+				setSeen(i->index);
 			}
 		}
 	}
 
 	if (not stack.empty()) {
-		if (stack.back() >= seen.size()) {
-			seen.resize(stack.back()+1, false);
-		}
-
-		seen[stack.back()] = true;
-
 		if (stack.back() >= expand.size()) {
 			expand.resize(stack.back()+1, false);
 		}
@@ -241,12 +238,24 @@ ConstDownIterator::ConstDownIterator(ConstOperationSet root, vector<Operand> sta
 	for (auto i = start.begin(); i != start.end(); i++) {
 		if (i->isExpr()) {
 			stack.push_back(i->index);
+			setSeen(i->index);
 		}
 	}
 	++*this;
 }
 
 ConstDownIterator::~ConstDownIterator() {
+}
+
+void ConstDownIterator::setSeen(size_t index) {
+	if (index >= seen.size()) {
+		seen.resize(index+1, false);
+	}
+	seen[index] = true;
+}
+
+bool ConstDownIterator::getSeen(size_t index) const {
+	return index < seen.size() and seen[index];
 }
 
 const Operation &ConstDownIterator::get() {
@@ -274,26 +283,14 @@ ConstDownIterator &ConstDownIterator::operator++() {
 		auto curr = root.getExpr(stack.back());
 		stack.pop_back();
 		for (auto i = curr->operands.begin(); i != curr->operands.end(); i++) {
-			if (i->isExpr()) {
-				if (i->index >= seen.size()) {
-					seen.resize(i->index+1, false);
-				}
-
-				if (i->index >= 0 and not seen[i->index]) {
-					stack.push_back(i->index);
-					seen[i->index] = true;
-				}
+			if (i->isExpr() and not getSeen(i->index)) {
+				stack.push_back(i->index);
+				setSeen(i->index);
 			}
 		}
 	}
 
 	if (not stack.empty()) {
-		if (stack.back() >= seen.size()) {
-			seen.resize(stack.back()+1, false);
-		}
-
-		seen[stack.back()] = true;
-
 		if (stack.back() >= expand.size()) {
 			expand.resize(stack.back()+1, false);
 		}
@@ -388,7 +385,7 @@ bool operator!=(const PostOrderDFSIterator &i0, const PostOrderDFSIterator &i1) 
 }
 
 ostream &operator<<(ostream &os, Match m) {
-	os << m.replace << " expr=" << ::to_string(m.expr) << " top=" << ::to_string(m.top) << " vars=" << ::to_string(m.vars);
+	os << "e" << m.expr << ::to_string(m.top) << " -> " << "rules:" << m.replace << ".map(v" << ::to_string(m.vars) << ")";
 	return os;
 }
 
@@ -446,41 +443,6 @@ Cost cost(ConstOperationSet ops, Operand top, vector<Type> vars) {
 		delay = expr[top.index].delay;
 	}
 	return Cost(complexity, delay);
-}
-
-bool verifyRuleFormat(ConstOperationSet ops, Operand i, bool msg) {
-	// ==, <, >
-	if (not i.isExpr()) {
-		if (msg) printf("internal:%s:%d: invalid format for rule\n", __FILE__, __LINE__);
-		return false;
-	}
-	auto j = ops.getExpr(i.index);
-	if (j == nullptr
-		or j->operands.size() != 2u
-		or (j->func != Operation::EQUAL
-		and j->func != Operation::LESS
-		and j->func != Operation::GREATER)) {
-		if (msg) printf("internal:%s:%d: invalid format for rule\n", __FILE__, __LINE__);
-		return false;
-	}
-	return true;
-}
-
-bool verifyRulesFormat(ConstOperationSet ops, Operand top, bool msg) {
-	auto ruleTop = ops.getExpr(top.index);
-	if (not top.isExpr() or ruleTop == nullptr) {
-		if (msg) printf("error: no replacement rules found\n");
-		return false;
-	}
-	if (ruleTop->func != Operation::ARRAY) {
-		if (msg) printf("error: invalid format for replacement rules\n");
-		return false;
-	}
-	bool result = true;
-	for (auto i = ruleTop->operands.begin(); i != ruleTop->operands.end(); i++) {
-		result = verifyRuleFormat(ops, *i, msg) and result;
-	}
-	return result;
 }
 
 bool canMap(vector<Operand> o0, Operand o1, ConstOperationSet e0, ConstOperationSet e1, bool init, map<size_t, vector<Operand> > *vars) {
@@ -640,9 +602,9 @@ Mapping tidy(OperationSet expr, vector<Operand> top, bool rules) {
 	// erase invalidates the expr mapping... This needs to be a bit more elegant.
 	vector<Operand> index = expr.exprIndex();
 	for (auto i = index.begin(); i != index.end(); i++) {
-		if (result.has(*i)) {
+		if (result.has(*i) and result.map(*i) != *i) {
 			expr.eraseExpr(i->index);
-		} else if (i->index >= currIter.seen.size() or not currIter.seen[i->index] or i->index >= refcount.size() or refcount[i->index] == 0u) {
+		} else if (not currIter.getSeen(i->index) or i->index >= refcount.size() or refcount[i->index] == 0u) {
 			expr.eraseExpr(i->index);
 			result.set(*i, Operand::undef());
 		}
@@ -719,48 +681,33 @@ Mapping tidy(OperationSet expr, vector<Operand> top, bool rules) {
 
 // pin - these expression IDs cannot be contained in a match except at the very
 // top of the match. These must be preserved through a replace.
-vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const Expression &rules, size_t count, bool fwd, bool bwd) {
-	if (not verifyRulesFormat(rules, rules.top, true)) {
-		//cout << rules << endl;
-		return vector<Match>();
-	}
-
+vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const RuleSet &rules, size_t count, bool fwd, bool bwd) {
 	using Leaf = pair<Operand, Operand>;
 	vector<pair<vector<Leaf>, Match> > stack;
 
 	// initialize the initial matches
-	auto ruleTop = rules.getExpr(rules.top.index);
 	vector<Operand> indices = ops.exprIndex();
 	for (auto i = indices.begin(); i != indices.end(); i++) {
-		// search through the "rules" rules and add all of the matching starts
-		for (auto j = ruleTop->operands.begin(); j != ruleTop->operands.end(); j++) {
-			if (not verifyRuleFormat(rules, *j, false)) {
-				continue;
-			}
-
-			auto rule = rules.getExpr(j->index);
-			auto lhs = rule->operands.begin();
-			auto rhs = std::next(lhs);
+		// search through the rules and add all of the matching starts
+		for (auto j = rules.rules.begin(); j != rules.rules.end(); j++) {
 			// map left to right
-			if (rule->func == Operation::GREATER or (fwd and rule->func == Operation::EQUAL)) {
-				Match match;
-				vector<Leaf> leaves;
-				if (canMap({*i}, *lhs, ops, rules, true, &match.vars)) {
-					match.expr = i->index;
-					match.replace = *rhs;
-					leaves.push_back({*i, *lhs});
-					stack.push_back({leaves, match});
-				}
+			Match match;
+			vector<Leaf> leaves;
+			if (canMap({*i}, j->left, ops, rules.sub, true, &match.vars)) {
+				match.expr = i->index;
+				match.replace = j->right;
+				leaves.push_back({*i, j->left});
+				stack.push_back({leaves, match});
 			}
 
 			// map right to left
-			if (rule->func == Operation::LESS or (bwd and rule->func == Operation::EQUAL)) {
+			if (not j->directed) {
 				Match match;
 				vector<Leaf> leaves;
-				if (canMap({*i}, *rhs, ops, rules, true, &match.vars)) {
+				if (canMap({*i}, j->right, ops, rules.sub, true, &match.vars)) {
 					match.expr = i->index;
-					match.replace = *lhs;
-					leaves.push_back({*i, *rhs});
+					match.replace = j->left;
+					leaves.push_back({*i, j->right});
 					stack.push_back({leaves, match});
 				}
 			}
@@ -787,7 +734,7 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const Expressio
 
 		if (to.isExpr()) {
 			auto fOp = ops.getExpr(from.index);
-			auto tOp = rules.getExpr(to.index);
+			auto tOp = rules.sub.getExpr(to.index);
 
 			bool foundPin = false;
 			for (auto i = fOp->operands.begin(); i != fOp->operands.end(); i++) {
@@ -805,7 +752,7 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const Expressio
 				//cout << "Elastic Commutative" << endl;
 				Match nextMatch = curr;
 				vector<Leaf> nextLeaves = leaves;
-				if (canMap(fOp->operands, tOp->operands[0], ops, rules, false, &nextMatch.vars)) {
+				if (canMap(fOp->operands, tOp->operands[0], ops, rules.sub, false, &nextMatch.vars)) {
 					for (size_t i = 0; i < fOp->operands.size(); i++) {
 						nextLeaves.push_back({fOp->operands[i], tOp->operands[0]});
 						if (nextMatch.top.empty()) {
@@ -827,7 +774,7 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const Expressio
 						//cout << *i << "(" << fOp->operands[*i] << "==" << tOp->operands[i-it.begin()] << ") ";
 						nextLeaves.push_back({fOp->operands[*i], tOp->operands[i-it.begin()]});
 						operands.push_back(*i);
-						found = canMap({fOp->operands[*i]}, tOp->operands[i-it.begin()], ops, rules, false, &nextMatch.vars);
+						found = canMap({fOp->operands[*i]}, tOp->operands[i-it.begin()], ops, rules.sub, false, &nextMatch.vars);
 						//if (not found) {
 						//	cout << "XX";
 						//}
@@ -859,7 +806,7 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const Expressio
 	return result;
 }
 
-Mapping replace(OperationSet expr, const Expression &rules, Match match) {
+Mapping replace(OperationSet expr, const RuleSet &rules, Match match) {
 	Mapping result;
 
 	if (not match.replace.isExpr()) {
@@ -902,7 +849,7 @@ Mapping replace(OperationSet expr, const Expression &rules, Match match) {
 	} else {
 		//cout << "top=e" << match.expr << endl;
 		if (match.replace.isExpr()
-			and rules.getExpr(match.replace.index)->func != expr.getExpr(match.expr)->func
+			and rules.sub.getExpr(match.replace.index)->func != expr.getExpr(match.expr)->func
 			and match.top.size() < expr.getExpr(match.expr)->operands.size()) {
 			// We matched to a commutative operation and we need to collapse the
 			// matched operands to the output of our expression.
@@ -919,7 +866,7 @@ Mapping replace(OperationSet expr, const Expression &rules, Match match) {
 
 		// Iterate over the replacement expression
 		map<size_t, size_t> exprMap;
-		for (auto curr = ConstDownIterator(rules, {match.replace}); not curr.done(); ++curr) {
+		for (auto curr = ConstDownIterator(rules.sub, {match.replace}); not curr.done(); ++curr) {
 			// Along the way, compute the exprIndex mapping
 			auto pos = exprMap.insert({curr->exprIndex, 0});
 			if (pos.second) {
@@ -987,27 +934,27 @@ Mapping replace(OperationSet expr, const Expression &rules, Match match) {
 	// cout << "after erase: " << *this << endl;
 }
 
-Mapping minimize(OperationSet expr, vector<Operand> top, Expression rules) {
-	static const Expression defaultRules = rewriteBasic();
-	if (rules.top.isUndef()) {
+Mapping minimize(OperationSet expr, vector<Operand> top, RuleSet rules) {
+	static const RuleSet defaultRules = rewriteSimple();
+	if (rules.empty()) {
 		rules = defaultRules;
 	}
 
-	// cout << "Rules: " << rules << endl;
+	cout << "Rules: " << rules << endl;
 
 	Mapping result;
 	result.apply(tidy(expr, top));
 	top = result.map(top);
 	vector<Match> tokens = search(expr, top, rules, 1u);
 	while (not tokens.empty()) {
-		//cout << "Expr: " << ::to_string(top) << " " << expr.cast<Expression>() << endl;
-		//cout << "Match: " << ::to_string(tokens) << endl;
+		cout << "Expr: " << ::to_string(top) << " " << expr.cast<Expression>() << endl;
+		cout << "Match: " << ::to_string(tokens) << endl;
 		Mapping sub = replace(expr, rules, tokens.back());
-		//cout << "Replace: " << expr.cast<Expression>() << endl;
+		cout << "Replace: " << expr.cast<Expression>() << endl;
 		sub.apply(tidy(expr, top));
 		top = sub.map(top);
 		result.apply(sub);
-		//cout << "Canon: " << ::to_string(top) << " " << expr.cast<Expression>() << endl << endl;
+		cout << "Canon: " << ::to_string(top) << " " << expr.cast<Expression>() << endl << endl;
 		tokens = search(expr, top, rules, 1u);
 	}
 

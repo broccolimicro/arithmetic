@@ -1,4 +1,6 @@
 #include "operation_set.h"
+#include "algorithm.h"
+#include <common/text.h>
 
 namespace arithmetic {
 
@@ -39,6 +41,14 @@ bool SimpleOperationSet::eraseExpr(size_t index) {
 	return elems.erase(index);
 }
 
+Mapping SimpleOperationSet::append(ConstOperationSet arg, vector<Operand> top) {
+	Mapping m;
+	for (ConstUpIterator i(arg, top); not i.done(); ++i) {
+		m.set(i->op(), pushExpr(Operation(*i).apply(m)));
+	}
+	return m;
+}
+
 void SimpleOperationSet::clear() {
 	elems.clear();
 }
@@ -50,13 +60,16 @@ size_t SimpleOperationSet::size() const {
 string SimpleOperationSet::to_string() const {
 	ostringstream oss;
 	for (auto i = elems.rbegin(); i != elems.rend(); i++) {
-		oss << i.index << ": " << *i << endl;
+		oss << *i << endl;
 	}
 	return oss.str();
 }
 
-ostream &operator<<(ostream &os, SimpleOperationSet e) {
-	os << e.to_string();
+ostream &operator<<(ostream &os, ConstOperationSet e) {
+	vector<Operand> operands = e.exprIndex();
+	for (auto i = operands.begin(); i != operands.end(); i++) {
+		os << *e.getExpr(i->index) << endl;
+	}
 	return os;
 }
 

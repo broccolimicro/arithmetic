@@ -48,8 +48,10 @@ struct Operand {
 	static Operand undef();
 
 	// Constants
-	static Operand X();
-	static Operand U();
+	static Operand X(Value::ValType type=Value::WIRE);
+	static Operand U(Value::ValType type=Value::WIRE);
+	static Operand gnd(Value::ValType type=Value::WIRE);
+	static Operand vdd();
 	static Operand boolOf(bool bval);
 	static Operand intOf(int64_t ival);
 	static Operand realOf(double rval);
@@ -86,6 +88,8 @@ struct Mapping {
 	Mapping &apply(Mapping m0);
 };
 
+ostream &operator<<(ostream &os, const Mapping &m);
+
 struct Operator {
 	Operator();
 	Operator(string prefix, string trigger, string infix, string postfix, bool commutative=false, bool reflexive=false);
@@ -103,38 +107,46 @@ struct Operator {
 struct Operation {
 	enum OpType : int {
 		UNDEF = -1,
-		WIRE_NOT = 0,
-		IDENTITY = 1,
-		NEGATION = 2,
-		NEGATIVE = 3,
-		VALIDITY = 4,
-		BOOLEAN_NOT = 5,
-		INVERSE = 6,
-		WIRE_OR = 7,
-		WIRE_AND = 8,
-		WIRE_XOR = 9,
-		EQUAL = 10,
-		NOT_EQUAL = 11,
-		LESS = 12,
-		GREATER = 13,
-		LESS_EQUAL = 14,
-		GREATER_EQUAL = 15,
-		SHIFT_LEFT = 16,
-		SHIFT_RIGHT = 17,
-		ADD = 18,
-		SUBTRACT = 19,
-		MULTIPLY = 20,
-		DIVIDE = 21,
-		MOD = 22,
-		TERNARY = 23,
-		BOOLEAN_OR = 24,
-		BOOLEAN_AND = 25,
-		BOOLEAN_XOR = 26,
-		ARRAY = 27,
-		INDEX = 28,
-		CALL = 29,
-		MEMBER = 30,
-		STRUCT = 31
+		VALIDITY,
+		WIRE_NOT,
+		WIRE_OR,
+		WIRE_AND,
+		WIRE_XOR,
+		
+		TRUTHINESS,
+		BOOLEAN_NOT,
+		BOOLEAN_OR,
+		BOOLEAN_AND,
+		BOOLEAN_XOR,
+
+		EQUAL,
+		NOT_EQUAL,
+		LESS,
+		GREATER,
+		LESS_EQUAL,
+		GREATER_EQUAL,
+		NEGATIVE,
+		TERNARY,
+
+		IDENTITY,
+		NEGATION,
+		INVERSE,
+
+		SHIFT_LEFT,
+		SHIFT_RIGHT,
+		ADD,
+		SUBTRACT,
+		MULTIPLY,
+		DIVIDE,
+		MOD,
+
+		CALL,
+
+		ARRAY,
+		INDEX,
+
+		STRUCT,
+		MEMBER,
 	};
 
 	Operation();

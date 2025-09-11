@@ -30,12 +30,14 @@ struct SimpleOperationSet {
 	Operand pushExpr(Operation o);
 	bool eraseExpr(size_t index);
 
+	Mapping append(ConstOperationSet arg, vector<Operand> top);
+
 	void clear();
 	size_t size() const;
 
 	string to_string() const;
 };
 
-ostream &operator<<(ostream &os, SimpleOperationSet e);
+ostream &operator<<(ostream &os, ConstOperationSet e);
 
 }

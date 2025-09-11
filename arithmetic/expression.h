@@ -6,6 +6,7 @@
 #include "type.h"
 
 #include "operation_set.h"
+#include "rewrite.h"
 
 namespace arithmetic {
 
@@ -24,8 +25,10 @@ struct Expression {
 	Operand top;
 
 	static Expression undef();
-	static Expression X();
-	static Expression U();
+	static Expression X(Value::ValType type=Value::WIRE);
+	static Expression U(Value::ValType type=Value::WIRE);
+	static Expression gnd(Value::ValType type=Value::WIRE);
+	static Expression vdd();
 	static Expression boolOf(bool bval);
 	static Expression intOf(int64_t ival);
 	static Expression realOf(double rval);
@@ -43,7 +46,7 @@ struct Expression {
 
 	void clear();
 	void tidy();
-	void minimize();
+	void minimize(RuleSet rules=RuleSet());
 	size_t size() const;
 
 	Operand append(Expression arg);

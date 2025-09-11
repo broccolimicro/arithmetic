@@ -34,15 +34,27 @@ Expression Expression::undef() {
 	return result;
 }
 
-Expression Expression::X() {
+Expression Expression::X(Value::ValType type) {
 	Expression result;
-	result.top = Operand::X();
+	result.top = Operand::X(type);
 	return result;
 }
 
-Expression Expression::U() {
+Expression Expression::U(Value::ValType type) {
 	Expression result;
-	result.top = Operand::U();
+	result.top = Operand::U(type);
+	return result;
+}
+
+Expression Expression::gnd(Value::ValType type) {
+	Expression result;
+	result.top = Operand::gnd(type);
+	return result;
+}
+
+Expression Expression::vdd() {
+	Expression result;
+	result.top = Operand::vdd();
 	return result;
 }
 
@@ -124,11 +136,7 @@ size_t Expression::size() const {
 }
 
 Operand Expression::append(Expression arg) {
-	Mapping m;
-	for (ConstUpIterator i(arg, {arg.top}); not i.done(); ++i) {
-		m.set(i->op(), pushExpr(Operation(*i).apply(m)));
-	}
-	return m.map(arg.top);
+	return sub.append(arg.sub, {arg.top}).map(arg.top);
 }
 
 vector<Operand> Expression::append(vector<Expression> arg) {
@@ -234,9 +242,9 @@ bool Expression::isWire() const {
 	vector<Operand> idx = exprIndex();
 	for (auto i = idx.begin(); i != idx.end(); i++) {
 		if (getExpr(i->index)->func == Operation::VALIDITY
-			or getExpr(i->index)->func == Operation::BOOLEAN_NOT
-			or getExpr(i->index)->func == Operation::BOOLEAN_AND
-			or getExpr(i->index)->func == Operation::BOOLEAN_OR) {
+			or getExpr(i->index)->func == Operation::WIRE_NOT
+			or getExpr(i->index)->func == Operation::WIRE_AND
+			or getExpr(i->index)->func == Operation::WIRE_OR) {
 			return true;
 		}
 		for (auto j = getExpr(i->index)->operands.begin(); j != getExpr(i->index)->operands.end(); j++) {
@@ -319,12 +327,13 @@ ostream &operator<<(ostream &os, Expression e) {
 	return os;
 }
 
-Expression operator~(Expression e)  { return e.push(Operation::BOOLEAN_NOT, {e.top}); }
+Expression operator~(Expression e)  { return e.push(Operation::WIRE_NOT, {e.top}); }
 Expression operator-(Expression e)  { return e.push(Operation::NEGATION,    {e.top}); }
 Expression ident(Expression e)      { return e.push(Operation::IDENTITY,    {e.top}); }
 Expression isValid(Expression e)    { return e.push(Operation::VALIDITY,    {e.top}); }
+Expression wtrue(Expression e)    { return e.push(Operation::TRUTHINESS,    {e.top}); }
 Expression isNegative(Expression e) { return e.push(Operation::NEGATIVE,    {e.top}); }
-Expression operator!(Expression e)  { return e.push(Operation::WIRE_NOT, {e.top}); }
+Expression operator!(Expression e)  { return e.push(Operation::BOOLEAN_NOT, {e.top}); }
 Expression inv(Expression e)        { return e.push(Operation::INVERSE,     {e.top}); }
 Expression operator|(Expression e0, Expression e1) { return e0.push(Operation::WIRE_OR,   {e0.top, e0.append(e1)}); }
 Expression operator&(Expression e0, Expression e1) { return e0.push(Operation::WIRE_AND,   {e0.top, e0.append(e1)}); }
@@ -477,8 +486,8 @@ Expression weakestGuard(const Expression &guard, const Expression &exclude) {
 	return guard;
 }
 
-void Expression::minimize() {
-	this->top = arithmetic::minimize(*this, {this->top}).map(this->top);
+void Expression::minimize(RuleSet rules) {
+	this->top = arithmetic::minimize(*this, {this->top}, rules).map(this->top);
 }
 
 void Expression::tidy() {

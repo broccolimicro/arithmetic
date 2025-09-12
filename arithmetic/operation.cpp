@@ -588,7 +588,7 @@ bool Operation::isUndef() const {
 
 Value Operation::evaluate(int func, vector<Value> args) {
 	if (func == Operation::VALIDITY) {
-		return valid(args[0]);
+		return isValid(args[0]);
 	} else if (func == Operation::WIRE_NOT) {
 		return ~args[0];
 	} else if (func == Operation::WIRE_OR) {
@@ -607,7 +607,7 @@ Value Operation::evaluate(int func, vector<Value> args) {
 		}
 		return args[0];
 	} else if (func == Operation::TRUTHINESS) {
-		return wtrue(args[0]);
+		return isTrue(args[0]);
 	} else if (func == Operation::BOOLEAN_NOT) {
 		return !args[0];
 	} else if (func == Operation::BOOLEAN_OR) { 

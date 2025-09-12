@@ -90,9 +90,8 @@ int order(Value v0, Value v1);
 
 ostream &operator<<(ostream &os, Value v);
 
-Value wtrue(Value v); // return a wire which is "valid" when the value is "true" and "neutral" otherwise
-Value bvalid(Value v); // return a boolean which is "true" when the value is "valid" and "neutral" otherwise
-Value valid(Value v);
+Value isTrue(Value v); // return a wire which is "valid" when the value is "true" and "neutral" otherwise
+Value isValid(Value v);
 	
 
 // wire NOT using neutral as false and any valid value as true

@@ -339,7 +339,7 @@ Type Value::typeOf() const {
 	return Type();
 }
 
-Value wtrue(Value v) {
+Value isTrue(Value v) {
 	v = boolOf(v);
 	if (v.isUnstable()) {
 		return Value::X();
@@ -351,17 +351,7 @@ Value wtrue(Value v) {
 	return v.bval ? Value::vdd() : Value::gnd();
 }
 
-Value bvalid(Value v) {
-	v = wireOf(v);
-	if (v.isUnstable()) {
-		return Value::X(Value::BOOL);
-	} else if (v.isUnknown()) {
-		return Value::U(Value::BOOL);
-	}
-	return Value::boolOf(v.isValid());
-}
-
-Value valid(Value v) {
+Value isValid(Value v) {
 	return wireOf(v);
 }
 

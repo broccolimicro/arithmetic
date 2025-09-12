@@ -80,7 +80,7 @@ Expression operator~(Expression e);
 Expression operator-(Expression e);
 Expression ident(Expression e);
 Expression isValid(Expression e);
-Expression wtrue(Expression e);
+Expression isTrue(Expression e);
 Expression isNegative(Expression e);
 Expression operator!(Expression e);
 Expression inv(Expression e);

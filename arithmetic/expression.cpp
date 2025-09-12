@@ -327,11 +327,11 @@ ostream &operator<<(ostream &os, Expression e) {
 	return os;
 }
 
-Expression operator~(Expression e)  { return e.push(Operation::WIRE_NOT, {e.top}); }
+Expression operator~(Expression e)  { return e.push(Operation::WIRE_NOT,    {e.top}); }
 Expression operator-(Expression e)  { return e.push(Operation::NEGATION,    {e.top}); }
 Expression ident(Expression e)      { return e.push(Operation::IDENTITY,    {e.top}); }
 Expression isValid(Expression e)    { return e.push(Operation::VALIDITY,    {e.top}); }
-Expression wtrue(Expression e)      { return e.push(Operation::TRUTHINESS,    {e.top}); }
+Expression isTrue(Expression e)     { return e.push(Operation::TRUTHINESS,  {e.top}); }
 Expression isNegative(Expression e) { return e.push(Operation::NEGATIVE,    {e.top}); }
 Expression operator!(Expression e)  { return e.push(Operation::BOOLEAN_NOT, {e.top}); }
 Expression inv(Expression e)        { return e.push(Operation::INVERSE,     {e.top}); }

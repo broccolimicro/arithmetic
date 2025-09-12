@@ -756,6 +756,8 @@ Value Operation::evaluate(State values, vector<Value> expressions, TypeSet types
 	return Operation::evaluate(func, args, types);
 }
 
+//TODO: fix these magic numbers with an enum. Are these no longer correct? SEE func == 23 ...~line 823
+//only used in arithemtic::Expression::passesGuard at the moment for CHP sim
 void Operation::propagate(State &result, const State &global, vector<Value> &expressions, const vector<Value> gexpressions, Value v) const
 {
 	if (v.isValid() or v.isUnknown()) {

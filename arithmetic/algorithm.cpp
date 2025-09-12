@@ -512,7 +512,7 @@ Cost cost(ConstOperationSet ops, Operand top, vector<Type> vars) {
 bool canMap(vector<Operand> o0, Operand o1, ConstOperationSet e0, ConstOperationSet e1, bool init, map<size_t, vector<Operand> > *vars) {
 	if (o1.isConst()) {
 		for (auto i = o0.begin(); i != o0.end(); i++) {
-			if (not i->isConst() or not areSame(i->cnst, o1.cnst)) {
+			if (not i->isConst() or (not areSame(i->cnst, o1.cnst) and not (i->cnst.isValid() and o1.cnst.isUnknown()))) {
 				return false;
 			}
 		}

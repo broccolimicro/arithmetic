@@ -130,7 +130,7 @@ RuleSet rewriteSimple() {
 	Expression c = Expression::varOf(2);
 
 	Expression X = Expression::X();
-	Expression U = Expression::U();
+	Expression U = Expression::U(); // Maps to any valid constant
 	Expression gnd = Expression::gnd();
 	Expression vdd = Expression::vdd();
 
@@ -156,9 +156,11 @@ RuleSet rewriteSimple() {
 		// Wire constant propagation
 		(vdd & a) > (isValid(a)),
 		(gnd & a) > (gnd),
+		(U & a) > (isValid(a)),
 		
 		(vdd | a) > (vdd),
 		(gnd | a) > (isValid(a)),
+		(U | a) > (vdd),
 
 		// Unwrap validity of arithmetic operations
 		(a & (-b)) > (a & b),

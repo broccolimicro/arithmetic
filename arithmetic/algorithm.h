@@ -123,6 +123,8 @@ struct PostOrderDFSIterator {
 bool operator==(const PostOrderDFSIterator &i0, const PostOrderDFSIterator &i1);
 bool operator!=(const PostOrderDFSIterator &i0, const PostOrderDFSIterator &i1);
 
+string to_string(ConstOperationSet ops, Operand top);
+
 struct Match {
 	// what to replace this match with from the rules
 	Operand replace;

@@ -44,7 +44,7 @@ bool SimpleOperationSet::eraseExpr(size_t index) {
 Mapping SimpleOperationSet::append(ConstOperationSet arg, vector<Operand> top) {
 	Mapping m;
 	for (ConstUpIterator i(arg, top); not i.done(); ++i) {
-		m.set(i->op(), pushExpr(Operation(*i).apply(m)));
+		m.m.insert({i->op(), pushExpr(Operation(*i).apply(m))});
 	}
 	return m;
 }

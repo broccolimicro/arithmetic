@@ -216,11 +216,10 @@ ostream &operator<<(ostream &os, Operand o) {
 }
 
 bool operator==(Operand o0, Operand o1) {
-	return ((o0.isConst() and o1.isConst() and areSame(o0.cnst, o1.cnst))
-		or (o0.isVar() and o1.isVar() and o0.index == o1.index)
-		or (o0.isExpr() and o1.isExpr() and o0.index == o1.index)
-		or (o0.isType() and o1.isType() and o0.index == o1.index)
-		or (o0.isUndef() and o1.isUndef()));
+	return o0.type == o1.type and (
+		(o0.isConst() and areSame(o0.cnst, o1.cnst))
+		or ((o0.isVar() or o0.isExpr() or o0.isType()) and o0.index == o1.index)
+		or o0.isUndef());
 }
 
 bool operator!=(Operand o0, Operand o1) {

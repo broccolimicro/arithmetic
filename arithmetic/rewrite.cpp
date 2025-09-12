@@ -105,7 +105,7 @@ ostream &operator<<(ostream &os, const RuleSet &r) {
 	os << r.sub;
 	
 	for (int i = 0; i < (int)r.rules.size(); i++) {
-		os << i << ": " << r.rules[i].left << (r.rules[i].directed ? ">" : "=") << r.rules[i].right << endl;
+		os << i << ": " << r.rules[i].left << "(" << to_string(r.sub, r.rules[i].left) << ")" << (r.rules[i].directed ? ">" : "=") << r.rules[i].right << "(" << to_string(r.sub, r.rules[i].right) << ")" << endl;
 	}
 	return os;
 }
@@ -135,13 +135,6 @@ RuleSet rewriteSimple() {
 	Expression vdd = Expression::vdd();
 
 	return RuleSet({
-		(a-b) > (a+(-b)),
-		(a/b) > (a*inv(b)),
-		(a > b) > isNegative(b+(-a)),
-		(a >= b) > not isNegative(a+(-b)),
-		(a < b) > isNegative(a+(-b)),
-		(a <= b) > not isNegative(b+(-a)),
-
 		// Wire identity rules
 		(~(~a)) > (isValid(a)),
 		(isValid(~a)) > (~a),
@@ -202,6 +195,9 @@ RuleSet rewriteSimple() {
 		(1*a) > (a),
 		(-1*a) > (-a),
 
+		// Simplify boolean expressions
+		//(not (a == b)) > (a != b),
+		//(not (a != b)) > (a == b),
 
 		//(a & (!b)) > (a & b),
 		//(a | (!b)) > (a | b),
@@ -241,10 +237,18 @@ RuleSet rewriteHuman() {
  
 	return RuleSet({
 		(a + (-b)) > (a - b),
+		(inv(a)) > (1/a),
 		(isNegative(a)) > (a < 0),
 		(not (a < b)) > (a >= b),
+		(not (a > b)) > (a <= b),
+		(not (a <= b)) > (a > b),
+		(not (a >= b)) > (a < b),
 		(a-b < c) > (a < b+c),
-		(inv(a)) > (1/a),
+		(a-b > c) > (a > b+c),
+		(a-b <= c) > (a <= b+c),
+		(a-b >= c) > (a >= b+c),
+		(a-b == c) > (a == b+c),
+		(a-b != c) > (a != b+c),
 	});
 }
 

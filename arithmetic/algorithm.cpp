@@ -2,6 +2,8 @@
 
 #include <common/text.h>
 #include <common/combinatoric.h>
+#include <common/message.h>
+#include <sstream>
 
 namespace arithmetic {
 
@@ -58,11 +60,21 @@ UpIterator &UpIterator::operator++() {
 
 		expand[stack.back()] = true;
 		auto curr = root.getExpr(stack.back());
-		for (auto i = curr->operands.begin(); i != curr->operands.end(); i++) {
-			if (i->isExpr() and not getSeen(i->index)) {
-				stack.push_back(i->index);
-				setSeen(i->index);
+		if (curr != nullptr) {
+			for (auto i = curr->operands.begin(); i != curr->operands.end(); i++) {
+				if (i->isExpr() and not getSeen(i->index)) {
+					stack.push_back(i->index);
+					setSeen(i->index);
+				} else if (i->isExpr()) {
+					auto pos = find(stack.begin(), stack.end(), i->index);
+					if (pos != stack.end()) {
+						stack.erase(pos);
+						stack.push_back(i->index);
+					}
+				}
 			}
+		} else {
+			internal("", "malformed arithmetic expression", __FILE__, __LINE__);
 		}
 	}
 
@@ -133,11 +145,21 @@ ConstUpIterator &ConstUpIterator::operator++() {
 
 		expand[stack.back()] = true;
 		auto curr = root.getExpr(stack.back());
-		for (auto i = curr->operands.begin(); i != curr->operands.end(); i++) {
-			if (i->isExpr() and not getSeen(i->index)) {
-				stack.push_back(i->index);
-				setSeen(i->index);
+		if (curr != nullptr) {
+			for (auto i = curr->operands.begin(); i != curr->operands.end(); i++) {
+				if (i->isExpr() and not getSeen(i->index)) {
+					stack.push_back(i->index);
+					setSeen(i->index);
+				} else if (i->isExpr()) {
+					auto pos = find(stack.begin(), stack.end(), i->index);
+					if (pos != stack.end()) {
+						stack.erase(pos);
+						stack.push_back(i->index);
+					}
+				}
 			}
+		} else {
+			internal("", "malformed arithmetic expression", __FILE__, __LINE__);
 		}
 	}
 
@@ -204,11 +226,15 @@ DownIterator &DownIterator::operator++() {
 	if (expand[stack.back()]) {
 		auto curr = root.getExpr(stack.back());
 		stack.pop_back();
-		for (auto i = curr->operands.begin(); i != curr->operands.end(); i++) {
-			if (i->isExpr() and not getSeen(i->index)) {
-				stack.push_back(i->index);
-				setSeen(i->index);
+		if (curr != nullptr) {
+			for (auto i = curr->operands.begin(); i != curr->operands.end(); i++) {
+				if (i->isExpr() and not getSeen(i->index)) {
+					stack.push_back(i->index);
+					setSeen(i->index);
+				}
 			}
+		} else {
+			internal("", "malformed arithmetic expression", __FILE__, __LINE__);
 		}
 	}
 
@@ -282,11 +308,15 @@ ConstDownIterator &ConstDownIterator::operator++() {
 	if (expand[stack.back()]) {
 		auto curr = root.getExpr(stack.back());
 		stack.pop_back();
-		for (auto i = curr->operands.begin(); i != curr->operands.end(); i++) {
-			if (i->isExpr() and not getSeen(i->index)) {
-				stack.push_back(i->index);
-				setSeen(i->index);
+		if (curr != nullptr) {
+			for (auto i = curr->operands.begin(); i != curr->operands.end(); i++) {
+				if (i->isExpr() and not getSeen(i->index)) {
+					stack.push_back(i->index);
+					setSeen(i->index);
+				}
 			}
+		} else {
+			internal("", "malformed arithmetic expression", __FILE__, __LINE__);
 		}
 	}
 
@@ -382,6 +412,40 @@ bool operator==(const PostOrderDFSIterator &i0, const PostOrderDFSIterator &i1) 
 
 bool operator!=(const PostOrderDFSIterator &i0, const PostOrderDFSIterator &i1) {
 	return !(i0 == i1);
+}
+
+string to_string(ConstOperationSet ops, Operand top) {
+	index_vector<string> strs;
+	for (ConstUpIterator i(ops, {top}); not i.done(); ++i) {
+		Operator func = Operation::operators[i->func];
+		stringstream result;
+		result << "(";
+		result << func.prefix;
+		for (int j = 0; j < (int)i->operands.size(); j++) {
+			if (i->operands[j].isExpr()) {
+				result << strs[i->operands[j].index];
+			} else {
+				result << i->operands[j];
+			}
+			if (j == 0 and not func.trigger.empty()) {
+				result << func.trigger;
+			} else if (j == (int)i->operands.size()-1) {
+				result << func.postfix;
+			} else {
+				result << func.infix;
+			}
+		}
+	
+		result << ")";
+		strs.emplace_at(i->op().index, result.str());
+	}
+	stringstream result;
+	if (top.isExpr()) {
+		result << strs[top.index];
+	} else {
+		result << top;
+	}
+	return result.str();
 }
 
 ostream &operator<<(ostream &os, Match m) {
@@ -935,26 +999,26 @@ Mapping replace(OperationSet expr, const RuleSet &rules, Match match) {
 }
 
 Mapping minimize(OperationSet expr, vector<Operand> top, RuleSet rules) {
-	static const RuleSet defaultRules = rewriteSimple();
+	static const RuleSet defaultRules = rewriteCanonical() + rewriteSimple();
 	if (rules.empty()) {
 		rules = defaultRules;
 	}
 
-	cout << "Rules: " << rules << endl;
+	//cout << "Rules: " << rules << endl;
 
 	Mapping result;
 	result.apply(tidy(expr, top));
 	top = result.map(top);
 	vector<Match> tokens = search(expr, top, rules, 1u);
 	while (not tokens.empty()) {
-		cout << "Expr: " << ::to_string(top) << " " << expr.cast<Expression>() << endl;
-		cout << "Match: " << ::to_string(tokens) << endl;
+		//cout << "Expr: " << ::to_string(top) << " " << expr.cast<Expression>() << endl;
+		//cout << "Match: " << ::to_string(tokens) << endl;
 		Mapping sub = replace(expr, rules, tokens.back());
-		cout << "Replace: " << expr.cast<Expression>() << endl;
+		//cout << "Replace: " << expr.cast<Expression>() << endl;
 		sub.apply(tidy(expr, top));
 		top = sub.map(top);
 		result.apply(sub);
-		cout << "Canon: " << ::to_string(top) << " " << expr.cast<Expression>() << endl << endl;
+		//cout << "Canon: " << ::to_string(top) << " " << expr.cast<Expression>() << endl << endl;
 		tokens = search(expr, top, rules, 1u);
 	}
 

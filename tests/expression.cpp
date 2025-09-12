@@ -389,21 +389,25 @@ TEST(Expression, DanglingExpression) {
 	// e1 = ~v12  (5)
 	// e0 = +true  (1)
 
-	Expression dut;
-	dut.push(Operation::IDENTITY, {Operand::boolOf(true)});
-	dut.push(Operation::BOOLEAN_NOT, {Operand::varOf(12)});
-	dut.push(Operation::BOOLEAN_OR, {Operand::exprOf(1), Operand::varOf(13)});
-	dut.push(Operation::BOOLEAN_NOT, {Operand::varOf(6)});
-	dut.push(Operation::BOOLEAN_OR, {Operand::exprOf(3), Operand::varOf(7)});
-	dut.push(Operation::BOOLEAN_AND, {Operand::boolOf(true), Operand::exprOf(4)});
-	dut.push(Operation::BOOLEAN_AND, {Operand::exprOf(5), Operand::exprOf(5)});
-	dut.push(Operation::BOOLEAN_AND, {Operand::exprOf(6), Operand::varOf(2)});
-	dut.push(Operation::BOOLEAN_AND, {Operand::exprOf(0), Operand::exprOf(7)});
-	dut.top = Operand::exprOf(8);
+	Expression after;
+	after.push(Operation::IDENTITY, {Operand::boolOf(true)});
+	after.push(Operation::BOOLEAN_NOT, {Operand::varOf(12)});
+	after.push(Operation::BOOLEAN_OR, {Operand::exprOf(1), Operand::varOf(13)});
+	after.push(Operation::BOOLEAN_NOT, {Operand::varOf(6)});
+	after.push(Operation::BOOLEAN_OR, {Operand::exprOf(3), Operand::varOf(7)});
+	after.push(Operation::BOOLEAN_AND, {Operand::boolOf(true), Operand::exprOf(4)});
+	after.push(Operation::BOOLEAN_AND, {Operand::exprOf(5), Operand::exprOf(5)});
+	after.push(Operation::BOOLEAN_AND, {Operand::exprOf(6), Operand::varOf(2)});
+	after.push(Operation::BOOLEAN_AND, {Operand::exprOf(0), Operand::exprOf(7)});
+	after.top = Operand::exprOf(8);
 
-	cout << dut << endl;
-	dut.minimize();
-	cout << dut << endl;
+	Expression before(after);
+	cout << before << endl;
+
+	after.minimize();
+	cout << after << endl;
+	EXPECT_TRUE(!areSame(before, after)) << before << endl << after << endl;
+	//TODO: document Expected result to test
 }
 
 TEST(Expression, Iteration) {
@@ -448,3 +452,44 @@ TEST(Expression, Iteration) {
 	expected.top = Operand::exprOf(2);
 	EXPECT_TRUE(areSame(eG, expected)) << expected << endl;
 }
+
+TEST(Expression, BooleanSimplification) {
+	Expression x = Expression::varOf(0);
+	Expression eTrue = Expression::boolOf(true);
+	Expression eFalse = Expression::boolOf(false);
+
+	Expression a = eTrue && x && eTrue;
+	a.minimize();
+	EXPECT_TRUE(areSame(a, x)) << x << endl << x << endl;
+
+	Expression b = eFalse || x || eFalse;
+	b.minimize();
+	EXPECT_TRUE(areSame(b, x)) << b << endl << x << endl;
+
+	Expression e = x && x && x && x;
+	e.minimize();
+	EXPECT_TRUE(areSame(e, x)) << e << endl << x << endl;
+
+	Expression f = x || x || x || x;
+	f.minimize();
+	EXPECT_TRUE(areSame(f, x)) << f << endl << x << endl;
+
+	Expression g = x && x || x && x || x && x;
+	g.minimize();
+	EXPECT_TRUE(areSame(g, x)) << g << endl << x << endl;
+}
+
+TEST(Expression, ConstantFolding) {
+	Expression zero = Expression::intOf(0);
+	Expression one = Expression::intOf(1);
+	Expression x = Expression::varOf(0);
+
+	Expression a = Expression::intOf(1) || x;
+	a.minimize();
+	EXPECT_TRUE(areSame(a, one)) << a << endl << one << endl;
+
+	Expression b = Expression::intOf(0) && x;
+	b.minimize();
+	EXPECT_TRUE(areSame(b, zero)) << b << endl << one << endl;
+}
+

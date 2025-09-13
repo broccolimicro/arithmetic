@@ -486,6 +486,12 @@ void Expression::minimize(RuleSet rules) {
 	this->top = arithmetic::minimize(*this, {this->top}, rules).map(this->top);
 }
 
+Expression Expression::minimized(RuleSet rules) {
+	Expression duplicate(*this);
+	duplicate.top = arithmetic::minimize(duplicate, {duplicate.top}, rules).map(duplicate.top);
+	return duplicate;
+}
+
 void Expression::tidy() {
 	this->top = arithmetic::tidy(*this, {this->top}).map(this->top);
 }

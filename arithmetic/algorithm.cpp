@@ -414,36 +414,46 @@ bool operator!=(const PostOrderDFSIterator &i0, const PostOrderDFSIterator &i1) 
 	return !(i0 == i1);
 }
 
-string to_string(ConstOperationSet ops, Operand top) {
-	index_vector<string> strs;
-	for (ConstUpIterator i(ops, {top}); not i.done(); ++i) {
-		Operator func = Operation::operators[i->func];
-		stringstream result;
-		result << "(";
-		result << func.prefix;
-		for (int j = 0; j < (int)i->operands.size(); j++) {
-			if (i->operands[j].isExpr()) {
-				result << strs[i->operands[j].index];
-			} else {
-				result << i->operands[j];
-			}
-			if (j == 0 and not func.trigger.empty()) {
-				result << func.trigger;
-			} else if (j == (int)i->operands.size()-1) {
-				result << func.postfix;
-			} else {
-				result << func.infix;
-			}
+string to_string(ConstOperationSet ops, Operand top, bool debug) {
+	std::ostringstream result;
+	if (debug) {
+		result << "top: " << top << endl;
+		vector<Operand> idx = ops.exprIndex();
+		for (auto i = idx.rbegin(); i != idx.rend(); i++) {
+			result << *ops.getExpr(i->index) << endl;
 		}
-	
-		result << ")";
-		strs.emplace_at(i->op().index, result.str());
-	}
-	stringstream result;
-	if (top.isExpr()) {
-		result << strs[top.index];
+
 	} else {
-		result << top;
+		index_vector<string> strs;
+		for (ConstUpIterator i(ops, {top}); not i.done(); ++i) {
+			Operator func = Operation::operators[i->func];
+			std::ostringstream oss;
+			oss << "(";
+			oss << func.prefix;
+			for (int j = 0; j < (int)i->operands.size(); j++) {
+				if (i->operands[j].isExpr()) {
+					oss << strs[i->operands[j].index];
+				} else {
+					oss << i->operands[j];
+				}
+				if (j == 0 and not func.trigger.empty()) {
+					oss << func.trigger;
+				} else if (j == (int)i->operands.size()-1) {
+					oss << func.postfix;
+				} else {
+					oss << func.infix;
+				}
+			}
+
+			oss << ")";
+			strs.emplace_at(i->op().index, oss.str());
+		}
+
+		if (top.isExpr()) {
+			result << strs[top.index];
+		} else {
+			result << top;
+		}
 	}
 	return result.str();
 }

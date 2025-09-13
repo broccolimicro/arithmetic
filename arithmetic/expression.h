@@ -47,6 +47,7 @@ struct Expression {
 	void clear();
 	void tidy();
 	void minimize(RuleSet rules=RuleSet());
+	Expression minimized(RuleSet rules=RuleSet());
 	size_t size() const;
 
 	Operand append(Expression arg);
@@ -62,7 +63,7 @@ struct Expression {
 	Expression &apply(vector<int> uidMap);
 	Expression &apply(Mapping m);
 
-	string to_string() const;
+	string to_string(bool debug=false) const;
 
 	Expression operator()(Expression idx) const;
 	Expression operator()(Expression from, Expression to) const;

@@ -1,12 +1,14 @@
 #include "expression.h"
+
+#include <array>
+
+#include <common/standard.h>
+#include <common/text.h>
+
 #include "state.h"
 #include "rewrite.h"
 #include "algorithm.h"
 
-#include <sstream>
-#include <array>
-#include <common/standard.h>
-#include <common/text.h>
 
 namespace arithmetic {
 
@@ -312,14 +314,8 @@ bool areSame(Expression e0, Expression e1) {
 	return i.done() and j.done();
 }
 
-string Expression::to_string() const {
-	ostringstream oss;
-	oss << "top: " << top << endl;
-	vector<Operand> idx = exprIndex();
-	for (auto i = idx.rbegin(); i != idx.rend(); i++) {
-		oss << *getExpr(i->index) << endl;
-	}
-	return oss.str();
+string Expression::to_string(bool debug) const {
+	return arithmetic::to_string(*this, this->top, debug);
 }
 
 ostream &operator<<(ostream &os, Expression e) {

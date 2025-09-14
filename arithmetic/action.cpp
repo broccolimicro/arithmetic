@@ -34,18 +34,11 @@ bool Action::isPassive() const {
 	return variable < 0;
 }
 
-void Action::apply(vector<int> uidMap) {
-	if (uidMap.empty()) {
-		return;
+void Action::applyVars(const Mapping<size_t> &m) {
+	if (variable >= 0) {
+		variable = m.map((size_t)variable);
 	}
-
-	if (variable >= 0 and variable < (int)uidMap.size()) {
-		variable = uidMap[variable];
-	} else {
-		variable = -1;
-	}
-
-	expr.apply(uidMap);
+	expr.applyVars(m);
 }
 
 bool areSame(Action a0, Action a1) {
@@ -176,13 +169,9 @@ Expression Parallel::guard() {
 	return result;
 }
 
-void Parallel::apply(vector<int> uidMap) {
-	if (uidMap.empty()) {
-		return;
-	}
-
+void Parallel::applyVars(const Mapping<size_t> &m) {
 	for (int i = 0; i < (int)actions.size(); i++) {
-		actions[i].apply(uidMap);
+		actions[i].applyVars(m);
 	}
 }
 
@@ -316,13 +305,9 @@ Expression Choice::guard() {
 	return result;
 }
 
-void Choice::apply(vector<int> uidMap) {
-	if (uidMap.empty()) {
-		return;
-	}
-
+void Choice::applyVars(const Mapping<size_t> &m) {
 	for (int i = 0; i < (int)terms.size(); i++) {
-		terms[i].apply(uidMap);
+		terms[i].applyVars(m);
 	}
 }
 

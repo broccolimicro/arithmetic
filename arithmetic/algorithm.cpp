@@ -572,7 +572,7 @@ Operand extract(OperationSet expr, size_t from, vector<size_t> operands) {
 
 Expression subExpr(ConstOperationSet e0, Operand top) {
 	Expression result;
-	Mapping m;
+	Mapping<Operand> m(Operand::undef(), false);
 	for (ConstUpIterator i(e0, {top}); not i.done(); ++i) {
 		m.set(i->op(), result.pushExpr(Operation(*i).apply(m)));
 	}
@@ -587,7 +587,7 @@ Expression subExpr(ConstOperationSet e0, Operand top) {
 // 4. remove dangling operations
 // 5. merge successive commutative operations
 // 6. sort operands into a canonical order for commutative operations
-Mapping tidy(OperationSet expr, vector<Operand> top, bool rules) {
+Mapping<Operand> tidy(OperationSet expr, vector<Operand> top, bool rules) {
 	// Start from the top and do depth first search. That zips up the graph for
 	// us. First, we need a mapping of index in operations to exprIndex so we
 	// don't have to search for the exprIndex each time.
@@ -598,7 +598,7 @@ Mapping tidy(OperationSet expr, vector<Operand> top, bool rules) {
 	// propagate all constants. The end result should still be functionally
 	// equivalent.
 
-	Mapping result;
+	Mapping<Operand> result(Operand::undef(), true);
 	vector<size_t> keep;
 	vector<size_t> refcount;
 
@@ -610,6 +610,7 @@ Mapping tidy(OperationSet expr, vector<Operand> top, bool rules) {
 		// cout << "start: " << curr << endl;
 		curr.apply(result);
 
+		Mapping<Operand> step(Operand::undef(), true);
 		bool squish = false;
 		for (int i = (int)curr.operands.size()-1; i >= 0; i--) {
 			Operand op = curr.operands[i];
@@ -639,24 +640,25 @@ Mapping tidy(OperationSet expr, vector<Operand> top, bool rules) {
 
 		if (curr.operands.size() == 1u and curr.operands[0].isConst()) {
 			// cout << "found const " << curr.op() << " = " << curr << endl;
-			result.set(curr.op(), Operation::evaluate(curr.func, {curr.operands[0].get()}));
+			step.set(curr.op(), Operation::evaluate(curr.func, {curr.operands[0].get()}));
 		}	else if (curr.operands.size() == 1u and (curr.isReflexive()
 			or (not rules and curr.isCommutative()))) {
 			// replace reflexive expressions
 			// cout << "found reflex " << curr.op() << " = " << curr.operands[0] << endl;
-			result.set(curr.op(), curr.operands[0]);
+			step.set(curr.op(), curr.operands[0]);
 		} else {
 			// replace identical operations
 			for (auto k = keep.begin(); k != keep.end(); k++) {
 				if (curr == *expr.getExpr(*k)) {
 					// cout << "found duplicate " << curr.op() << " = " << Operand::exprOf(*k) << endl;
-					result.set(curr.op(), Operand::exprOf(*k));
+					step.set(curr.op(), Operand::exprOf(*k));
 					break;
 				}
 			}
 		}
 
-		if (not result.has(curr.op())) {
+		result *= step;
+		if (step.mapsTo(curr.op())) {
 			expr.setExpr(curr);
 			keep.push_back(curr.exprIndex);
 		}
@@ -676,11 +678,11 @@ Mapping tidy(OperationSet expr, vector<Operand> top, bool rules) {
 	// erase invalidates the expr mapping... This needs to be a bit more elegant.
 	vector<Operand> index = expr.exprIndex();
 	for (auto i = index.begin(); i != index.end(); i++) {
-		if (result.has(*i) and result.map(*i) != *i) {
+		if (not result.mapsTo(*i)) {
 			expr.eraseExpr(i->index);
 		} else if (not currIter.getSeen(i->index) or i->index >= refcount.size() or refcount[i->index] == 0u) {
 			expr.eraseExpr(i->index);
-			result.set(*i, Operand::undef());
+			result.update(*i, Operand::undef());
 		}
 	}
 
@@ -880,20 +882,18 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const RuleSet &
 	return result;
 }
 
-Mapping replace(OperationSet expr, const RuleSet &rules, Match match) {
-	Mapping result;
-
+void replace(OperationSet expr, const RuleSet &rules, Match match) {
 	if (not match.replace.isExpr()) {
 		auto slotPtr = expr.getExpr(match.expr);
 		if (slotPtr == nullptr) {
 			printf("internal:%s:%d: expression %lu not found\n", __FILE__, __LINE__, match.expr);
-			return result;
+			return;
 		}
 		Operation slot = *slotPtr;
 
-		if (match.top.empty()) {
+		if (match.top.empty() or match.top.size() == slot.operands.size()) {
 			slot.operands.clear();
-			slot.func = Operation::OpType::UNDEF;
+			slot.func = Operation::OpType::IDENTITY;
 			match.top.push_back(0);
 		} else {
 			// If this match doesn't cover all operands, we only want to replace
@@ -953,7 +953,7 @@ Mapping replace(OperationSet expr, const RuleSet &rules, Match match) {
 			auto slotPtr = expr.getExpr(pos.first->second);
 			if (slotPtr == nullptr) {
 				printf("internal:%s:%d: expression %lu not found\n", __FILE__, __LINE__, pos.first->second);
-				return result;
+				return;
 			}
 			Operation slot = *slotPtr;
 
@@ -1004,11 +1004,10 @@ Mapping replace(OperationSet expr, const RuleSet &rules, Match match) {
 
 	// Let tidy handle the cleanup. There may be other references to these in the DAG
 
-	return result;
 	// cout << "after erase: " << *this << endl;
 }
 
-Mapping minimize(OperationSet expr, vector<Operand> top, RuleSet rules) {
+Mapping<Operand> minimize(OperationSet expr, vector<Operand> top, RuleSet rules) {
 	static const RuleSet defaultRules = rewriteCanonical() + rewriteSimple();
 	if (rules.empty()) {
 		rules = defaultRules;
@@ -1016,18 +1015,18 @@ Mapping minimize(OperationSet expr, vector<Operand> top, RuleSet rules) {
 
 	//cout << "Rules: " << rules << endl;
 
-	Mapping result;
-	result.apply(tidy(expr, top));
+	Mapping<Operand> result(Operand::undef(), true);
+	result *= tidy(expr, top);
 	top = result.map(top);
 	vector<Match> tokens = search(expr, top, rules, 1u);
 	while (not tokens.empty()) {
 		//cout << "Expr: " << ::to_string(top) << " " << expr.cast<Expression>() << endl;
 		//cout << "Match: " << ::to_string(tokens) << endl;
-		Mapping sub = replace(expr, rules, tokens.back());
+		replace(expr, rules, tokens.back());
 		//cout << "Replace: " << expr.cast<Expression>() << endl;
-		sub.apply(tidy(expr, top));
+		Mapping<Operand> sub = tidy(expr, top);
 		top = sub.map(top);
-		result.apply(sub);
+		result *= sub;
 		//cout << "Canon: " << ::to_string(top) << " " << expr.cast<Expression>() << endl << endl;
 		tokens = search(expr, top, rules, 1u);
 	}

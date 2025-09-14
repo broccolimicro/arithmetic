@@ -30,7 +30,7 @@ struct SimpleOperationSet {
 	Operand pushExpr(Operation o);
 	bool eraseExpr(size_t index);
 
-	Mapping append(ConstOperationSet arg, vector<Operand> top);
+	Mapping<size_t> append(ConstOperationSet arg, vector<Operand> top);
 
 	void clear();
 	size_t size() const;

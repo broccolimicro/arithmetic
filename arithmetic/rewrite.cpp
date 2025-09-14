@@ -27,7 +27,7 @@ RuleSet::RuleSet(std::initializer_list<Expression> lst) {
 			continue;
 		}
 
-		Operation rule = *sub.getExpr(sub.append(e->sub, {e->top}).map(e->top).index);
+		Operation rule = *sub.getExpr(sub.append(e->sub, {e->top}).map(e->top.index));
 		if (rule.func == Operation::EQUAL) {
 			rules.push_back(Rule(rule.operands[0], rule.operands[1], false));
 		} else if (rule.func == Operation::GREATER) {
@@ -37,7 +37,7 @@ RuleSet::RuleSet(std::initializer_list<Expression> lst) {
 		}
 	}
 
-	Mapping m = arithmetic::tidy(sub, top(), true);
+	Mapping<Operand> m = arithmetic::tidy(sub, top(), true);
 	for (auto i = rules.begin(); i != rules.end(); i++) {
 		i->left = m.map(i->left);
 		i->right = m.map(i->right);
@@ -68,11 +68,11 @@ vector<Operand> RuleSet::top() const {
 }
 
 RuleSet &RuleSet::operator+=(const RuleSet &r1) {
-	Mapping m = sub.append(r1.sub, r1.top());
+	Mapping<size_t> m = sub.append(r1.sub, r1.top());
 	for (int i = 0; i < (int)r1.rules.size(); i++) {
 		Rule r = r1.rules[i];
-		r.left = m.map(r.left);
-		r.right = m.map(r.right);
+		r.left.applyExprs(m);
+		r.right.applyExprs(m);
 		rules.push_back(r);
 	}
 	return *this;
@@ -116,7 +116,7 @@ RuleSet rewriteCanonical() {
  
 	return RuleSet({
 		(a-b) > (a+(-b)),
-		(a/b) > (a*inv(b)),
+		//(a/b) > (a*inv(b)),
 		(a > b) > isNegative(b+(-a)),
 		(a >= b) > not isNegative(a+(-b)),
 		(a < b) > isNegative(a+(-b)),
@@ -188,14 +188,44 @@ RuleSet rewriteSimple() {
 		(a+(-a)) > (0),
 		(X+a) > (X),
 		(0+a) > (a),
+		(a/a) > (1), // TODO(edward.bingham) this should be handled by inv
+		((a*b)/a) > (b), // TODO(edward.bingham) this should be handled by inv
 
-		(a*inv(a)) > (1),
-		(inv(a*b)) > (inv(a)*inv(b)),
-		(inv(inv(a))) > a,
+		//(a*inv(a)) > (1),
+		//(inv(a*b)) > (inv(a)*inv(b)),
+		//(inv(inv(a))) > a,
 		(X*a) > (X),
 		(0*a) > (0),
 		(1*a) > (a),
 		(-1*a) > (-a),
+
+
+
+
+
+		/*isTrue(isTrue(a)) > isTrue(a),
+		isTrue(isValid(a)) > isValid(a),
+		isValid(isTrue(a)) > isTrue(a),
+		!isValid(a) > gnd,
+		!isTrue(a) > gnd,
+
+		(!(!a)) > (isTrue(a)),
+		(isTrue(!a)) > (!a),
+		(!isTrue(a)) > (!a),
+		(isTrue(isTrue(a))) > (isTrue(a)),
+
+
+
+		(isTrue(a) && b) > (a && b),
+		(isTrue(a && b)) > (a && b),
+		(isTrue(a) || b) > (a || b),
+		(isTrue(a || b)) > (a || b),
+		a && a > isTrue(a),
+		a || a > isTrue(a),
+		a && !a > false,
+		a || !a > true,*/
+		
+		
 
 		// Simplify boolean expressions
 		//(not (a == b)) > (a != b),
@@ -239,7 +269,7 @@ RuleSet rewriteHuman() {
  
 	return RuleSet({
 		(a + (-b)) > (a - b),
-		(inv(a)) > (1/a),
+		//(inv(a)) > (1/a),
 		(isNegative(a)) > (a < 0),
 		(not (a < b)) > (a >= b),
 		(not (a > b)) > (a <= b),

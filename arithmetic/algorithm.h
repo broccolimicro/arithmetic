@@ -153,11 +153,11 @@ bool canMap(vector<Operand> o0, Operand o1, ConstOperationSet e0, ConstOperation
 Operand extract(OperationSet expr, size_t from, vector<size_t> operands);
 Expression subExpr(ConstOperationSet e0, Operand top);
 
-Mapping tidy(OperationSet expr, vector<Operand> top, bool rules=false);
+Mapping<Operand> tidy(OperationSet expr, vector<Operand> top, bool rules=false);
 
 vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const RuleSet &rules, size_t count=0, bool fwd=true, bool bwd=true);
-Mapping replace(OperationSet expr, const RuleSet &rules, Match token);
-Mapping minimize(OperationSet expr, vector<Operand> top, RuleSet rules=RuleSet());
+void replace(OperationSet expr, const RuleSet &rules, Match token);
+Mapping<Operand> minimize(OperationSet expr, vector<Operand> top, RuleSet rules=RuleSet());
 
 //Expression espresso(Expression expr, vector<Type> vars=vector<Type>(), Expression directed=Expression(), Expression undirected=Expression());
 

@@ -177,17 +177,21 @@ Operand Operand::varOf(size_t index) {
 	return result;
 }
 
-Operand &Operand::apply(vector<int> varMap) {
-	if (varMap.empty()) {
-		return *this;
-	}
-
+Operand &Operand::applyVars(const Mapping<size_t> &m) {
 	if (isVar()) {
-		if (index < varMap.size()) {
-			index = varMap[index];
-		} else {
-			type = CONST;
-			cnst = Value::X();
+		index = m.map(index);
+		if (index == m.undef) {
+			type = UNDEF;
+		}
+	}
+	return *this;
+}
+
+Operand &Operand::applyExprs(const Mapping<size_t> &m) {
+	if (isExpr()) {
+		index = m.map(index);
+		if (index == m.undef) {
+			type = UNDEF;
 		}
 	}
 	return *this;
@@ -232,74 +236,18 @@ bool operator<(Operand o0, Operand o1) {
 		and o0.index < o1.index);
 }
 
-bool Mapping::set(Operand o0, Operand o1) {
-	auto pos = m.insert({o0, o1});
-	if (pos.second) {
-		for (auto i = m.begin(); i != m.end(); i++) {
-			if (i->second == o0) {
-				i->second = o1;
-			}
-		}
-		return true;
-	}
-	return false;
-}
-
-bool Mapping::has(Operand o0) const {
-	return m.find(o0) != m.end();
-}
-
-Operand Mapping::map(Operand o0) const {
-	auto pos = m.find(o0);
-	if (pos != m.end()) {
-		return pos->second;
-	}
-	return o0;
-}
-
-vector<Operand> Mapping::map(vector<Operand> from) const {
-	vector<Operand> result;
-	for (auto i = from.begin(); i != from.end(); i++) {
-		result.push_back(map(*i));
-	}
-	return result;
-}
-
-bool Mapping::isIdentity() const {
-	return m.empty();
-}
-
-Mapping &Mapping::apply(Mapping m0) {
-	for (auto i = m.begin(); i != m.end(); i++) {
-		i->second = m0.map(i->second);
-	}
-	for (auto i = m0.m.begin(); i != m0.m.end(); i++) {
-		if (not has(i->first)) {
-			set(i->first, i->second);
-		}
-	}
-	return *this;
-}
-
-ostream &operator<<(ostream &os, const Mapping &m) {
-	for (auto i = m.m.begin(); i != m.m.end(); i++) {
-		os << i->first << "->" << i->second << endl;
-	}
-	return os;
-}
-
 Operator::Operator() {
 	commutative = false;
 	reflexive = true;
 }
 
-Operator::Operator(string prefix, string trigger, string infix, string postfix, bool commutative, bool reflexive) {
+Operator::Operator(string prefix, string trigger, string infix, string postfix, uint8_t flags) {
 	this->prefix = prefix;
 	this->trigger = trigger;
 	this->infix = infix;
 	this->postfix = postfix;
-	this->commutative = commutative;
-	this->reflexive = reflexive;
+	this->commutative = (flags & COMMUTATIVE) != 0;
+	this->reflexive = (flags & REFLEXIVE) != 0;
 }
 
 Operator::~Operator() {
@@ -341,15 +289,15 @@ void Operation::loadOperators() {
 
 		set(OpType::VALIDITY, Operator("val(", "", "", ")"));
 		set(OpType::WIRE_NOT, Operator("~", "", "", ""));
-		set(OpType::WIRE_OR, Operator("", "", "|", "", true));
-		set(OpType::WIRE_AND, Operator("", "", "&", "", true));
-		set(OpType::WIRE_XOR, Operator("", "", "^", "", true));
+		set(OpType::WIRE_OR, Operator("", "", "|", "", Operator::COMMUTATIVE));
+		set(OpType::WIRE_AND, Operator("", "", "&", "", Operator::COMMUTATIVE));
+		set(OpType::WIRE_XOR, Operator("", "", "^", "", Operator::COMMUTATIVE));
 
 		set(OpType::TRUTHINESS, Operator("true(", "", "", ")"));
 		set(OpType::BOOLEAN_NOT, Operator("!", "", "", ""));
-		set(OpType::BOOLEAN_OR, Operator("", "", "||", "", true));
-		set(OpType::BOOLEAN_AND, Operator("", "", "&&", "", true));
-		set(OpType::BOOLEAN_XOR, Operator("", "", "^^", "", true));
+		set(OpType::BOOLEAN_OR, Operator("", "", "||", "", Operator::COMMUTATIVE));
+		set(OpType::BOOLEAN_AND, Operator("", "", "&&", "", Operator::COMMUTATIVE));
+		set(OpType::BOOLEAN_XOR, Operator("", "", "^^", "", Operator::COMMUTATIVE));
 
 		set(OpType::EQUAL, Operator("", "", "==", ""));
 		set(OpType::NOT_EQUAL, Operator("", "", "~=", ""));
@@ -360,15 +308,15 @@ void Operation::loadOperators() {
 		set(OpType::NEGATIVE, Operator("ltz(", "", "", ")"));
 		set(OpType::TERNARY, Operator("", "?", ":", ""));
 
-		set(OpType::IDENTITY, Operator("+", "", "", "", false, true));
+		set(OpType::IDENTITY, Operator("+", "", "", "", Operator::REFLEXIVE));
 		set(OpType::NEGATION, Operator("-", "", "", ""));
 		set(OpType::INVERSE, Operator("inv(", "", "", ")"));
 
 		set(OpType::SHIFT_LEFT, Operator("", "", "<<", ""));
 		set(OpType::SHIFT_RIGHT, Operator("", "", ">>", ""));
-		set(OpType::ADD, Operator("", "", "+", "", true));
+		set(OpType::ADD, Operator("", "", "+", "", Operator::COMMUTATIVE));
 		set(OpType::SUBTRACT, Operator("", "", "-", ""));
-		set(OpType::MULTIPLY, Operator("", "", "*", "", true));
+		set(OpType::MULTIPLY, Operator("", "", "*", "", Operator::COMMUTATIVE));
 		set(OpType::DIVIDE, Operator("", "", "/", ""));
 		set(OpType::MOD, Operator("", "", "%", ""));
 
@@ -847,22 +795,21 @@ void Operation::propagate(State &result, const State &global, vector<Value> &exp
 	} 
 }
 
-Operation &Operation::apply(vector<int> varMap) {
-	if (varMap.empty()) {
-		return *this;
-	}
-
+Operation &Operation::applyVars(const Mapping<size_t> &m) {
 	for (int i = 0; i < (int)operands.size(); i++) {
-		operands[i].apply(varMap);
+		operands[i].applyVars(m);
 	}
 	return *this;
 }
 
-Operation &Operation::apply(const Mapping &m) {
-	if (m.isIdentity()) {
-		return *this;
+Operation &Operation::applyExprs(const Mapping<size_t> &m) {
+	for (int i = 0; i < (int)operands.size(); i++) {
+		operands[i].applyExprs(m);
 	}
+	return *this;
+}
 
+Operation &Operation::apply(const Mapping<Operand> &m) {
 	for (int i = 0; i < (int)operands.size(); i++) {
 		operands[i] = m.map(operands[i]);
 	}

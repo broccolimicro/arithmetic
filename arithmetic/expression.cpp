@@ -138,7 +138,7 @@ size_t Expression::size() const {
 }
 
 Operand Expression::append(Expression arg) {
-	return sub.append(arg.sub, {arg.top}).map(arg.top);
+	return arg.top.applyExprs(sub.append(arg.sub, {arg.top}));
 }
 
 vector<Operand> Expression::append(vector<Expression> arg) {
@@ -258,15 +258,22 @@ bool Expression::isWire() const {
 	return false;
 }
 
-Expression &Expression::apply(vector<int> uidMap) {
-	if (uidMap.empty()) {
-		return *this;
-	}
-	this->top.apply(uidMap);
+Expression &Expression::applyVars(const Mapping<size_t> &m) {
+	top.applyVars(m);
 
 	vector<Operand> idx = exprIndex();
 	for (auto i = idx.begin(); i != idx.end(); i++) {
-		setExpr(Operation(*getExpr(i->index)).apply(uidMap));
+		setExpr(Operation(*getExpr(i->index)).applyVars(m));
+	}
+	return *this;
+}
+
+Expression &Expression::apply(const Mapping<Operand> &m) {
+	top = m.map(top);
+
+	vector<Operand> idx = exprIndex();
+	for (auto i = idx.begin(); i != idx.end(); i++) {
+		setExpr(Operation(*getExpr(i->index)).apply(m));
 	}
 	return *this;
 }

@@ -1,13 +1,12 @@
 #pragma once
 
 #include <common/standard.h>
+#include <common/mapping.h>
 
 #include "state.h"
 #include "type.h"
 
 namespace arithmetic {
-
-struct Mapping;
 
 struct Operand {
 	// Used by "type"
@@ -63,7 +62,8 @@ struct Operand {
 	Operand &offsetExpr(int off);
 
 	static Operand varOf(size_t index);
-	Operand &apply(vector<int> varMap);
+	Operand &applyVars(const Mapping<size_t> &m);
+	Operand &applyExprs(const Mapping<size_t> &m);
 	
 	static Operand typeOf(Type type);
 };
@@ -74,26 +74,15 @@ bool operator==(Operand o0, Operand o1);
 bool operator!=(Operand o0, Operand o1);
 bool operator<(Operand o0, Operand o1); // does not differentiate constants
 
-struct Mapping {
-	std::map<Operand, Operand> m;
-
-	bool set(Operand o0, Operand o1);
-
-	bool has(Operand o0) const;
-	Operand map(Operand o0) const;
-	vector<Operand> map(vector<Operand> from) const;
-
-	bool isIdentity() const;
-
-	Mapping &apply(Mapping m0);
-};
-
-ostream &operator<<(ostream &os, const Mapping &m);
-
 struct Operator {
 	Operator();
-	Operator(string prefix, string trigger, string infix, string postfix, bool commutative=false, bool reflexive=false);
+	Operator(string prefix, string trigger, string infix, string postfix, uint8_t flags=0);
 	~Operator();
+
+	enum Flags {
+		COMMUTATIVE = 1,
+		REFLEXIVE = 2,
+	};
 
 	string prefix;
 	string trigger;
@@ -177,8 +166,9 @@ struct Operation {
 	Value evaluate(State values, vector<Value> expressions) const;
 	Value evaluate(State values, vector<Value> expressions, TypeSet types) const;
 	void propagate(State &result, const State &global, vector<Value> &expressions, const vector<Value> gexpressions, Value v) const;
-	Operation &apply(vector<int> varMap);
-	Operation &apply(const Mapping &m);
+	Operation &applyVars(const Mapping<size_t> &m);
+	Operation &applyExprs(const Mapping<size_t> &m);
+	Operation &apply(const Mapping<Operand> &m);
 	Operation extract(vector<size_t> idx, size_t exprIndex=0);
 	Operation &offsetExpr(int off);
 

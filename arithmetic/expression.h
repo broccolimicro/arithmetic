@@ -60,8 +60,8 @@ struct Expression {
 	bool isNeutral() const;
 	bool isWire() const;
 
-	Expression &apply(vector<int> uidMap);
-	Expression &apply(Mapping m);
+	Expression &applyVars(const Mapping<size_t> &m);
+	Expression &apply(const Mapping<Operand> &m);
 
 	string to_string(bool debug=false) const;
 

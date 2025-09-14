@@ -18,7 +18,7 @@ struct Action {
 	bool isVacuous() const;
 	bool isPassive() const;
 
-	void apply(vector<int> uidMap);
+	void applyVars(const Mapping<size_t> &m);
 };
 
 bool areSame(Action a0, Action a1);
@@ -49,7 +49,7 @@ struct Parallel {
 	State evaluate(const State &curr);
 	Expression guard();
 
-	void apply(vector<int> uidMap);
+	void applyVars(const Mapping<size_t> &m);
 
 	Parallel &operator&=(const Action &c0);
 	Parallel &operator&=(const Parallel &c0);
@@ -82,7 +82,7 @@ struct Choice {
 	Region evaluate(const State &curr);
 	Expression guard();
 
-	void apply(vector<int> uidMap);
+	void applyVars(const Mapping<size_t> &m);
 
 	Choice &operator&=(const Action &c0);
 	Choice &operator&=(const Parallel &c0);

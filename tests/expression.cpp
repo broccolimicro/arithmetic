@@ -357,22 +357,19 @@ TEST(Expression, Apply) {
 	Expression e = Expression::varOf(4);
 	Expression f = Expression::varOf(5);
 
-	std::vector<int> nets1 = {2, 0, 1};
-	mapping m1(nets1);
-
-	std::vector<int> nets2 = {5, 4, 3};
-	mapping m2(nets2);
+	Mapping<size_t> m2(std::numeric_limits<size_t>::max(), false);
+	m2.set({{0, 5}, {1, 4}, {2, 3}});
 
 	Expression expected = f+e+d;
 	Expression reality = a+b+c;
-	reality.apply(nets2);
+	reality.applyVars(m2);
 	EXPECT_TRUE(areSame(reality, expected));
 	cout << reality << "... vs ..." << endl << expected << endl;
 
 	// Edge case: a lone .top var w/ an empty .sub body should still map
 	expected = f;
 	reality = a;
-	reality.apply(nets2);
+	reality.applyVars(m2);
 	EXPECT_TRUE(areSame(reality, expected));
 	cout << reality << "... vs ..." << endl << expected << endl;
 }
@@ -474,7 +471,7 @@ TEST(Expression, BooleanSimplification) {
 	f.minimize();
 	EXPECT_TRUE(areSame(f, x)) << f << endl << x << endl;
 
-	Expression g = x && x || x && x || x && x;
+	Expression g = (x && x) || (x && x) || (x && x);
 	g.minimize();
 	EXPECT_TRUE(areSame(g, x)) << g << endl << x << endl;
 }

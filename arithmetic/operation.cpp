@@ -197,6 +197,27 @@ Operand &Operand::applyExprs(const Mapping<size_t> &m) {
 	return *this;
 }
 
+Operand &Operand::applyVars(const Mapping<int> &m) {
+	if (isVar()) {
+		index = m.map(index);
+		if (index == m.undef) {
+			type = UNDEF;
+		}
+	}
+	return *this;
+}
+
+Operand &Operand::applyExprs(const Mapping<int> &m) {
+	if (isExpr()) {
+		index = m.map(index);
+		if (index == m.undef) {
+			type = UNDEF;
+		}
+	}
+	return *this;
+}
+
+
 Operand Operand::typeOf(Operand::Type type) {
 	Operand result;
 	result.type = TYPE;
@@ -808,6 +829,22 @@ Operation &Operation::applyExprs(const Mapping<size_t> &m) {
 	}
 	return *this;
 }
+
+Operation &Operation::applyVars(const Mapping<int> &m) {
+	for (int i = 0; i < (int)operands.size(); i++) {
+		operands[i].applyVars(m);
+	}
+	return *this;
+}
+
+Operation &Operation::applyExprs(const Mapping<int> &m) {
+	for (int i = 0; i < (int)operands.size(); i++) {
+		operands[i].applyExprs(m);
+	}
+	return *this;
+}
+
+
 
 Operation &Operation::apply(const Mapping<Operand> &m) {
 	for (int i = 0; i < (int)operands.size(); i++) {

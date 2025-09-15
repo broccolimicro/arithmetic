@@ -61,6 +61,7 @@ struct Expression {
 	bool isWire() const;
 
 	Expression &applyVars(const Mapping<size_t> &m);
+	Expression &applyVars(const Mapping<int> &m);
 	Expression &apply(const Mapping<Operand> &m);
 
 	string to_string(bool debug=false) const;

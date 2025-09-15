@@ -63,7 +63,9 @@ struct Operand {
 
 	static Operand varOf(size_t index);
 	Operand &applyVars(const Mapping<size_t> &m);
+	Operand &applyVars(const Mapping<int> &m);
 	Operand &applyExprs(const Mapping<size_t> &m);
+	Operand &applyExprs(const Mapping<int> &m);
 	
 	static Operand typeOf(Type type);
 };
@@ -167,7 +169,9 @@ struct Operation {
 	Value evaluate(State values, vector<Value> expressions, TypeSet types) const;
 	void propagate(State &result, const State &global, vector<Value> &expressions, const vector<Value> gexpressions, Value v) const;
 	Operation &applyVars(const Mapping<size_t> &m);
+	Operation &applyVars(const Mapping<int> &m);
 	Operation &applyExprs(const Mapping<size_t> &m);
+	Operation &applyExprs(const Mapping<int> &m);
 	Operation &apply(const Mapping<Operand> &m);
 	Operation extract(vector<size_t> idx, size_t exprIndex=0);
 	Operation &offsetExpr(int off);

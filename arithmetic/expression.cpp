@@ -268,6 +268,16 @@ Expression &Expression::applyVars(const Mapping<size_t> &m) {
 	return *this;
 }
 
+Expression &Expression::applyVars(const Mapping<int> &m) {
+	top.applyVars(m);
+
+	vector<Operand> idx = exprIndex();
+	for (auto i = idx.begin(); i != idx.end(); i++) {
+		setExpr(Operation(*getExpr(i->index)).applyVars(m));
+	}
+	return *this;
+}
+
 Expression &Expression::apply(const Mapping<Operand> &m) {
 	top = m.map(top);
 

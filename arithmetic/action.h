@@ -19,6 +19,7 @@ struct Action {
 	bool isPassive() const;
 
 	void applyVars(const Mapping<size_t> &m);
+	void applyVars(const Mapping<int> &m);
 };
 
 bool areSame(Action a0, Action a1);
@@ -50,6 +51,7 @@ struct Parallel {
 	Expression guard();
 
 	void applyVars(const Mapping<size_t> &m);
+	void applyVars(const Mapping<int> &m);
 
 	Parallel &operator&=(const Action &c0);
 	Parallel &operator&=(const Parallel &c0);
@@ -83,6 +85,7 @@ struct Choice {
 	Expression guard();
 
 	void applyVars(const Mapping<size_t> &m);
+	void applyVars(const Mapping<int> &m);
 
 	Choice &operator&=(const Action &c0);
 	Choice &operator&=(const Parallel &c0);

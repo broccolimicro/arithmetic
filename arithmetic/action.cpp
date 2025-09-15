@@ -41,6 +41,13 @@ void Action::applyVars(const Mapping<size_t> &m) {
 	expr.applyVars(m);
 }
 
+void Action::applyVars(const Mapping<int> &m) {
+	if (variable >= 0) {
+		variable = m.map(variable);
+	}
+	expr.applyVars(m);
+}
+
 bool areSame(Action a0, Action a1) {
 	return a0.variable == a1.variable and areSame(a0.expr, a1.expr);
 }
@@ -170,6 +177,12 @@ Expression Parallel::guard() {
 }
 
 void Parallel::applyVars(const Mapping<size_t> &m) {
+	for (int i = 0; i < (int)actions.size(); i++) {
+		actions[i].applyVars(m);
+	}
+}
+
+void Parallel::applyVars(const Mapping<int> &m) {
 	for (int i = 0; i < (int)actions.size(); i++) {
 		actions[i].applyVars(m);
 	}
@@ -306,6 +319,12 @@ Expression Choice::guard() {
 }
 
 void Choice::applyVars(const Mapping<size_t> &m) {
+	for (int i = 0; i < (int)terms.size(); i++) {
+		terms[i].applyVars(m);
+	}
+}
+
+void Choice::applyVars(const Mapping<int> &m) {
 	for (int i = 0; i < (int)terms.size(); i++) {
 		terms[i].applyVars(m);
 	}

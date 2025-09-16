@@ -28,9 +28,9 @@ struct State
 	void clear();
 	void push_back(Value v);
 
-	Value get(int uid) const;
-	void set(int uid, Value v);
-	void svIntersect(int uid, Value v);
+	Value get(LValue lhs) const;
+	void set(LValue lhs, Value rhs);
+	void svIntersect(LValue lhs, Value rhs);
 
 	bool isSubsetOf(const State &s) const;
 
@@ -38,8 +38,8 @@ struct State
 	State &operator|=(State s);
 	State &operator=(State s);
 
-	Value &operator[](int uid);
-	Value operator[](int uid) const;
+	Value &operator[](LValue lhs);
+	Value operator[](LValue lhs) const;
 
 	State remote(vector<vector<int> > groups);
 
@@ -50,6 +50,9 @@ struct State
 	State combineMask(const State &m) const;
 
 	void apply(vector<int> uidMap);
+
+	Value *at(LValue lvalue, bool init=false);
+	const Value *at(LValue lvalue) const;
 };
 
 ostream &operator<<(ostream &os, const State &s);

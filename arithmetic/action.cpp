@@ -5,58 +5,61 @@ namespace arithmetic
 {
 
 Action::Action() {
-	variable = -1;
+	this->lvalue = Expression::vdd();
+	this->rvalue = Expression::vdd();
 }
 
-Action::Action(Expression expr) {
-	this->variable = -1;
-	this->expr = expr;
+Action::Action(Expression rvalue) {
+	this->lvalue = Expression::vdd();
+	this->rvalue = rvalue;
 }
 
-Action::Action(int variable, Expression expr) {
-	this->variable = variable;
-	this->expr = expr;
+Action::Action(Expression lvalue, Expression rvalue) {
+	this->lvalue = lvalue;
+	this->rvalue = rvalue;
 }
 
 Action::~Action() {
 }
 
 bool Action::isInfeasible() const {
-	return expr.isNull();
+	return rvalue.isNull();
 }
 
 bool Action::isVacuous() const {
-	return variable < 0
-		and expr.isConstant();
+	return lvalue.isConstant()
+		and rvalue.isConstant();
 }
 
 bool Action::isPassive() const {
-	return variable < 0;
+	return lvalue.isConstant();
 }
 
 void Action::applyVars(const Mapping<size_t> &m) {
-	if (variable >= 0) {
-		variable = m.map((size_t)variable);
-	}
-	expr.applyVars(m);
+	lvalue.applyVars(m);
+	rvalue.applyVars(m);
 }
 
 void Action::applyVars(const Mapping<int> &m) {
-	if (variable >= 0) {
-		variable = m.map(variable);
+	lvalue.applyVars(m);
+	rvalue.applyVars(m);
+}
+
+void Action::evaluate(State &next, const State &curr, TypeSet types) {
+	if (lvalue.isUndef()) {
+		return;
 	}
-	expr.applyVars(m);
+	next.svIntersect(
+		arithmetic::evaluateL(lvalue, lvalue.top, curr, types),
+		arithmetic::evaluate(rvalue, rvalue.top, curr, types));
 }
 
 bool areSame(Action a0, Action a1) {
-	return a0.variable == a1.variable and areSame(a0.expr, a1.expr);
+	return areSame(a0.lvalue, a1.lvalue) and areSame(a0.rvalue, a1.rvalue);
 }
 
 ostream &operator<<(ostream &os, const Action &a) {
-	if (a.variable >= 0) {
-		os << "v" << a.variable << "=";
-	}
-	os << a.expr;
+	os << a.lvalue << "=" << a.rvalue;
 	return os;
 }
 
@@ -67,8 +70,8 @@ Parallel::Parallel(Expression expr) {
 	actions.push_back(Action(expr));
 }
 
-Parallel::Parallel(int variable, Expression expr) {
-	actions.push_back(Action(variable, expr));
+Parallel::Parallel(Expression lvalue, Expression rvalue) {
+	actions.push_back(Action(lvalue, rvalue));
 }
 
 Parallel::Parallel(std::initializer_list<Action> exprs) : actions(exprs) {
@@ -151,26 +154,19 @@ Parallel Parallel::mask(vector<int> cov) const {
 	return p0;
 }*/
 
-State Parallel::evaluate(const State &curr) {
-	// Determine the Value for the data being sent in either the request or the acknowledge
-
+State Parallel::evaluate(const State &curr, TypeSet types) {
 	State result;
-	for (int i = 0; i < (int)actions.size(); i++) {
-		if (actions[i].variable < 0) {
-			continue;
-		}
-
-		result.svIntersect(actions[i].variable, arithmetic::evaluate(actions[i].expr, actions[i].expr.top, curr));
+	for (auto i = actions.begin(); i != actions.end(); i++) {
+		i->evaluate(result, curr, types);
 	}
-
 	return result;
 }
 
 Expression Parallel::guard() {
-	Expression result = Expression::boolOf(true);
+	Expression result = Expression::vdd();
 	for (auto a = actions.begin(); a != actions.end(); a++) {
-		if (not a->expr.isConstant()) {
-			result = result & a->expr;
+		if (not a->rvalue.isConstant()) {
+			result = result & a->rvalue;
 		}
 	}
 	return result;
@@ -298,20 +294,20 @@ bool Choice::isPassive() const {
 	return true;
 }
 
-Region Choice::evaluate(const State &curr) {
+Region Choice::evaluate(const State &curr, TypeSet types) {
 	Region result;
-	for (auto term = terms.begin(); term != terms.end(); term++) {
-		result.states.push_back(term->evaluate(curr));
+	for (auto i = terms.begin(); i != terms.end(); i++) {
+		result.states.push_back(i->evaluate(curr, types));
 	}
 	return result;
 }
 
 Expression Choice::guard() {
 	if (terms.empty()) {
-		return Expression::boolOf(true);
+		return Expression::vdd();
 	}
 
-	Expression result = Expression::boolOf(false);
+	Expression result = Expression::gnd();
 	for (auto t = terms.begin(); t != terms.end(); t++) {
 		result = result | t->guard();
 	}

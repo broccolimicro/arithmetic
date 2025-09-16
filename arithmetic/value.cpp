@@ -5,8 +5,19 @@
 namespace arithmetic
 {
 
+LValue::LValue(size_t index, std::initializer_list<size_t> mods) : mods(mods) {
+	this->index = index;
+}
+
+LValue::~LValue() {
+}
+
+bool LValue::isUndef() {
+	return index != std::numeric_limits<size_t>::max();
+}
+
 Value::Value() {
-	type = ValType::WIRE;
+	type = ValType::UNDEF;
 	state = StateType::UNSTABLE;
 }
 
@@ -199,6 +210,49 @@ bool Value::isSubsetOf(Value v) const {
 	}
 
 	return false;
+}
+
+Value *Value::at(vector<size_t> mods, bool init) {
+	Value *curr = this;
+	while ((curr->type == Value::ARRAY or curr->type == Value::STRUCT) and not mods.empty()) {
+		if (init and mods.back() >= curr->arr.size()) {
+			curr->arr.resize(mods.back()+1, Value());
+		}
+
+		if (mods.back() < 0 or mods.back() >= curr->arr.size()) {
+			printf("error:%s:%d: index out of bounds\n", __FILE__, __LINE__);
+			return nullptr;
+		}
+		curr = &curr->arr[mods.back()];
+		mods.pop_back();
+
+		if (init and curr->type == Value::UNDEF) {
+			curr->type = Value::ARRAY;
+			curr->state = Value::UNKNOWN;
+		}
+	}
+	if (not mods.empty()) {
+		printf("error:%s:%d: type cannot be indexed\n", __FILE__, __LINE__);
+		return nullptr;
+	}
+	return curr;
+}
+
+const Value *Value::at(vector<size_t> mods) const {
+	const Value *curr = this;
+	while ((curr->type == Value::ARRAY or curr->type == Value::STRUCT) and not mods.empty()) {
+		if (mods.back() < 0 or mods.back() >= curr->arr.size()) {
+			printf("error:%s:%d: index out of bounds\n", __FILE__, __LINE__);
+			return nullptr;
+		}
+		curr = &curr->arr[mods.back()];
+		mods.pop_back();
+	}
+	if (not mods.empty()) {
+		printf("error:%s:%d: type cannot be indexed\n", __FILE__, __LINE__);
+		return nullptr;
+	}
+	return curr;
 }
 
 bool areSame(Value v0, Value v1) {

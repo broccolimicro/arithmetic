@@ -143,7 +143,8 @@ struct Match {
 
 ostream &operator<<(ostream &os, Match m);
 
-Value evaluate(ConstOperationSet expr, Operand top, State values);
+Value evaluate(ConstOperationSet expr, Operand top, State values, TypeSet types=TypeSet());
+LValue evaluateL(ConstOperationSet expr, Operand top, State values, TypeSet types=TypeSet());
 Cost cost(ConstOperationSet ops, Operand top, vector<Type> vars);
 
 bool verifyRuleFormat(ConstOperationSet ops, Operand i, bool msg=true);

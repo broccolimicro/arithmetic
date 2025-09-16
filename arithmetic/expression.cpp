@@ -163,6 +163,10 @@ Expression &Expression::push(int func, vector<Operand> args) {
 	return *this;
 }
 
+bool Expression::isUndef() const {
+	return top.isUndef();
+}
+
 bool Expression::isNull() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is null after constant propagation using quantified element elimination

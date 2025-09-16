@@ -163,10 +163,8 @@ struct Operation {
 	bool isReflexive() const;
 	bool isUndef() const;
 
-	static Value evaluate(int func, vector<Value> args);
-	static Value evaluate(int func, vector<Value> args, TypeSet types);
-	Value evaluate(State values, vector<Value> expressions) const;
-	Value evaluate(State values, vector<Value> expressions, TypeSet types) const;
+	static Value evaluate(int func, vector<Value> args, TypeSet types=TypeSet());
+	Value evaluate(State values, vector<Value> expressions, TypeSet types=TypeSet()) const;
 	void propagate(State &result, const State &global, vector<Value> &expressions, const vector<Value> gexpressions, Value v) const;
 	Operation &applyVars(const Mapping<size_t> &m);
 	Operation &applyVars(const Mapping<int> &m);

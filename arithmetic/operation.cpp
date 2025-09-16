@@ -200,7 +200,7 @@ Operand &Operand::applyExprs(const Mapping<size_t> &m) {
 Operand &Operand::applyVars(const Mapping<int> &m) {
 	if (isVar()) {
 		index = m.map(index);
-		if (index == m.undef) {
+		if ((int)index == m.undef) {
 			type = UNDEF;
 		}
 	}
@@ -210,7 +210,7 @@ Operand &Operand::applyVars(const Mapping<int> &m) {
 Operand &Operand::applyExprs(const Mapping<int> &m) {
 	if (isExpr()) {
 		index = m.map(index);
-		if (index == m.undef) {
+		if ((int)index == m.undef) {
 			type = UNDEF;
 		}
 	}
@@ -555,7 +555,7 @@ bool Operation::isUndef() const {
 	return func == Operation::UNDEF;
 }
 
-Value Operation::evaluate(int func, vector<Value> args) {
+Value Operation::evaluate(int func, vector<Value> args, TypeSet types) {
 	if (func == Operation::VALIDITY) {
 		return isValid(args[0]);
 	} else if (func == Operation::WIRE_NOT) {
@@ -688,13 +688,7 @@ Value Operation::evaluate(int func, vector<Value> args) {
 		} else {
 			return Value::structOf(args[0].sval, vector<Value>(args.begin()+1, args.end()));
 		}
-	}
-	printf("internal: function %d not implemented\n", func);
-	return Value::X();
-}
-
-Value Operation::evaluate(int func, vector<Value> args, TypeSet types) {
-	if (func == Operation::MEMBER) {
+	} else if (func == Operation::MEMBER and not types.empty()) {
 		if (args.size() == 2u) {
 			return member(args[0], args[1], types);
 		} else {
@@ -702,17 +696,8 @@ Value Operation::evaluate(int func, vector<Value> args, TypeSet types) {
 			return Value::X();
 		}
 	}
-	return evaluate(func, args);
-}
-
-Value Operation::evaluate(State values, vector<Value> expressions) const {
-	vector<Value> args;
-	args.reserve(operands.size());
-	for (int i = 0; i < (int)operands.size(); i++) {
-		args.push_back(operands[i].get(values, expressions));
-	}
-
-	return Operation::evaluate(func, args);
+	printf("internal: function %d not implemented\n", func);
+	return Value::X();
 }
 
 Value Operation::evaluate(State values, vector<Value> expressions, TypeSet types) const {

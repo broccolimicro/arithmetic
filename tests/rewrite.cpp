@@ -11,16 +11,18 @@ using namespace std;
 
 void verifyRule(const RuleSet &rules, int idx) {
 	Rule rule = rules.rules[idx];
+	cout << "evaluating rule " << to_string(rules.sub, rule.left, false) << endl;
 	State s;
 	for (ConstDownIterator i(rules.sub, {rule.left, rule.right}); not i.done(); ++i) {
 		auto j = i.get();
 		for (auto k = j.operands.begin(); k != j.operands.end(); k++) {
-			if (k->isVar() and s.get(k->index).isUnknown()) {
+			if (k->isVar() and s.at(k->index) == nullptr) {
 				s.set(k->index, Value::intOf(rand()%100+1));
 			}
 		}
 	}
 
+	cout << "on state " << s << endl;
 	try {
 		Value left = evaluate(rules.sub, rule.left, s);
 		Value right = evaluate(rules.sub, rule.right, s);

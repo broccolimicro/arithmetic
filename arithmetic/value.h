@@ -7,12 +7,28 @@
 namespace arithmetic
 {
 
+struct LValue {
+	LValue(size_t index=std::numeric_limits<size_t>::max(), std::initializer_list<size_t> mods={});
+	~LValue();
+
+	size_t index;
+
+	// The stack of modifiers to apply.
+	// The last modifer in the stack
+	// should be applied first and so
+	// on.
+	vector<size_t> mods;
+
+	bool isUndef();
+};
+
 // This structure represents a delay insensitive encoded integer
 // value with a single neutral state. This is purposefully limited
 // for now to keep the CHP language and simulator simple to
 // implement.
 struct Value {
 	enum ValType : int32_t {
+		UNDEF = -7,
 		WIRE = -6,
 		// can only be used to dereference a member of a structure
 		STRING = -5,
@@ -83,6 +99,9 @@ struct Value {
 	operator bool() const;
 
 	Type typeOf() const;
+
+	Value *at(vector<size_t> mods, bool init=false);
+	const Value *at(vector<size_t> mods) const;
 };
 
 bool areSame(Value v0, Value v1);

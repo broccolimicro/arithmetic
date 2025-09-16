@@ -7,12 +7,12 @@ namespace arithmetic
 
 struct Action {
 	Action();
-	Action(Expression expr);
-	Action(int variable, Expression expr);
+	Action(Expression rvalue);
+	Action(Expression lvalue, Expression rvalue);
 	~Action();
 
-	int variable;
-	Expression expr;
+	Expression lvalue;
+	Expression rvalue;
 
 	bool isInfeasible() const;
 	bool isVacuous() const;
@@ -20,6 +20,8 @@ struct Action {
 
 	void applyVars(const Mapping<size_t> &m);
 	void applyVars(const Mapping<int> &m);
+	
+	void evaluate(State &next, const State &curr, TypeSet types=TypeSet());
 };
 
 bool areSame(Action a0, Action a1);
@@ -29,7 +31,7 @@ ostream &operator<<(ostream &os, const Action &a);
 struct Parallel {
 	Parallel();
 	Parallel(Expression expr);
-	Parallel(int variable, Expression expr);
+	Parallel(Expression lvalue, Expression rvalue);
 	Parallel(std::initializer_list<Action> exprs);
 	~Parallel();
 
@@ -47,7 +49,7 @@ struct Parallel {
 	bool isVacuous() const;
 	bool isPassive() const;
 
-	State evaluate(const State &curr);
+	State evaluate(const State &curr, TypeSet types=TypeSet());
 	Expression guard();
 
 	void applyVars(const Mapping<size_t> &m);
@@ -81,7 +83,7 @@ struct Choice {
 	bool isVacuous() const;
 	bool isPassive() const;
 
-	Region evaluate(const State &curr);
+	Region evaluate(const State &curr, TypeSet types=TypeSet());
 	Expression guard();
 
 	void applyVars(const Mapping<size_t> &m);

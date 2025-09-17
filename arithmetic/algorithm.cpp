@@ -563,6 +563,33 @@ LValue evaluateL(ConstOperationSet ops, Operand top, State values, TypeSet types
 	return LValue();
 }
 
+size_t lvalueBase(ConstOperationSet ops, Operand top, TypeSet types) {
+	if (top.isVar()) {
+		return top.index;
+	} else if (not top.isExpr()) {
+		printf("error:%s:%d: expected lvalue\n", __FILE__, __LINE__);
+		return std::numeric_limits<size_t>::max();
+	}
+
+	Operand curr = top;
+	while (curr.isExpr()) {
+		auto op = ops.getExpr(curr.index);
+		if (op == nullptr) {
+			printf("internal:%s:%d: malformed arithmetic expression\n", __FILE__, __LINE__);
+			return std::numeric_limits<size_t>::max();
+		}
+
+		curr = op->operands[0];
+	}
+
+	if (curr.isVar()) {
+		return curr.index;
+	}
+	printf("error:%s:%d: expected lvalue\n", __FILE__, __LINE__);
+	return std::numeric_limits<size_t>::max();
+}
+
+
 Cost cost(ConstOperationSet ops, Operand top, vector<Type> vars) {
 	if (not top.isExpr()) {
 		return Cost();

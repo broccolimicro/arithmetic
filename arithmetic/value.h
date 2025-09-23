@@ -7,19 +7,30 @@
 namespace arithmetic
 {
 
-struct LValue {
-	LValue(size_t index=std::numeric_limits<size_t>::max(), std::initializer_list<size_t> mods={});
-	~LValue();
+struct Slice {
+	Slice();
+	~Slice();
 
-	size_t index;
+	vector<size_t> idx;
+	vector<bool> memb;
+	size_t from;
+	size_t to;
 
-	// The stack of modifiers to apply.
-	// The last modifer in the stack
-	// should be applied first and so
-	// on.
-	vector<size_t> mods;
+	bool isSlice() const;
 
-	bool isUndef();
+	bool index(size_t index);
+	bool member(size_t index);
+	bool slice(size_t from, size_t to);
+};
+
+struct Reference {
+	Reference(size_t uid=std::numeric_limits<size_t>::max());
+	~Reference();
+
+	size_t uid;
+	Slice slice;
+
+	bool isUndef() const;
 };
 
 // This structure represents a delay insensitive encoded integer
@@ -75,6 +86,7 @@ struct Value {
 
 	vector<Value> arr;
 
+	bool isUndef() const;
 	bool isValid() const;
 	bool isNeutral() const;
 	bool isUnstable() const;
@@ -83,6 +95,7 @@ struct Value {
 	const char *ctypeName() const;
 	string typeName() const;
 
+	static Value undef();
 	static Value X(ValType type=WIRE);
 	static Value U(ValType type=WIRE);
 	static Value gnd(ValType type=WIRE);
@@ -100,9 +113,23 @@ struct Value {
 
 	Type typeOf() const;
 
-	Value *at(vector<size_t> mods, bool init=false);
-	const Value *at(vector<size_t> mods) const;
+	void set(Slice slice, Value v, bool define=false);
+	Value get(Slice slice) const;
 };
+
+struct ValRef {
+	ValRef(Value val=Value(), Reference ref=Reference());
+	~ValRef();
+
+	Value val;
+	Reference ref;
+};
+
+_CONST_INTERFACE_ARG(TypeSet,
+	(int, memberIndex, (string type, string name) const, (type, name)));
+
+_INTERFACE_ARG(Caller,
+	(ValRef, evaluateCall, (string name, vector<ValRef> args), (name, args)));
 
 bool areSame(Value v0, Value v1);
 int order(Value v0, Value v1);
@@ -152,12 +179,12 @@ Value realOf(Value v);
 Value cast(Value::ValType type, Value v);
 Value intOf(Value v);
 Value index(Value v, Value i);
+ValRef index(ValRef v, Value i);
 Value index(Value v, Value f, Value t);
-
-_CONST_INTERFACE_ARG(TypeSet,
-	(int, memberIndex, (string type, string name) const, (type, name)));
+ValRef index(ValRef v, Value f, Value t);
 
 Value member(Value v0, Value v1, TypeSet types);
+ValRef member(ValRef v0, Value v1, TypeSet types);
 
 // set operators of the lattice documented in Value::isSubsetOf()
 Value intersect(Value v0, Value v1);

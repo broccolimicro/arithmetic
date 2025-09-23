@@ -40,8 +40,8 @@ struct Operand {
 	bool isVar() const;
 	bool isType() const;
 
-	Value get(State values=State(), vector<Value> expressions=vector<Value>()) const;
-	void set(State &values, vector<Value> &expressions, Value v) const;
+	ValRef get(State values=State(), vector<ValRef> expressions=vector<ValRef>()) const;
+	void set(State &values, vector<ValRef> &expressions, ValRef v) const;
 
 	// Undefined
 	static Operand undef();
@@ -163,9 +163,9 @@ struct Operation {
 	bool isReflexive() const;
 	bool isUndef() const;
 
-	static Value evaluate(int func, vector<Value> args, TypeSet types=TypeSet());
-	Value evaluate(State values, vector<Value> expressions, TypeSet types=TypeSet()) const;
-	void propagate(State &result, const State &global, vector<Value> &expressions, const vector<Value> gexpressions, Value v) const;
+	static ValRef evaluate(int func, vector<ValRef> args, TypeSet types=TypeSet(), Caller caller=Caller());
+	ValRef evaluate(State values, vector<ValRef> expressions, TypeSet types=TypeSet(), Caller caller=Caller()) const;
+	void propagate(State &result, const State &global, vector<ValRef> &expressions, const vector<ValRef> gexpressions, Value v) const;
 	Operation &applyVars(const Mapping<size_t> &m);
 	Operation &applyVars(const Mapping<int> &m);
 	Operation &applyExprs(const Mapping<size_t> &m);

@@ -463,104 +463,26 @@ ostream &operator<<(ostream &os, Match m) {
 	return os;
 }
 
-Value evaluate(ConstOperationSet ops, Operand top, State values, TypeSet types) {
+ValRef evaluate(ConstOperationSet ops, Operand top, State values, TypeSet types, Caller caller) {
 	if (not top.isExpr()) {
-		return top.get(values, vector<Value>());
+		return top.get(values, vector<ValRef>());
 	}
 
-	vector<Value> result;
-	Value prev;
-	for (auto i = ConstUpIterator(ops, {top}); not i.done(); ++i) {
-		if (i->exprIndex >= result.size()) {
-			result.resize(i->exprIndex+1, Value::X());
-		}
-		prev = i->evaluate(values, result, types);
-		result[i->exprIndex] = prev;
-	}
-
-	return prev;
-}
-
-LValue evaluateL(ConstOperationSet ops, Operand top, State values, TypeSet types) {
-	if (top.isVar()) {
-		return LValue(top.index);
-	} else if (not top.isExpr()) {
-		printf("error:%s:%d: expected lvalue\n", __FILE__, __LINE__);
-		return LValue();
-	}
-
-	// TODO(edward.bingham) I'm trying to evaluate an lvalue here
-	// A[3:k].x[i+j][3] = ...
-	vector<Value> exprs;
+	size_t prev = 0;
+	vector<ValRef> exprs;
 	for (auto i = ConstUpIterator(ops, {top}); not i.done(); ++i) {
 		if (i->exprIndex >= exprs.size()) {
 			exprs.resize(i->exprIndex+1, Value::X());
 		}
-		exprs[i->exprIndex] = i->evaluate(values, exprs, types);
+		exprs[i->exprIndex] = i->evaluate(values, exprs, types, caller);
+		prev = i->exprIndex;
 	}
 
-	LValue result;
-	Operand curr = top;
-	while (curr.isExpr()) {
-		auto op = ops.getExpr(curr.index);
-		if (op == nullptr) {
-			printf("internal:%s:%d: malformed arithmetic expression\n", __FILE__, __LINE__);
-			return LValue();
-		}
-
-		if (op->func == Operation::INDEX) {
-			if (op->operands.size() != 2u) {
-				printf("error:%s:%d: slice operator not supported\n", __FILE__, __LINE__);
-				return LValue();
-			}
-			Value mod = op->operands[1].get(values, exprs);
-			if (mod.isValid() and mod.type == Value::INT) {
-				result.mods.push_back(mod.ival);
-			} else {
-				printf("error:%s:%d: non-valid modifier in lvalue\n", __FILE__, __LINE__);
-				return LValue();
-			}
-		} else if (op->func == Operation::MEMBER) {
-			if (op->operands.size() != 2u) {
-				printf("error:%s:%d: malformed '.' operator\n", __FILE__, __LINE__);
-				return LValue();
-			}
-			// TODO(edward.bingham) This is a placeholder. I need to be able to
-			// evaluate the type of the LHS without necessarily evaluating the value,
-			// because the value may just be unstable, but it's still a valid type.
-			Value var = op->operands[0].get(values, exprs);
-			if (var.type != Value::STRUCT) {
-				printf("error:%s:%d: malformed '.' operator\n", __FILE__, __LINE__);
-				return LValue();
-			}
-
-			Value mod = op->operands[1].get(values, exprs);
-			if (mod.type != Value::STRING) {
-				printf("error:%s:%d: malformed '.' operator\n", __FILE__, __LINE__);
-				return LValue();
-			}
-
-			int idx = types.memberIndex(var.sval, mod.sval);
-			if (idx < 0) {
-				printf("error:%s:%d: member '%s' not found for type '%s'\n", __FILE__, __LINE__, "", mod.sval.c_str());
-				return LValue();
-			}
-
-			result.mods.push_back(idx);
-		} else {
-			printf("error:%s:%d: unsupported operator for lvalue\n", __FILE__, __LINE__);
-			return LValue();
-		}
-
-		curr = op->operands[0];
+	if (prev >= exprs.size()) {
+		printf("internal:%s:%d: malformed expression structure\n", __FILE__, __LINE__);
+		return Value::X();
 	}
-
-	if (curr.isVar()) {
-		result.index = curr.index;
-		return result;
-	}
-	printf("error:%s:%d: expected lvalue\n", __FILE__, __LINE__);
-	return LValue();
+	return exprs[prev];
 }
 
 size_t lvalueBase(ConstOperationSet ops, Operand top, TypeSet types) {
@@ -749,7 +671,7 @@ Mapping<Operand> tidy(OperationSet expr, vector<Operand> top, bool rules) {
 
 		if (curr.operands.size() == 1u and curr.operands[0].isConst()) {
 			// cout << "found const " << curr.op() << " = " << curr << endl;
-			step.set(curr.op(), Operation::evaluate(curr.func, {curr.operands[0].get()}));
+			step.set(curr.op(), Operation::evaluate(curr.func, {curr.operands[0].get()}).val);
 		}	else if (curr.operands.size() == 1u and (curr.isReflexive()
 			or (not rules and curr.isCommutative()))) {
 			// replace reflexive expressions

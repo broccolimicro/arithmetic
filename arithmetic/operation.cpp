@@ -71,7 +71,7 @@ bool Operand::isType() const {
 	return type == TYPE;
 }
 
-Value Operand::get(State values, vector<Value> expressions) const {
+ValRef Operand::get(State values, vector<ValRef> expressions) const {
 	switch (type)
 	{
 	case CONST:
@@ -95,7 +95,7 @@ Value Operand::get(State values, vector<Value> expressions) const {
 	}
 }
 
-void Operand::set(State &values, vector<Value> &expressions, Value v) const {
+void Operand::set(State &values, vector<ValRef> &expressions, ValRef v) const {
 	if (isExpr()) {
 		if (index < expressions.size()) {
 			expressions[index] = v;
@@ -103,9 +103,9 @@ void Operand::set(State &values, vector<Value> &expressions, Value v) const {
 			printf("error: Expression index '%lu' out of bounds '%lu'\n", index, expressions.size());
 		}
 	} else if (isVar()) {
-		values.set(index, v);
-	} else if (isConst()) {
-		printf("error: const not writeable\n");
+		values.set(index, v.val);
+	} else {
+		printf("internal:%s:%d: operand %s not writeable\n", __FILE__, __LINE__, ::to_string(*this).c_str());
 	}
 }
 
@@ -555,248 +555,269 @@ bool Operation::isUndef() const {
 	return func == Operation::UNDEF;
 }
 
-Value Operation::evaluate(int func, vector<Value> args, TypeSet types) {
+ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller caller) {
 	if (func == Operation::VALIDITY) {
-		return isValid(args[0]);
+		if (args.size() != 1u) {
+			printf("internal:%s:%d: validity operator expected 1 operand, found %zu\n", __FILE__, __LINE__, args.size());
+			return Value::X();
+		}
+		return isValid(args[0].val);
 	} else if (func == Operation::WIRE_NOT) {
-		return ~args[0];
+		if (args.size() != 1u) {
+			printf("internal:%s:%d: wire not (~) operator expected 1 operand, found %zu\n", __FILE__, __LINE__, args.size());
+			return Value::X();
+		}
+		return ~args[0].val;
 	} else if (func == Operation::WIRE_OR) {
-		for (int i = 1; i < (int)args.size(); i++) {
-			args[0] = args[0] | args[i];
+		if (args.size() == 1u) {
+			return wireOf(args[0].val);
 		}
-		return args[0];
+		Value result = args[0].val;
+		for (size_t i = 1u; i < args.size(); i++) {
+			result = result | args[i].val;
+		}
+		return result;
 	} else if (func == Operation::WIRE_AND) {
-		for (int i = 1; i < (int)args.size(); i++) {
-			args[0] = args[0] & args[i];
+		if (args.size() == 1u) {
+			return wireOf(args[0].val);
 		}
-		return args[0];
+		Value result = args[0].val;
+		for (size_t i = 1u; i < args.size(); i++) {
+			result = result & args[i].val;
+		}
+		return result;
 	} else if (func == Operation::WIRE_XOR) {
-		for (int i = 1; i < (int)args.size(); i++) {
-			args[0] = args[0] ^ args[i];
+		if (args.size() == 1u) {
+			return wireOf(args[0].val);
 		}
-		return args[0];
+		Value result = args[0].val;
+		for (size_t i = 1u; i < args.size(); i++) {
+			result = result ^ args[i].val;
+		}
+		return result;
 	} else if (func == Operation::TRUTHINESS) {
-		return isTrue(args[0]);
+		return isTrue(args[0].val);
 	} else if (func == Operation::BOOLEAN_NOT) {
-		return !args[0];
-	} else if (func == Operation::BOOLEAN_OR) { 
-		for (int i = 1; i < (int)args.size(); i++) {
-			args[0] = args[0] or args[i];
+		return !args[0].val;
+	} else if (func == Operation::BOOLEAN_OR) {
+ 		if (args.size() == 1u) {
+			return boolOf(args[0].val);
 		}
-		return args[0];
-	} else if (func == Operation::BOOLEAN_AND) { 
-		for (int i = 1; i < (int)args.size(); i++) {
-			args[0] = args[0] and args[i];
+		Value result = args[0].val;
+		for (size_t i = 1u; i < args.size(); i++) {
+			result = result or args[i].val;
 		}
-		return args[0];
-	} else if (func == Operation::BOOLEAN_XOR) { 
-		for (int i = 1; i < (int)args.size(); i++) {
-			args[0] = (args[0] and !args[i]) or (!args[0] and args[i]);
+		return result;
+	} else if (func == Operation::BOOLEAN_AND) {
+ 		if (args.size() == 1u) {
+			return boolOf(args[0].val);
 		}
-		return args[0];
+		Value result = args[0].val;
+		for (size_t i = 1u; i < args.size(); i++) {
+			result = result and args[i].val;
+		}
+		return result;
+	} else if (func == Operation::BOOLEAN_XOR) {
+ 		if (args.size() == 1u) {
+			return boolOf(args[0].val);
+		}
+		Value result = args[0].val;
+		for (size_t i = 1u; i < args.size(); i++) {
+			result = (result and !args[i].val) or (!result and args[i].val);
+		}
+		return result;
 	} else if (func == Operation::EQUAL) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
-		return (args[0] == args[1]);
+		return (args[0].val == args[1].val);
 	} else if (func == Operation::NOT_EQUAL) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
-		return (args[0] != args[1]);
+		return (args[0].val != args[1].val);
 	} else if (func == Operation::LESS) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
-		return (args[0] <  args[1]);
+		return (args[0].val <  args[1].val);
 	} else if (func == Operation::GREATER) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
-		return (args[0] >  args[1]);
+		return (args[0].val >  args[1].val);
 	} else if (func == Operation::LESS_EQUAL) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
-		return (args[0] <= args[1]);
+		return (args[0].val <= args[1].val);
 	} else if (func == Operation::GREATER_EQUAL) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
-		return (args[0] >= args[1]);
+		return (args[0].val >= args[1].val);
 	} else if (func == Operation::NEGATIVE) {
-		return args[0] < Value::intOf(0);
+		return args[0].val < Value::intOf(0);
 	} else if (func == Operation::TERNARY) { // ternary operator
 		if (args.size() == 1u) {
 			return args[0];
 		} else if (args.size() == 2u) {
 			args.push_back(Value::X());
 		}
-		return args[0] ? args[1] : args[2];
+		return args[0].val ? args[1].val : args[2].val;
 	} else if (func == Operation::IDENTITY) {
+		if (args.size() != 1u) {
+			printf("internal:%s:%d: identity (+) operator expected 1 operand, found %zu\n", __FILE__, __LINE__, args.size());
+			return Value::X();
+		}
 		return args[0];
 	} else if (func == Operation::NEGATION) {
-		return -args[0];
+		if (args.size() != 1u) {
+			printf("internal:%s:%d: negation (-) operator expected 1 operand, found %zu\n", __FILE__, __LINE__, args.size());
+			return Value::X();
+		}
+		return -args[0].val;
 	} else if (func == Operation::INVERSE) {
-		return inv(args[0]);
+		if (args.size() != 1u) {
+			printf("internal:%s:%d: inverse (1/x) operator expected 1 operand, found %zu\n", __FILE__, __LINE__, args.size());
+			return Value::X();
+		}
+		return inv(args[0].val);
 	} else if (func == Operation::SHIFT_LEFT) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
-		return (args[0] << args[1]);
+		return (args[0].val << args[1].val);
 	} else if (func == Operation::SHIFT_RIGHT) { 
 		if (args.size() == 1u) {
 			return args[0];
 		}
-		return (args[0] >> args[1]);
-	} else if (func == Operation::ADD) { 
-		for (int i = 1; i < (int)args.size(); i++) {
-			args[0] = args[0] + args[i];
+		return (args[0].val >> args[1].val);
+	} else if (func == Operation::ADD) {
+ 		if (args.size() == 1u) {
+			return args[0];
 		}
-		return args[0];
-	} else if (func == Operation::SUBTRACT) { 
-		for (int i = 1; i < (int)args.size(); i++) {
-			args[0] = args[0] - args[i];
+		Value result = args[0].val;
+		for (size_t i = 1u; i < args.size(); i++) {
+			result = result + args[i].val;
 		}
-		return args[0];
-	} else if (func == Operation::MULTIPLY) { 
-		for (int i = 1; i < (int)args.size(); i++) {
-			args[0] = args[0] * args[i];
+		return result;
+	} else if (func == Operation::SUBTRACT) {
+		if (args.size() == 1u) {
+			return args[0];
 		}
-		return args[0];
+		Value result = args[0].val;
+		for (size_t i = 1u; i < args.size(); i++) {
+			result = result - args[i].val;
+		}
+		return result;
+	} else if (func == Operation::MULTIPLY) {
+ 		if (args.size() == 1u) {
+			return args[0];
+		}
+		Value result = args[0].val;
+		for (size_t i = 1u; i < args.size(); i++) {
+			result = result * args[i].val;
+		}
+		return result;
 	} else if (func == Operation::DIVIDE) { 
 		if (args.size() == 1u) {
 			return args[0];
 		}
-		return (args[0] /  args[1]);
+		return (args[0].val /  args[1].val);
 	} else if (func == Operation::MOD) { 
 		if (args.size() == 1u) {
 			return args[0];
 		}
-		return (args[0] %  args[1]);
-	// else if (func == Operation::CALL) {
+		return (args[0].val %  args[1].val);
+	} else if (func == Operation::CALL and not caller.empty()) {
+		if (args.empty() or args[0].val.type != Value::STRING) {
+			printf("internal:%s:%d: call (()) operator expected string name, found %s\n", __FILE__, __LINE__, ::to_string(args[0].val).c_str());
+			return Value::X();
+		}
+		string name = args[0].val.sval;
+		args.erase(args.begin());
+		return caller.evaluateCall(name, args);
 	} else if (func == Operation::ARRAY) { // concat arrays
-		return Value::arrOf(args);
+		vector<Value> arr;
+		for (size_t i = 0; i < args.size(); i++) {
+			arr.push_back(args[i].val);
+		}
+		return Value::arrOf(arr);
 	} else if (func == Operation::INDEX and args.size() == 2) { // index
-		return index(args[0], args[1]);
+		return index(args[0], args[1].val);
 	} else if (func == Operation::INDEX and args.size() == 3) { // slice
-		return index(args[0], args[1], args[1]);
+		return index(args[0], args[1].val, args[1].val);
 	} else if (func == Operation::STRUCT) { // concat arrays
-		if (args.empty() or args[0].type != Value::STRING) {
-			printf("error: 'struct()' operator expects string name\n");
+		if (args.empty() or args[0].val.type != Value::STRING) {
+			printf("internal:%s:%d: struct ({}) operator expected string name, found %s\n", __FILE__, __LINE__, ::to_string(args[0].val).c_str());
 			return Value::X();
-		} else {
-			return Value::structOf(args[0].sval, vector<Value>(args.begin()+1, args.end()));
 		}
+		vector<Value> arr;
+		for (size_t i = 1; i < args.size(); i++) {
+			arr.push_back(args[i].val);
+		}
+		return Value::structOf(args[0].val.sval, arr);
 	} else if (func == Operation::MEMBER and not types.empty()) {
-		if (args.size() == 2u) {
-			return member(args[0], args[1], types);
-		} else {
-			printf("error: '.' operator expects 2 arguments, found %d\n", (int)args.size());
+		if (args.size() != 2u) {
+			printf("internal:%s:%d: '.' operator expects 2 arguments, found %zu\n", __FILE__, __LINE__, args.size());
+			return Value::X();
+		} else if (args[1].val.type != Value::STRING) {
+			printf("internal:%s:%d: '.' operator expected string name, found %s\n", __FILE__, __LINE__, ::to_string(args[1].val).c_str());
 			return Value::X();
 		}
+			
+		return member(args[0], args[1].val, types);
 	}
-	printf("internal: function %d not implemented\n", func);
+	printf("internal:%s:%d: function %d not implemented\n", __FILE__, __LINE__, func);
 	return Value::X();
 }
 
-Value Operation::evaluate(State values, vector<Value> expressions, TypeSet types) const {
-	vector<Value> args;
+ValRef Operation::evaluate(State values, vector<ValRef> expressions, TypeSet types, Caller caller) const {
+	vector<ValRef> args;
 	args.reserve(operands.size());
 	for (int i = 0; i < (int)operands.size(); i++) {
 		args.push_back(operands[i].get(values, expressions));
 	}
 
-	return Operation::evaluate(func, args, types);
+	return Operation::evaluate(func, args, types, caller);
 }
 
-//TODO: fix these magic numbers with an enum. Are these no longer correct? SEE func == 23 ...~line 823
-//only used in arithemtic::Expression::passesGuard at the moment for CHP sim
-void Operation::propagate(State &result, const State &global, vector<Value> &expressions, const vector<Value> gexpressions, Value v) const
-{
+// only used in arithemtic::Expression::passesGuard at the moment for CHP sim
+void Operation::propagate(State &result, const State &global, vector<ValRef> &expressions, const vector<ValRef> gexpressions, Value v) const {
 	if (v.isValid() or v.isUnknown()) {
-		if (func >= 0 and func <= 2) {
-			// !a, a, -a
-			operands[0].set(result, expressions, operands[0].get(global, gexpressions));
-		} else if (func == 3 or func < 0) {
-			// (bool)
-			operands[0].set(result, expressions, operands[0].get(global, gexpressions));
-		} else if (func == 4) {
-			// ~a
-			operands[0].set(result, expressions, false);
-		} else if (func >= 5 and func <= 22) {
-			// a||b, a&&b, a^b, a<<b, a>>b
-			// a+b, a-b, a*b, a/b, a%b
-			// a==b, a!=b, a<b, a>b, a<=b, a>=b
-			// a&b
-			operands[0].set(result, expressions, operands[0].get(global, gexpressions));
-			operands[1].set(result, expressions, operands[1].get(global, gexpressions));
-		} else if (func == 23) {
-			// a|b
-			Value v0 = operands[0].get(global, gexpressions);
-			if (v0.isValid()) {
-				operands[0].set(result, expressions, v0);
-			} else {
-				operands[0].set(result, expressions, Value::U());
-			}
-			Value v1 = operands[1].get(global, expressions);
-			if (v1.isValid()) {
-				operands[0].set(result, expressions, v1);
-			} else {
-				operands[0].set(result, expressions, Value::U());
+		if (func == Operation::WIRE_NOT) {
+			operands[0].set(result, expressions, Value::gnd());
+		} else if (func == Operation::WIRE_OR) {
+			for (size_t i = 0; i < operands.size(); i++) {
+				Value v0 = operands[i].get(global, gexpressions).val;
+				if (v0.isValid()) {
+					operands[i].set(result, expressions, v0);
+				}
 			}
 		} else {
-			// a
-			operands[0].set(result, expressions, operands[0].get(global, gexpressions));
+			for (size_t i = 0; i < operands.size(); i++) {
+				operands[i].set(result, expressions, operands[i].get(global, gexpressions).val);
+			}
 		}
 	} else if (v.isNeutral()) {
-		if (func >= 0 and func <= 2) {
-			// !a, a, -a
-			operands[0].set(result, expressions, false);
-		} else if (func == 3 or func < 0) {
-			operands[0].set(result, expressions, false);
-		} else if (func == 4) {
-			// ~a
-			operands[0].set(result, expressions, operands[0].get(global, gexpressions));
-		} else if (func >= 5 and func <= 22) {
-			// a||b, a&&b, a^b, a<<b, a>>b
-			// a+b, a-b, a*b, a/b, a%b
-			// a==b, a!=b, a<b, a>b, a<=b, a>=b
-			// a&b
-			Value v0 = operands[0].get(global, gexpressions);
-			if (v0.isNeutral()) {
-				operands[0].set(result, expressions, v0);
-			} else {
-				operands[0].set(result, expressions, Value::U());
+		if (func == Operation::WIRE_NOT) {
+			operands[0].set(result, expressions, operands[0].get(global, gexpressions).val);
+		} else if (func == Operation::WIRE_OR or operands.size() == 1u) {
+			for (size_t i = 0; i < operands.size(); i++) {
+				operands[i].set(result, expressions, Value::gnd());
 			}
-			Value v1 = operands[1].get(global, expressions);
-			if (v1.isNeutral()) {
-				operands[0].set(result, expressions, v1);
-			} else {
-				operands[0].set(result, expressions, Value::U());
-			}
-		} else if (func == 23) {
-			// a|b
-			operands[0].set(result, expressions, false);
-			operands[1].set(result, expressions, false);
 		} else {
-			// a
-			operands[0].set(result, expressions, false);
+			for (size_t i = 0; i < operands.size(); i++) {
+				Value v0 = operands[0].get(global, gexpressions).val;
+				if (v0.isNeutral()) {
+					operands[i].set(result, expressions, v0);
+				}
+			}
 		}
 	} else {
-		if ((func >= 0 and func <= 4) or func < 0) {
-			// !a, a, -a, ~a
-			operands[0].set(result, expressions, Value::U());
-		} else if (func >= 5 and func <= 23) {
-			// a||b, a&&b, a^b, a<<b, a>>b
-			// a+b, a-b, a*b, a/b, a%b
-			// a==b, a!=b, a<b, a>b, a<=b, a>=b
-			// a&b, a|b
-			operands[0].set(result, expressions, Value::U());
-			operands[1].set(result, expressions, Value::U());
-		} else {
-			// a
-			operands[0].set(result, expressions, Value::U());
+		for (size_t i = 0; i < operands.size(); i++) {
+			operands[i].set(result, expressions, Value::U());
 		}
 	} 
 }
@@ -878,7 +899,7 @@ void Operation::tidy() {
 	while (i != operands.end() and next(i) != operands.end()) {
 		auto j = next(i);
 		if (i->isConst() and j->isConst()) {
-			*i = evaluate(func, {i->get(), j->get()});
+			*i = evaluate(func, {i->get(), j->get()}).val;
 			operands.erase(j);
 		} else {
 			i++;

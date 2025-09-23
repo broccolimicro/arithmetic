@@ -5,15 +5,59 @@
 namespace arithmetic
 {
 
-LValue::LValue(size_t index, std::initializer_list<size_t> mods) : mods(mods) {
-	this->index = index;
+Slice::Slice() {
+	this->from = 0;
+	this->to = std::numeric_limits<size_t>::max();
 }
 
-LValue::~LValue() {
+Slice::~Slice() {
 }
 
-bool LValue::isUndef() {
-	return index != std::numeric_limits<size_t>::max();
+bool Slice::isSlice() const {
+	return to != std::numeric_limits<size_t>::max();
+}
+
+bool Slice::index(size_t index) {
+	if (to < from + index) {
+		printf("error: index %zu out of bounds for array of size %zu\n", index, to-from);
+		return false;
+	}
+	idx.push_back(from + index);
+	memb.push_back(false);
+	from = 0;
+	to = std::numeric_limits<size_t>::max();
+	return true;
+}
+
+bool Slice::member(size_t index) {
+	if (isSlice()) {
+		printf("error: member operator not defined for arrays\n");
+		return false;
+	}
+	idx.push_back(index);
+	memb.push_back(true);
+	return true;
+}
+
+bool Slice::slice(size_t from, size_t to) {
+	if (this->to < this->from + to) {
+		printf("error: range [%zu, %zu) out of bounds for array of size %zu\n", from, to, this->to-this->from);
+		return false;
+	}
+	this->to = this->from + to;
+	this->from = this->from + from;
+	return true;
+}
+
+Reference::Reference(size_t uid) {
+	this->uid = uid;
+}
+
+Reference::~Reference() {
+}
+
+bool Reference::isUndef() const {
+	return uid == std::numeric_limits<size_t>::max();
 }
 
 Value::Value() {
@@ -54,6 +98,10 @@ Value::Value(string sval) {
 Value::~Value() {
 }
 
+bool Value::isUndef() const {
+	return type == ValType::UNDEF;
+}
+
 bool Value::isValid() const {
 	return state == StateType::VALID;
 }
@@ -79,7 +127,9 @@ bool Value::isTrue() const {
 }
 
 const char *Value::ctypeName() const {
-	if (type == ValType::WIRE) {
+	if (type == ValType::UNDEF) {
+		return "undef";
+	} else if (type == ValType::WIRE) {
 		return "wire";
 	} else if (type == ValType::STRING) {
 		return "string";
@@ -99,6 +149,10 @@ const char *Value::ctypeName() const {
 
 string Value::typeName() const {
 	return string(ctypeName());
+}
+
+Value Value::undef() {
+	return Value();
 }
 
 Value Value::X(Value::ValType type) {
@@ -212,47 +266,114 @@ bool Value::isSubsetOf(Value v) const {
 	return false;
 }
 
-Value *Value::at(vector<size_t> mods, bool init) {
-	Value *curr = this;
-	while ((curr->type == Value::ARRAY or curr->type == Value::STRUCT) and not mods.empty()) {
-		if (init and mods.back() >= curr->arr.size()) {
-			curr->arr.resize(mods.back()+1, Value());
-		}
-
-		if (mods.back() < 0 or mods.back() >= curr->arr.size()) {
-			printf("error:%s:%d: index out of bounds\n", __FILE__, __LINE__);
-			return nullptr;
-		}
-		curr = &curr->arr[mods.back()];
-		mods.pop_back();
-
-		if (init and curr->type == Value::UNDEF) {
-			curr->type = Value::ARRAY;
-			curr->state = Value::UNKNOWN;
+void Value::set(Slice slice, Value v, bool define) {
+	Value *dst = this;
+	int i = 0;
+	for (; i < (int)slice.idx.size() and dst->type != Value::INT; i++) {
+		if (slice.memb[i] and dst->type != Value::STRUCT) {
+			printf("internal:%s:%d: member operator expected struct type\n", __FILE__, __LINE__);
+			return;
+		} else if (not slice.memb[i] and dst->type != Value::ARRAY) {
+			printf("internal:%s:%d: index operator expected array or int type\n", __FILE__, __LINE__);
+			return;
+		} else if (slice.idx[i] >= v.arr.size()) {
+			if (define) {
+				dst->arr.resize(slice.idx[i]+1);
+				dst = &dst->arr[slice.idx[i]];
+			} else {
+				printf("error: index %zu out of bounds for array of size %zu\n", slice.idx[i], v.arr.size());
+				return;
+			}
+		} else {
+			dst = &dst->arr[slice.idx[i]];
 		}
 	}
-	if (not mods.empty()) {
-		printf("error:%s:%d: type cannot be indexed\n", __FILE__, __LINE__);
-		return nullptr;
+
+	Slice accum;
+	for (; i < (int)slice.idx.size() and dst->type == Value::INT; i++) {
+		if (not accum.slice(slice.idx[i], slice.idx[i]+1)) {
+			return;
+		}
 	}
+
+	if (slice.isSlice() and not accum.slice(slice.from, slice.to)) {
+		return;
+	}
+
+	if (accum.isSlice()) {
+		if (dst->type == Value::ARRAY) {
+			if (slice.to >= v.arr.size()) {
+				if (define) {
+					dst->arr.resize(slice.to+1);
+				} else {
+					printf("error: range [%zu, %zu) out of bounds for array of size %zu\n", slice.from, slice.to, v.arr.size());
+					return;
+				}
+			}
+			for (size_t j = slice.from; j != slice.to; j++) {
+				dst->arr[j] = index(v, Value::intOf(j));
+			}
+		} else if (dst->type == Value::INT) {
+			if (v.type != Value::INT) {
+				printf("error: cannot assign a non-integer value to an integer bitslice\n");
+				return;
+			}
+			int64_t mask = ((1l<<(slice.to-slice.from))-1l);
+			dst->ival = (dst->ival & ~(mask << slice.from)) | ((v.ival & mask) << slice.from);
+		} else {
+			printf("internal:%s:%d: slice operator expected array or integer type\n", __FILE__, __LINE__);
+			return;
+		}
+	} else if (dst->type == v.type or (dst->isUndef() and define)) {
+		*dst = v;
+	} else {
+		printf("error:%s:%d: type mismatch between %s:%s and %s:%s\n", __FILE__, __LINE__, dst->ctypeName(), ::to_string(*dst).c_str(), v.ctypeName(), ::to_string(v).c_str());
+	}
+}
+
+Value Value::get(Slice slice) const {
+	Value curr = *this;
+	for (int i = 0; i < (int)slice.idx.size(); i++) {
+		if (slice.memb[i] and curr.type != Value::STRUCT) {
+			printf("internal:%s:%d: member operator expected struct type\n", __FILE__, __LINE__);
+			return Value::undef();
+		} else if (not slice.memb[i] and curr.type != Value::ARRAY and curr.type != Value::INT) {
+			printf("internal:%s:%d: index operator expected array or int type\n", __FILE__, __LINE__);
+			return Value::undef();
+		} else if (slice.idx[i] >= curr.arr.size()) {
+			printf("error: index %zu out of bounds for array of size %zu\n", slice.idx[i], curr.arr.size());
+			return Value::X();
+		} else if (curr.type == Value::INT) {
+			curr.ival = (curr.ival >> slice.idx[i]) & 1;
+		} else {
+			curr = curr.arr[slice.idx[i]];
+		}
+	}
+
+	if (slice.isSlice()) {
+		if (curr.type == Value::ARRAY) {
+			if (slice.from >= slice.to or slice.to >= curr.arr.size()) {
+				printf("error: range [%zu, %zu) out of bounds for array of size %zu\n", slice.from, slice.to, curr.arr.size());
+				return Value::X();
+			}
+			curr.arr = vector<Value>(curr.arr.begin()+slice.from, curr.arr.begin()+slice.to);
+		} else if (curr.type == Value::INT) {
+			curr.ival = (curr.ival >> slice.from) & ((1<<slice.to)-1);
+		} else {
+			printf("internal:%s:%d: expected array or integer type\n", __FILE__, __LINE__);
+			return Value::undef();
+		}
+	}
+
 	return curr;
 }
 
-const Value *Value::at(vector<size_t> mods) const {
-	const Value *curr = this;
-	while ((curr->type == Value::ARRAY or curr->type == Value::STRUCT) and not mods.empty()) {
-		if (mods.back() < 0 or mods.back() >= curr->arr.size()) {
-			printf("error:%s:%d: index out of bounds\n", __FILE__, __LINE__);
-			return nullptr;
-		}
-		curr = &curr->arr[mods.back()];
-		mods.pop_back();
-	}
-	if (not mods.empty()) {
-		printf("error:%s:%d: type cannot be indexed\n", __FILE__, __LINE__);
-		return nullptr;
-	}
-	return curr;
+ValRef::ValRef(Value val, Reference ref) {
+	this->val = val;
+	this->ref = ref;
+}
+
+ValRef::~ValRef() {
 }
 
 bool areSame(Value v0, Value v1) {
@@ -940,6 +1061,28 @@ Value index(Value v, Value i) {
 	return Value::X();
 }
 
+ValRef index(ValRef v, Value i) {
+	if (i.isUnstable()) {
+		return Value::X();
+	} else if (i.isNeutral()) {
+		return Value::gnd();
+	} else if (i.isUnknown()) {
+		return Value::U();
+	} else if (v.val.type == Value::ARRAY and i.type == Value::INT) {
+		if (i.ival >= 0 and i.ival < (int)v.val.arr.size()) {
+			v.val = v.val.arr[i.ival];
+			if (not v.ref.isUndef()) {
+				v.ref.slice.index((size_t)i.ival);
+			}
+			return v;
+		}
+		printf("error: index %ld out of bounds for array of size %zu\n", (long)i.ival, v.val.arr.size());
+		return Value::X();
+	}
+	printf("error: 'operator[]' not defined for '%s' and '%s'\n", v.val.ctypeName(), i.ctypeName());
+	return Value::X();
+}
+
 Value index(Value v, Value f, Value t) {
 	if (f.isUnstable() or t.isUnstable()) {
 		return Value::X(Value::ARRAY);
@@ -959,6 +1102,28 @@ Value index(Value v, Value f, Value t) {
 	return Value::X(Value::ARRAY);
 }
 
+ValRef index(ValRef v, Value f, Value t) {
+	if (f.isUnstable() or t.isUnstable()) {
+		return Value::X(Value::ARRAY);
+	} else if (f.isNeutral() or t.isNeutral()) {
+		return Value::gnd(Value::ARRAY);
+	} else if (f.isUnknown() or t.isUnknown()) {
+		return Value::U(Value::ARRAY);
+	} else if (v.val.type == Value::ARRAY and f.type == Value::INT and t.type == Value::INT) {
+		if (f.ival >= 0 and f.ival < t.ival and t.ival <= (int)v.val.arr.size()) {
+			v.val.arr = vector<Value>(v.val.arr.begin()+f.ival, v.val.arr.begin()+t.ival);
+			if (not v.ref.isUndef()) {
+				v.ref.slice.slice((size_t)f.ival, (size_t)t.ival);
+			}
+			return v;
+		}
+		printf("error: range [%ld, %ld) out of bounds for array of size %zu\n", (long)f.ival, (long)t.ival, v.val.arr.size());
+		return Value::X(Value::ARRAY);
+	}
+	printf("error: 'operator[]' not defined for '%s', '%s', and '%s'\n", v.val.ctypeName(), f.ctypeName(), t.ctypeName());
+	return Value::X(Value::ARRAY);
+}
+
 Value member(Value v0, Value v1, TypeSet types) {
 	if (v0.type == Value::STRUCT and v1.type == Value::STRING) {
 		int idx = types.memberIndex(v0.sval, v1.sval);
@@ -969,6 +1134,23 @@ Value member(Value v0, Value v1, TypeSet types) {
 		return Value::X();
 	}
 	printf("error: 'operator.' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
+	return Value::X();
+}
+
+ValRef member(ValRef v0, Value v1, TypeSet types) {
+	if (v0.val.type == Value::STRUCT and v1.type == Value::STRING) {
+		int idx = types.memberIndex(v0.val.sval, v1.sval);
+		if (idx >= 0 and idx < (int)v0.val.arr.size()) {
+			v0.val = v0.val.arr[idx];
+			if (not v0.ref.isUndef()) {
+				v0.ref.slice.member((size_t)idx);
+			}
+			return v0;
+		}
+		printf("internal: member %s(%d) out of bounds for structure '%s' of size %zu\n", v1.sval.c_str(), idx, v0.val.sval.c_str(), v0.val.arr.size());
+		return Value::X();
+	}
+	printf("error: 'operator.' not defined for '%s' and '%s'\n", v0.val.ctypeName(), v1.ctypeName());
 	return Value::X();
 }
 

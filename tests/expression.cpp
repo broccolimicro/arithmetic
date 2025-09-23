@@ -19,11 +19,12 @@ TEST(Expression, OperandWireOr) {
 	s.push_back(10);
 	s.push_back(Value::gnd());
 
-	Value result = evaluate(e, e.top, s);
+	ValRef result = evaluate(e, e.top, s);
 
-	EXPECT_EQ(result.type, Value::WIRE);
-	EXPECT_TRUE(result.isValid());
-	EXPECT_FALSE(result.isNeutral());
+	EXPECT_EQ(result.val.type, Value::WIRE);
+	EXPECT_TRUE(result.val.isValid());
+	EXPECT_FALSE(result.val.isNeutral());
+	EXPECT_TRUE(result.ref.isUndef());
 }
 
 TEST(Expression, OperandWireAnd) {
@@ -37,11 +38,12 @@ TEST(Expression, OperandWireAnd) {
 	s.push_back(10);
 	s.push_back(Value::gnd());
 
-	Value result = evaluate(e, e.top, s);
+	ValRef result = evaluate(e, e.top, s);
 
-	EXPECT_EQ(result.type, Value::WIRE);
-	EXPECT_FALSE(result.isValid());
-	EXPECT_TRUE(result.isNeutral());
+	EXPECT_EQ(result.val.type, Value::WIRE);
+	EXPECT_FALSE(result.val.isValid());
+	EXPECT_TRUE(result.val.isNeutral());
+	EXPECT_TRUE(result.ref.isUndef());
 }
 
 TEST(Expression, OperandWireXor) {
@@ -55,11 +57,12 @@ TEST(Expression, OperandWireXor) {
 	s.push_back(10);
 	s.push_back(Value::gnd());
 
-	Value result = evaluate(e, e.top, s);
+	ValRef result = evaluate(e, e.top, s);
 
-	EXPECT_EQ(result.type, Value::WIRE);
-	EXPECT_TRUE(result.isValid());
-	EXPECT_FALSE(result.isNeutral());
+	EXPECT_EQ(result.val.type, Value::WIRE);
+	EXPECT_TRUE(result.val.isValid());
+	EXPECT_FALSE(result.val.isNeutral());
+	EXPECT_TRUE(result.ref.isUndef());
 }
 
 TEST(Expression, OperandEqualTo) {
@@ -72,32 +75,36 @@ TEST(Expression, OperandEqualTo) {
 	State s;
 	s.push_back(5);
 	s.push_back(4);
-	Value result = evaluate(e, e.top, s);
-	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_TRUE(result.isValid());
-	EXPECT_FALSE(result.bval);
+	ValRef result = evaluate(e, e.top, s);
+	EXPECT_EQ(result.val.type, Value::BOOL);
+	EXPECT_TRUE(result.val.isValid());
+	EXPECT_FALSE(result.val.bval);
+	EXPECT_TRUE(result.ref.isUndef());
 
 	s.clear();
 	s.push_back(5);
 	s.push_back(5);
 	result = evaluate(e, e.top, s);
-	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_TRUE(result.isValid());
-	EXPECT_TRUE(result.bval);
+	EXPECT_EQ(result.val.type, Value::BOOL);
+	EXPECT_TRUE(result.val.isValid());
+	EXPECT_TRUE(result.val.bval);
+	EXPECT_TRUE(result.ref.isUndef());
 
 	s.clear();
 	s.push_back(Value::X());
 	s.push_back(4);
 	result = evaluate(e, e.top, s);
-	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_TRUE(result.isUnstable());
+	EXPECT_EQ(result.val.type, Value::BOOL);
+	EXPECT_TRUE(result.val.isUnstable());
+	EXPECT_TRUE(result.ref.isUndef());
 
 	s.clear();
 	s.push_back(false);
 	s.push_back(4);
 	result = evaluate(e, e.top, s);
-	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_TRUE(result.isUnstable());
+	EXPECT_EQ(result.val.type, Value::BOOL);
+	EXPECT_TRUE(result.val.isUnstable());
+	EXPECT_TRUE(result.ref.isUndef());
 }
 
 TEST(Expression, OperandNotEqualTo) {
@@ -110,30 +117,34 @@ TEST(Expression, OperandNotEqualTo) {
 	State s;
 	s.push_back(5);
 	s.push_back(4);
-	Value result = evaluate(e, e.top, s);
-	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_TRUE(result.bval);
+	ValRef result = evaluate(e, e.top, s);
+	EXPECT_EQ(result.val.type, Value::BOOL);
+	EXPECT_TRUE(result.val.bval);
+	EXPECT_TRUE(result.ref.isUndef());
 
 	s.clear();	
 	s.push_back(5);
 	s.push_back(5);
 	result = evaluate(e, e.top, s);
-	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_FALSE(result.bval);
+	EXPECT_EQ(result.val.type, Value::BOOL);
+	EXPECT_FALSE(result.val.bval);
+	EXPECT_TRUE(result.ref.isUndef());
 
 	s.clear();
 	s.push_back(Value::X());
 	s.push_back(4);
 	result = evaluate(e, e.top, s);
-	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_TRUE(result.isUnstable());
+	EXPECT_EQ(result.val.type, Value::BOOL);
+	EXPECT_TRUE(result.val.isUnstable());
+	EXPECT_TRUE(result.ref.isUndef());
 
 	s.clear();
 	s.push_back(false);
 	s.push_back(4);
 	result = evaluate(e, e.top, s);
-	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_TRUE(result.isUnstable());
+	EXPECT_EQ(result.val.type, Value::BOOL);
+	EXPECT_TRUE(result.val.isUnstable());
+	EXPECT_TRUE(result.ref.isUndef());
 }
 
 TEST(Expression, OperandLessThan) {
@@ -146,30 +157,34 @@ TEST(Expression, OperandLessThan) {
 	State s;
 	s.push_back(5);
 	s.push_back(4);
-	Value result = evaluate(e, e.top, s);
-	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_FALSE(result.bval);
+	ValRef result = evaluate(e, e.top, s);
+	EXPECT_EQ(result.val.type, Value::BOOL);
+	EXPECT_FALSE(result.val.bval);
+	EXPECT_TRUE(result.ref.isUndef());
 
 	s.clear();	
 	s.push_back(4);
 	s.push_back(5);
 	result = evaluate(e, e.top, s);
-	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_TRUE(result.bval);
+	EXPECT_EQ(result.val.type, Value::BOOL);
+	EXPECT_TRUE(result.val.bval);
+	EXPECT_TRUE(result.ref.isUndef());
 
 	s.clear();
 	s.push_back(Value::X());
 	s.push_back(4);
 	result = evaluate(e, e.top, s);
-	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_TRUE(result.isUnstable());
+	EXPECT_EQ(result.val.type, Value::BOOL);
+	EXPECT_TRUE(result.val.isUnstable());
+	EXPECT_TRUE(result.ref.isUndef());
 
 	s.clear();
 	s.push_back(false);
 	s.push_back(4);
 	result = evaluate(e, e.top, s);
-	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_TRUE(result.isUnstable());
+	EXPECT_EQ(result.val.type, Value::BOOL);
+	EXPECT_TRUE(result.val.isUnstable());
+	EXPECT_TRUE(result.ref.isUndef());
 }
 
 TEST(Expression, OperandGreaterThan) {
@@ -182,30 +197,34 @@ TEST(Expression, OperandGreaterThan) {
 	State s;
 	s.push_back(5);
 	s.push_back(4);
-	Value result = evaluate(e, e.top, s);
-	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_TRUE(result.bval);
+	ValRef result = evaluate(e, e.top, s);
+	EXPECT_EQ(result.val.type, Value::BOOL);
+	EXPECT_TRUE(result.val.bval);
+	EXPECT_TRUE(result.ref.isUndef());
 
 	s.clear();	
 	s.push_back(4);
 	s.push_back(5);
 	result = evaluate(e, e.top, s);
-	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_FALSE(result.bval);
+	EXPECT_EQ(result.val.type, Value::BOOL);
+	EXPECT_FALSE(result.val.bval);
+	EXPECT_TRUE(result.ref.isUndef());
 
 	s.clear();
 	s.push_back(Value::X());
 	s.push_back(4);
 	result = evaluate(e, e.top, s);
-	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_TRUE(result.isUnstable());
+	EXPECT_EQ(result.val.type, Value::BOOL);
+	EXPECT_TRUE(result.val.isUnstable());
+	EXPECT_TRUE(result.ref.isUndef());
 
 	s.clear();
 	s.push_back(false);
 	s.push_back(4);
 	result = evaluate(e, e.top, s);
-	EXPECT_EQ(result.type, Value::BOOL);
-	EXPECT_TRUE(result.isUnstable());
+	EXPECT_EQ(result.val.type, Value::BOOL);
+	EXPECT_TRUE(result.val.isUnstable());
+	EXPECT_TRUE(result.ref.isUndef());
 }
 
 TEST(Expression, Compound) {
@@ -224,9 +243,10 @@ TEST(Expression, Compound) {
 	s.push_back(3);
 	s.push_back(6);
 	s.push_back(3);
-	Value result = evaluate(e, e.top, s);
-	EXPECT_EQ(result.type, Value::INT);
-	EXPECT_EQ(result.ival, 27);
+	ValRef result = evaluate(e, e.top, s);
+	EXPECT_EQ(result.val.type, Value::INT);
+	EXPECT_EQ(result.val.ival, 27);
+	EXPECT_TRUE(result.ref.isUndef());
 }
 
 TEST(Expression, TidyConstants) {

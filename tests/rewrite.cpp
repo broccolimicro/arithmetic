@@ -16,16 +16,16 @@ void verifyRule(const RuleSet &rules, int idx) {
 	for (ConstDownIterator i(rules.sub, {rule.left, rule.right}); not i.done(); ++i) {
 		auto j = i.get();
 		for (auto k = j.operands.begin(); k != j.operands.end(); k++) {
-			if (k->isVar() and s.at(k->index) == nullptr) {
-				s.set(k->index, Value::intOf(rand()%100+1));
+			if (k->isVar() and (k->index >= s.values.size() or s.values[k->index].isUndef())) {
+				s.set(k->index, Value::intOf(rand()%100+1), true);
 			}
 		}
 	}
 
 	cout << "on state " << s << endl;
 	try {
-		Value left = evaluate(rules.sub, rule.left, s);
-		Value right = evaluate(rules.sub, rule.right, s);
+		Value left = evaluate(rules.sub, rule.left, s).val;
+		Value right = evaluate(rules.sub, rule.right, s).val;
 
 		EXPECT_TRUE(areSame(left, right)) << "rule " << idx << ": " << left.typeName() << ":" << left << " != " << right.typeName() << ":" << right << endl << subExpr(rules.sub, rule.left) << "vs" << endl << subExpr(rules.sub, rule.right);
 	} catch (const std::exception& e) {

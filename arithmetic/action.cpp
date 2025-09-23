@@ -50,8 +50,8 @@ void Action::evaluate(State &next, const State &curr, TypeSet types) {
 		return;
 	}
 	next.svIntersect(
-		arithmetic::evaluateL(lvalue, lvalue.top, curr, types),
-		arithmetic::evaluate(rvalue, rvalue.top, curr, types));
+		arithmetic::evaluate(lvalue, lvalue.top, curr, types).ref,
+		arithmetic::evaluate(rvalue, rvalue.top, curr, types).val);
 }
 
 bool areSame(Action a0, Action a1) {

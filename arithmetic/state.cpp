@@ -43,28 +43,36 @@ void State::push_back(Value v) {
 	values.push_back(v);
 }
 
-Value State::get(LValue lhs) const {
-	const Value *var = at(lhs);
-	if (var == nullptr) {
+Value State::get(Reference lhs) const {
+	if (lhs.isUndef()) {
+		printf("error:%s:%d: variable not defined\n", __FILE__, __LINE__);
+		return Value::X();
+	} else if (lhs.uid >= values.size()) {
+		printf("error:%s:%d: variable not defined 'v%zu'\n", __FILE__, __LINE__, lhs.uid);
 		return Value::U();
 	}
-	return *var;
+	return values[lhs.uid].get(lhs.slice);
 }
 
-void State::set(LValue lhs, Value rhs) {
-	Value *var = at(lhs, true);
-	if (var == nullptr) {
+void State::set(Reference lhs, Value rhs, bool define) {
+	if (lhs.isUndef() and not define) {
+		printf("error:%s:%d: variable not defined\n", __FILE__, __LINE__);
 		return;
 	}
-	*var = rhs;
+	if (lhs.uid >= values.size()) {
+		values.resize(lhs.uid+1);
+	}
+	values[lhs.uid].set(lhs.slice, rhs, define);
 }
 
-void State::svIntersect(LValue lhs, Value rhs) {
-	Value *var = at(lhs, true);
-	if (var == nullptr) {
+void State::svIntersect(Reference lhs, Value rhs) {
+	if (lhs.isUndef()) {
 		return;
 	}
-	*var = intersect(*var, rhs);
+	if (lhs.uid >= values.size()) {
+		values.resize(lhs.uid+1);
+	}
+	values[lhs.uid].set(lhs.slice, intersect(values[lhs.uid].get(lhs.slice), rhs));
 }
 
 bool State::isSubsetOf(const State &s) const {
@@ -111,11 +119,7 @@ State &State::operator=(State s) {
 	return *this;
 }
 
-Value &State::operator[](LValue lhs) {
-	return *at(lhs, true);
-}
-
-Value State::operator[](LValue lhs) const {
+Value State::operator[](Reference lhs) const {
 	return get(lhs);
 }
 
@@ -209,26 +213,6 @@ void State::apply(vector<int> uidMap) {
 		}
 	}
 	values = result.values;
-}
-
-Value *State::at(LValue lvalue, bool init) {
-	if (lvalue.index >= values.size()) {
-		if (init) {
-			values.resize(lvalue.index+1, Value());
-		} else {
-			printf("error:%s:%d: variable not defined 'v%zu'\n", __FILE__, __LINE__, lvalue.index);
-			return nullptr;
-		}
-	}
-	return values[lvalue.index].at(lvalue.mods, init);
-}
-
-const Value *State::at(LValue lvalue) const {
-	if (lvalue.index >= values.size()) {
-		printf("error:%s:%d: variable not defined 'v%zu'\n", __FILE__, __LINE__, lvalue.index);
-		return nullptr;
-	}
-	return values[lvalue.index].at(lvalue.mods);
 }
 
 ostream &operator<<(ostream &os, const State &s) {

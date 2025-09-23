@@ -437,17 +437,17 @@ Expression call(string func_name, vector<Expression> args) {
 }
 
 int passesGuard(const State &encoding, const State &global, const Expression &guard, State *total) {
-	vector<Value> expressions;
-	vector<Value> gexpressions;
+	vector<ValRef> expressions;
+	vector<ValRef> gexpressions;
 
 	for (ConstUpIterator i(guard.sub, {guard.top}); not i.done(); ++i) {
-		Value g = i->evaluate(global, gexpressions);
-		Value l = i->evaluate(encoding, expressions);
+		ValRef g = i->evaluate(global, gexpressions);
+		ValRef l = i->evaluate(encoding, expressions);
 
-		if (l.isUnstable() or g.isUnstable()
-			or (g.isNeutral() and l.isValid())
-			or (g.isValid() and l.isNeutral())
-			or (g.isValid() and l.isValid() and not areSame(g, l))) {
+		if (l.val.isUnstable() or g.val.isUnstable()
+			or (g.val.isNeutral() and l.val.isValid())
+			or (g.val.isValid() and l.val.isNeutral())
+			or (g.val.isValid() and l.val.isValid() and not areSame(g.val, l.val))) {
 			l = Value::X();
 		}
 
@@ -461,10 +461,10 @@ int passesGuard(const State &encoding, const State &global, const Expression &gu
 		gexpressions[i->exprIndex] = g;
 	}
 
-	if (expressions[guard.top.index].isUnknown() or expressions[guard.top.index].isValid()) {
-		if (gexpressions[guard.top.index].isNeutral() or gexpressions[guard.top.index].isUnknown()) {
+	if (expressions[guard.top.index].val.isUnknown() or expressions[guard.top.index].val.isValid()) {
+		if (gexpressions[guard.top.index].val.isNeutral() or gexpressions[guard.top.index].val.isUnknown()) {
 			expressions[guard.top.index] = Value::X();
-		} else if (gexpressions[guard.top.index].isValid()) {
+		} else if (gexpressions[guard.top.index].val.isValid()) {
 			expressions[guard.top.index] = gexpressions[guard.top.index];
 		}
 	}
@@ -481,15 +481,15 @@ int passesGuard(const State &encoding, const State &global, const Expression &gu
 
 	// This validity/neutrality information propagates differently through
 	// different operations.
-	if (total != nullptr and expressions.back().isValid()) {
+	if (total != nullptr and expressions.back().val.isValid()) {
 		for (ConstDownIterator i(guard.sub, {guard.top}); not i.done(); ++i) {
-			i->propagate(*total, global, expressions, gexpressions, expressions[i->exprIndex]);
+			i->propagate(*total, global, expressions, gexpressions, expressions[i->exprIndex].val);
 		}
 	}
 
-	if (expressions.empty() or expressions[guard.top.index].isNeutral()) {
+	if (expressions.empty() or expressions[guard.top.index].val.isNeutral()) {
 		return -1;
-	} else if (expressions[guard.top.index].isUnstable()) {
+	} else if (expressions[guard.top.index].val.isUnstable()) {
 		return 0;
 	}
 	

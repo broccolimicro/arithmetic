@@ -51,4 +51,23 @@ TEST(Rewrite, Undirected) {
 	verifyRewrite(rewriteUndirected());
 }
 
+TEST(Rewrite, Commutative) {
+	Expression a = Expression::varOf(0);
+	Expression b = Expression::varOf(1);
+	Expression c = Expression::varOf(2);
+	Expression d = Expression::varOf(3);
+
+	auto rules = RuleSet({
+		(a & wireOr(b)) > (wireOr(a&b)),
+	});
+
+	Expression dut = (a | b) & (c | d);
+	Expression exp = ((a & c) | (a & d) | (b & c) | (b & d));
+	exp.minimize();
+	cout << dut << endl;
+	dut.minimize(rules);
+	dut.minimize();
+	EXPECT_TRUE(areSame(dut, exp)) << dut << " != " << exp << endl;
+}
+
 

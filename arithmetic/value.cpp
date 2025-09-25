@@ -1087,6 +1087,21 @@ Value intOf(Value v) {
 	return Value::X(Value::INT);
 }
 
+// TODO(edward.bingham) look up type string with type system
+Value cast(string type, Value v) {
+	if (type == "wire") {
+		return wireOf(v);
+	} else if (type == "bool") {
+		return boolOf(v);
+	} else if (type == "int") {
+		return intOf(v);
+	} else if (type == "real") {
+		return realOf(v);
+	}
+	printf("error: cast to '%s' not defined for '%s'\n", type.c_str(), v.ctypeName());
+	return Value::X();
+}
+
 Value cast(Value::ValType type, Value v) {
 	if (v.type == type) {
 		return v;
@@ -1099,7 +1114,7 @@ Value cast(Value::ValType type, Value v) {
 	} else if (type == Value::REAL) {
 		return realOf(v);
 	}
- 	printf("error: cast to 'int' not defined for '%s'\n", v.ctypeName());
+ 	printf("error: cast not defined for '%s'\n", v.ctypeName());
 	return Value::X(type);
 }
 

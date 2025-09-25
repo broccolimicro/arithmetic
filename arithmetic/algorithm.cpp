@@ -643,6 +643,8 @@ Mapping<Operand> tidy(OperationSet expr, vector<Operand> top, bool rules) {
 
 		Mapping<Operand> step(Operand::undef(), true);
 		bool squish = false;
+
+		// flatten/squish unnecessary hierarchy of commutative operations
 		for (int i = (int)curr.operands.size()-1; i >= 0; i--) {
 			Operand op = curr.operands[i];
 			if (op.isExpr()) {

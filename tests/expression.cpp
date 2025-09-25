@@ -480,42 +480,54 @@ TEST(Expression, Iteration) {
 }
 
 TEST(Expression, BooleanSimplification) {
+	Expression True = Expression::boolOf(true);
+	Expression False = Expression::boolOf(false);
+	
 	Expression x = Expression::varOf(0);
-	Expression eTrue = Expression::boolOf(true);
-	Expression eFalse = Expression::boolOf(false);
+	Expression boolX = cast("bool", x);
 
-	Expression a = eTrue && x && eTrue;
+
+	Expression a = True && x && True;
 	a.minimize();
-	EXPECT_TRUE(areSame(a, x)) << x << endl << x << endl;
+	cout << a.to_string(true) << endl << boolX.to_string(true) << endl;
+	EXPECT_TRUE(areSame(a, boolX)) << a << " != " << boolX << endl;
 
-	Expression b = eFalse || x || eFalse;
+	Expression b = False || x || False;
 	b.minimize();
-	EXPECT_TRUE(areSame(b, x)) << b << endl << x << endl;
+	cout << b.to_string(true) << endl << boolX.to_string(true) << endl;
+	EXPECT_TRUE(areSame(b, boolX)) << b << " != " << boolX << endl;
 
 	Expression e = x && x && x && x;
 	e.minimize();
-	EXPECT_TRUE(areSame(e, x)) << e << endl << x << endl;
+	cout << e.to_string(true) << endl << boolX.to_string(true) << endl;
+	EXPECT_TRUE(areSame(e, boolX)) << e << " != " << boolX << endl;
 
 	Expression f = x || x || x || x;
 	f.minimize();
-	EXPECT_TRUE(areSame(f, x)) << f << endl << x << endl;
+	cout << f.to_string(true) << endl << boolX.to_string(true) << endl;
+	EXPECT_TRUE(areSame(f, boolX)) << f << " != " << boolX << endl;
 
 	Expression g = (x && x) || (x && x) || (x && x);
 	g.minimize();
-	EXPECT_TRUE(areSame(g, x)) << g << endl << x << endl;
+	cout << g.to_string(true) << endl << boolX.to_string(true) << endl;
+	EXPECT_TRUE(areSame(g, boolX)) << g << " != " << boolX << endl;
 }
 
 TEST(Expression, ConstantFolding) {
-	Expression zero = Expression::intOf(0);
-	Expression one = Expression::intOf(1);
+	Expression Zero = Expression::intOf(0);
+	Expression One = Expression::intOf(1);
+
+	Expression False = Expression::boolOf(false);
+	Expression True = Expression::boolOf(true);
+
 	Expression x = Expression::varOf(0);
 
-	Expression a = Expression::intOf(1) || x;
+	Expression a = One || x;
 	a.minimize();
-	EXPECT_TRUE(areSame(a, one)) << a << endl << one << endl;
+	EXPECT_TRUE(areSame(a, True)) << a << " != " << True << endl;
 
-	Expression b = Expression::intOf(0) && x;
+	Expression b = Zero && x;
 	b.minimize();
-	EXPECT_TRUE(areSame(b, zero)) << b << endl << one << endl;
+	EXPECT_TRUE(areSame(b, False)) << b << " != " << False << endl;
 }
 

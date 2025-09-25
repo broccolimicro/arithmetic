@@ -173,6 +173,11 @@ RuleSet rewriteSimple() {
 		(isValid(inv(a))) > (isValid(a)),
 		(~inv(a)) > (~a),
 
+		(a & (!b)) > (a & b),
+		(a | (!b)) > (a | b),
+		(isValid(!a)) > (isValid(a)),
+		(~(!a)) > (~a),
+
 		(a & (b+c)) > (a & b & c),
 		(a | (b+c)) > (a | (b & c)),
 		(isValid(a+b)) > (a & b),
@@ -199,56 +204,38 @@ RuleSet rewriteSimple() {
 		(1*a) > (a),
 		(-1*a) > (-a),
 
-
-
-
-
 		isTrue(isTrue(a)) > isTrue(a),
 		isTrue(isValid(a)) > isValid(a),
 		isValid(isTrue(a)) > isTrue(a),
-		/*!isValid(a) > gnd,
-		!isTrue(a) > gnd,
-
-		(!(!a)) > (isTrue(a)),
-		(isTrue(!a)) > (!a),
-		(!isTrue(a)) > (!a),
-		(isTrue(isTrue(a))) > (isTrue(a)),
-
-
-
-		(isTrue(a) && b) > (a && b),
-		(isTrue(a && b)) > (a && b),
-		(isTrue(a) || b) > (a || b),
-		(isTrue(a || b)) > (a || b),
-		a && a > isTrue(a),
-		a || a > isTrue(a),
-		a && !a > false,
-		a || !a > true,*/
-		
-		
-
-		// Simplify boolean expressions
-		//(not (a == b)) > (a != b),
-		//(not (a != b)) > (a == b),
-
-		//(a & (!b)) > (a & b),
-		//(a | (!b)) > (a | b),
-		//(~(!b)) > (~b),
-		//(a and (b & c)) > (a and b and c),
-		//(a or (b & c)) > (a or (b and c)),
-		//(not (b & c)) > (not b or not c),
-		//(a and (b | c)) > (a and b and c),
-		//(a or (b | c)) > (a or (b and c)),
-		//(not (b | c)) > (not b or not c),
 	
-		/*(a ^^ a) > (0),
-		(a && a) > (a),
-		(0 && a) > (0),
-		(0 || a) > (a),
-		(-1 && a) > (a),
-		(-1 || a) > (-1),
-		(a || a) > (a),
-		(!!a) > (a)*/
+		// Simplify boolean expressions
+		(!(!a)) > (cast("bool", a)),
+		(cast("bool", !a)) > (!a),
+		(!cast("bool", a)) > (!a),
+		(cast("bool", cast("bool", a))) > (cast("bool", a)),
+
+		(cast("bool", a) && b) > (a && b),
+		(cast("bool", a && b)) > (a && b),
+		(cast("bool", a) || b) > (a || b),
+		(cast("bool", a || b)) > (a || b),
+
+		(a && a) > cast("bool", a),
+		(a || a) > cast("bool", a),
+
+		(a && !a) > false,
+		(a || !a) > true,
+
+		// Boolean constant propagation
+		(true && a) > (cast("bool", a)),
+		(false && a) > (false),
+		//(U && a) > (isTrue(a)),
+		
+		(true || a) > (true),
+		(false || a) > (cast("bool", a)),
+		//(U || a) > (true),
+
+		(not (a == b)) > (a != b),
+		(not (a != b)) > (a == b),
 	});
 }
 

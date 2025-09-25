@@ -168,6 +168,7 @@ Expression add(vector<Expression> e0);
 Expression mult(vector<Expression> e0);
 
 Expression call(string func_name, vector<Expression> args);
+Expression cast(string type_name, Expression e0);
 
 int passesGuard(const State &encoding, const State &global, const Expression &guard, State *total);
 Expression weakestGuard(const Expression &guard, const Expression &exclude);

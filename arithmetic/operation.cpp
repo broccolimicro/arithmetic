@@ -342,6 +342,7 @@ void Operation::loadOperators() {
 		set(OpType::MOD, Operator("", "", "%", ""));
 
 		set(OpType::CALL, Operator("", "(", ",", ")"));
+		set(OpType::CAST, Operator("(", ")", "", ""));
 
 		set(OpType::ARRAY, Operator("[", "", ",", "]"));
 		set(OpType::INDEX, Operator("", "[", ":", "]"));
@@ -741,7 +742,6 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 	} else if (func == Operation::CALL) {
 		if (args.empty() or args[0].val.type != Value::STRING) {
 			printf("internal:%s:%d: call (()) operator expected string name, found %s\n", __FILE__, __LINE__, ::to_string(args[0].val).c_str());
-			throw std::runtime_error("wat");
 			return Value::X();
 		}
 		string name = args[0].val.sval;
@@ -751,6 +751,17 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 			return Value::X();
 		}
 		return caller.evaluateCall(name, args);
+	} else if (func == Operation::CAST) {
+		if (args.size() != 2u) {
+			printf("internal:%s:%d: cast ((type)val) operator expected two operands, found %zu\n", __FILE__, __LINE__, args.size());
+			return Value::X();
+		} else if (args[0].val.type != Value::STRING) {
+			printf("internal:%s:%d: cast ((type)val) operator expected type string, found %s\n", __FILE__, __LINE__, ::to_string(args[0].val).c_str());
+			return Value::X();
+		}
+		string type = args[0].val.sval;
+		args.erase(args.begin());
+		return cast(type, args[1].val);
 	} else if (func == Operation::ARRAY) { // concat arrays
 		vector<Value> arr;
 		for (size_t i = 0; i < args.size(); i++) {
@@ -931,6 +942,20 @@ void Operation::tidy() {
 		if (i->isConst() and j->isConst()) {
 			*i = evaluate(func, {i->get(), j->get()}).val;
 			operands.erase(j);
+		} else if (i->isConst()
+			and (func == Operation::BOOLEAN_OR
+			or func == Operation::BOOLEAN_AND
+			or func == Operation::BOOLEAN_XOR)
+			and i->cnst.type != Value::BOOL) {
+			i->cnst = cast(Value::BOOL, i->cnst);
+			i++;
+		} else if (i->isConst()
+			and (func == Operation::WIRE_OR
+			or func == Operation::WIRE_AND
+			or func == Operation::WIRE_XOR)
+			and i->cnst.type != Value::WIRE) {
+			i->cnst = cast(Value::WIRE, i->cnst);
+			i++;
 		} else {
 			i++;
 		}

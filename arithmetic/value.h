@@ -182,8 +182,11 @@ Value stringOf(Value v);
 Value wireOf(Value v); // compute validity
 Value boolOf(Value v); // compute truthiness
 Value realOf(Value v);
-Value cast(Value::ValType type, Value v);
 Value intOf(Value v);
+
+Value cast(string type, Value v);
+Value cast(Value::ValType type, Value v);
+
 Value index(Value v, Value i);
 ValRef index(ValRef v, Value i);
 Value index(Value v, Value f, Value t);

@@ -132,6 +132,7 @@ struct Operation {
 		MOD,
 
 		CALL,
+		CAST,
 
 		ARRAY,
 		INDEX,

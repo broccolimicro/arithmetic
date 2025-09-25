@@ -436,6 +436,11 @@ Expression call(string func_name, vector<Expression> args) {
 	return result.push(Operation::CALL, result.append(args));
 }
 
+Expression cast(string typeName, Expression e0) {
+	return e0.push(Operation::CAST, {Operand::stringOf(typeName), e0.top});
+}
+
+
 int passesGuard(const State &encoding, const State &global, const Expression &guard, State *total) {
 	vector<ValRef> expressions;
 	vector<ValRef> gexpressions;

@@ -55,7 +55,7 @@ Value State::get(Reference lhs) const {
 }
 
 void State::set(Reference lhs, Value rhs, bool define) {
-	if (lhs.isUndef() and not define) {
+	if (lhs.isUndef()) {
 		printf("error:%s:%d: variable not defined\n", __FILE__, __LINE__);
 		return;
 	}
@@ -67,12 +67,13 @@ void State::set(Reference lhs, Value rhs, bool define) {
 
 void State::svIntersect(Reference lhs, Value rhs) {
 	if (lhs.isUndef()) {
+		cout << "State::svIntersect(): undef lhs" << endl;
 		return;
 	}
 	if (lhs.uid >= values.size()) {
 		values.resize(lhs.uid+1);
 	}
-	values[lhs.uid].set(lhs.slice, intersect(values[lhs.uid].get(lhs.slice), rhs));
+	values[lhs.uid].set(lhs.slice, intersect(values[lhs.uid].get(lhs.slice), rhs), true);
 }
 
 bool State::isSubsetOf(const State &s) const {
@@ -83,7 +84,7 @@ bool State::isSubsetOf(const State &s) const {
 		}
 	}
 	for (int i = m0; i < (int)s.values.size(); i++) {
-		if (not s.values[i].isUnknown()) {
+		if (not s.values[i].isUndef() and not s.values[i].isUnknown()) {
 			return false;
 		}
 	}
@@ -150,7 +151,7 @@ State State::remote(vector<vector<int> > groups)
 
 bool State::isTautology() const {
 	for (auto v = values.begin(); v != values.end(); v++) {
-		if (not v->isUnknown()) {
+		if (not v->isUndef() and not v->isUnknown()) {
 			return false;
 		}
 	}
@@ -235,12 +236,12 @@ bool operator==(State s0, State s1) {
 		}
 	}
 	for (int i = m0; i < (int)s0.values.size(); i++) {
-		if (not s0.values[i].isUnknown()) {
+		if (not s0.values[i].isUndef() and not s0.values[i].isUnknown()) {
 			return false;
 		}
 	}
 	for (int i = m0; i < (int)s1.values.size(); i++) {
-		if (not s1.values[i].isUnknown()) {
+		if (not s0.values[i].isUndef() and not s1.values[i].isUnknown()) {
 			return false;
 		}
 	}
@@ -255,12 +256,12 @@ bool operator!=(State s0, State s1) {
 		}
 	}
 	for (int i = m0; i < (int)s0.values.size(); i++) {
-		if (not s0.values[i].isUnknown()) {
+		if (not s0.values[i].isUndef() and not s0.values[i].isUnknown()) {
 			return true;
 		}
 	}
 	for (int i = m0; i < (int)s1.values.size(); i++) {
-		if (not s1.values[i].isUnknown()) {
+		if (not s1.values[i].isUndef() and not s1.values[i].isUnknown()) {
 			return true;
 		}
 	}
@@ -344,16 +345,13 @@ State operator|(State s0, State s1) {
 	return result;
 }
 
-State localAssign(State s0, State s1, bool stable)
-{
+State localAssign(State s0, State s1, bool stable) {
 	if (s0.values.size() < s1.values.size()) {
 		s0.values.resize(s1.values.size(), Value::U());
 	}
 
 	for (int i = 0; i < (int)s0.values.size() and i < (int)s1.values.size(); i++) {
-		if (not s1.values[i].isUnknown()) {
-			s0.values[i] = stable ? s1.values[i] : Value::X();
-		}
+		localAssign(s0.values[i], s1.values[i], stable);
 	}
 	return s0;
 }
@@ -365,16 +363,14 @@ State remoteAssign(State s0, State s1, bool stable)
 	}
 
 	for (int i = 0; i < (int)s0.values.size() and i < (int)s1.values.size(); i++) {
-		if (not s1.values[i].isUnknown() and not areSame(s0.values[i], s1.values[i])) {
-			s0.values[i] = stable ? Value::U() : Value::X();
-		}
+		remoteAssign(s0.values[i], s1.values[i], stable);
 	}
 	return s0;
 }
 
 bool vacuousAssign(const State &s0, const State &s1, bool stable) {
 	for (int i = 0; i < (int)s0.values.size() and i < (int)s1.values.size(); i++) {
-		if (not s1.values[i].isUnknown() and not areSame(s0.values[i], s1.values[i]) and (not stable or not s0.values[i].isUnstable())) {
+		if (not vacuousAssign(s0.values[i], s1.values[i], stable)) {
 			return false;
 		}
 	}
@@ -384,7 +380,9 @@ bool vacuousAssign(const State &s0, const State &s1, bool stable) {
 bool areInterfering(const State &s0, const State &s1) {
 	int m0 = min(s0.values.size(), s1.values.size());
 	for (int i = 0; i < m0; i++) {
-		if (not s0.values[i].isUnknown() and not s1.values[i].isUnknown() and not areSame(s0.values[i], s1.values[i])) {
+		if (not s0.values[i].isUndef() and not s1.values[i].isUndef()
+			and not s0.values[i].isUnknown() and not s1.values[i].isUnknown()
+			and not areSame(s0.values[i], s1.values[i])) {
 			return true;
 		}
 	}
@@ -394,7 +392,9 @@ bool areInterfering(const State &s0, const State &s1) {
 State interfere(State s0, const State &s1) {
 	int m0 = min(s0.values.size(), s1.values.size());
 	for (int i = 0; i < m0; i++) {
-		if (not s0.values[i].isUnknown() and not s1.values[i].isUnknown() and not areSame(s0.values[i], s1.values[i])) {
+		if (not s0.values[i].isUndef() and not s1.values[i].isUndef()
+			and not s0.values[i].isUnknown() and not s1.values[i].isUnknown()
+			and not areSame(s0.values[i], s1.values[i])) {
 			s0.values[i] = Value::X();
 		}
 	}
@@ -450,5 +450,18 @@ bool vacuousAssign(const State &s0, const Region &r1, bool stable) {
 	}
 	return false;
 }
+
+ostream &operator<<(ostream &os, const Region &r) {
+	os << "[";
+	for (int i = 0; i < (int)r.states.size(); i++) {
+		if (i != 0) {
+			os << " ";
+		}
+		os << r.states[i];
+	}
+	os << "]";
+	return os;
+}
+
 
 }

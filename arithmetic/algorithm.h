@@ -144,6 +144,7 @@ struct Match {
 ostream &operator<<(ostream &os, Match m);
 
 ValRef evaluate(ConstOperationSet expr, Operand top, State values, TypeSet types=TypeSet(), Caller caller=Caller());
+size_t lvalueBase(ConstOperationSet ops, Operand top, TypeSet types=TypeSet());
 Cost cost(ConstOperationSet ops, Operand top, vector<Type> vars);
 
 bool verifyRuleFormat(ConstOperationSet ops, Operand i, bool msg=true);

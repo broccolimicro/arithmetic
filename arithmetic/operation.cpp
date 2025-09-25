@@ -78,7 +78,7 @@ ValRef Operand::get(State values, vector<ValRef> expressions) const {
 		return cnst;
 	case VAR:
 		if (index < values.size()) {
-			return values[index];
+			return ValRef(values[index], index);
 		} else {
 			printf("error: variable not defined %d/%d\n", (int)index, (int)values.size());
 		}
@@ -308,7 +308,7 @@ void Operation::loadOperators() {
 	if (Operation::operators.count() == 0) {
 		//printf("loading operators\n");
 
-		set(OpType::VALIDITY, Operator("val(", "", "", ")"));
+		set(OpType::VALIDITY, Operator("valid(", "", "", ")"));
 		set(OpType::WIRE_NOT, Operator("~", "", "", ""));
 		set(OpType::WIRE_OR, Operator("", "", "|", "", Operator::COMMUTATIVE));
 		set(OpType::WIRE_AND, Operator("", "", "&", "", Operator::COMMUTATIVE));
@@ -596,8 +596,16 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 		}
 		return result;
 	} else if (func == Operation::TRUTHINESS) {
+		if (args.size() != 1u) {
+			printf("internal:%s:%d: truthiness operator expected 1 operand, found %zu\n", __FILE__, __LINE__, args.size());
+			return Value::X();
+		}
 		return isTrue(args[0].val);
 	} else if (func == Operation::BOOLEAN_NOT) {
+		if (args.size() != 1u) {
+			printf("internal:%s:%d: boolean not operator expected 1 operand, found %zu\n", __FILE__, __LINE__, args.size());
+			return Value::X();
+		}
 		return !args[0].val;
 	} else if (func == Operation::BOOLEAN_OR) {
  		if (args.size() == 1u) {
@@ -730,13 +738,18 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 			return args[0];
 		}
 		return (args[0].val %  args[1].val);
-	} else if (func == Operation::CALL and not caller.empty()) {
+	} else if (func == Operation::CALL) {
 		if (args.empty() or args[0].val.type != Value::STRING) {
 			printf("internal:%s:%d: call (()) operator expected string name, found %s\n", __FILE__, __LINE__, ::to_string(args[0].val).c_str());
+			throw std::runtime_error("wat");
 			return Value::X();
 		}
 		string name = args[0].val.sval;
 		args.erase(args.begin());
+		if (caller.empty()) {
+			printf("internal:%s:%d: function calls (%s(%s)) not implemented\n", __FILE__, __LINE__, name.c_str(), ::to_string(args).c_str());
+			return Value::X();
+		}
 		return caller.evaluateCall(name, args);
 	} else if (func == Operation::ARRAY) { // concat arrays
 		vector<Value> arr;
@@ -787,37 +800,54 @@ ValRef Operation::evaluate(State values, vector<ValRef> expressions, TypeSet typ
 void Operation::propagate(State &result, const State &global, vector<ValRef> &expressions, const vector<ValRef> gexpressions, Value v) const {
 	if (v.isValid() or v.isUnknown()) {
 		if (func == Operation::WIRE_NOT) {
-			operands[0].set(result, expressions, Value::gnd());
+			if (operands[0].isVar() or operands[0].isExpr()) {
+				Value v = operands[0].get(result, expressions).val;
+				operands[0].set(result, expressions, Value::gnd(v.type));
+			}
 		} else if (func == Operation::WIRE_OR) {
 			for (size_t i = 0; i < operands.size(); i++) {
-				Value v0 = operands[i].get(global, gexpressions).val;
-				if (v0.isValid()) {
-					operands[i].set(result, expressions, v0);
+				if (operands[i].isVar() or operands[i].isExpr()) {
+					Value v0 = operands[i].get(global, gexpressions).val;
+					if (v0.isValid()) {
+						operands[i].set(result, expressions, v0);
+					}
 				}
 			}
 		} else {
 			for (size_t i = 0; i < operands.size(); i++) {
-				operands[i].set(result, expressions, operands[i].get(global, gexpressions).val);
+				if (operands[i].isVar() or operands[i].isExpr()) {
+					operands[i].set(result, expressions, operands[i].get(global, gexpressions).val);
+				}
 			}
 		}
 	} else if (v.isNeutral()) {
 		if (func == Operation::WIRE_NOT) {
-			operands[0].set(result, expressions, operands[0].get(global, gexpressions).val);
+			if (operands[0].isVar() or operands[0].isExpr()) {
+				operands[0].set(result, expressions, operands[0].get(global, gexpressions).val);
+			}
 		} else if (func == Operation::WIRE_OR or operands.size() == 1u) {
 			for (size_t i = 0; i < operands.size(); i++) {
-				operands[i].set(result, expressions, Value::gnd());
+				if (operands[i].isVar() or operands[i].isExpr()) {
+					Value v = operands[0].get(result, expressions).val;
+					operands[i].set(result, expressions, Value::gnd(v.type));
+				}
 			}
 		} else {
 			for (size_t i = 0; i < operands.size(); i++) {
-				Value v0 = operands[0].get(global, gexpressions).val;
-				if (v0.isNeutral()) {
-					operands[i].set(result, expressions, v0);
+				if (operands[i].isVar() or operands[i].isExpr()) {
+					Value v0 = operands[0].get(global, gexpressions).val;
+					if (v0.isNeutral()) {
+						operands[i].set(result, expressions, v0);
+					}
 				}
 			}
 		}
 	} else {
 		for (size_t i = 0; i < operands.size(); i++) {
-			operands[i].set(result, expressions, Value::U());
+			if (operands[i].isVar() or operands[i].isExpr()) {
+				Value v = operands[0].get(result, expressions).val;
+				operands[i].set(result, expressions, Value::U(v.type));
+			}
 		}
 	} 
 }

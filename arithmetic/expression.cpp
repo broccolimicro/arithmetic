@@ -461,11 +461,13 @@ int passesGuard(const State &encoding, const State &global, const Expression &gu
 		gexpressions[i->exprIndex] = g;
 	}
 
-	if (expressions[guard.top.index].val.isUnknown() or expressions[guard.top.index].val.isValid()) {
-		if (gexpressions[guard.top.index].val.isNeutral() or gexpressions[guard.top.index].val.isUnknown()) {
-			expressions[guard.top.index] = Value::X();
-		} else if (gexpressions[guard.top.index].val.isValid()) {
-			expressions[guard.top.index] = gexpressions[guard.top.index];
+	ValRef gtop = guard.top.get(global, gexpressions);
+	ValRef top = guard.top.get(encoding, expressions);
+	if (top.val.isUnknown() or top.val.isValid()) {
+		if (gtop.val.isNeutral() or gtop.val.isUnknown()) {
+			top.val = Value::X();
+		} else if (gtop.val.isValid()) {
+			top = gtop;
 		}
 	}
 
@@ -481,15 +483,15 @@ int passesGuard(const State &encoding, const State &global, const Expression &gu
 
 	// This validity/neutrality information propagates differently through
 	// different operations.
-	if (total != nullptr and expressions.back().val.isValid()) {
+	if (total != nullptr and top.val.isValid()) {
 		for (ConstDownIterator i(guard.sub, {guard.top}); not i.done(); ++i) {
 			i->propagate(*total, global, expressions, gexpressions, expressions[i->exprIndex].val);
 		}
 	}
 
-	if (expressions.empty() or expressions[guard.top.index].val.isNeutral()) {
+	if (top.val.isNeutral()) {
 		return -1;
-	} else if (expressions[guard.top.index].val.isUnstable()) {
+	} else if (top.val.isUnstable()) {
 		return 0;
 	}
 	

@@ -23,6 +23,8 @@ struct Slice {
 	bool slice(size_t from, size_t to);
 };
 
+ostream &operator<<(ostream &os, Slice slice);
+
 struct Reference {
 	Reference(size_t uid=std::numeric_limits<size_t>::max());
 	~Reference();
@@ -32,6 +34,8 @@ struct Reference {
 
 	bool isUndef() const;
 };
+
+ostream &operator<<(ostream &os, Reference ref);
 
 // This structure represents a delay insensitive encoded integer
 // value with a single neutral state. This is purposefully limited
@@ -63,7 +67,7 @@ struct Value {
 		NEUTRAL  = 1,
 		// dataless valid (vdd)
 		VALID    = 2,
-		// The value is not currently known.
+		// The value is not currently known. Also used for arrays and structures for implicitly/partially defined arrays or structures
 		UNKNOWN  = 3
 	};
 
@@ -124,6 +128,8 @@ struct ValRef {
 	Value val;
 	Reference ref;
 };
+
+ostream &operator<<(ostream &os, ValRef lval);
 
 _CONST_INTERFACE_ARG(TypeSet,
 	(int, memberIndex, (string type, string name) const, (type, name)));
@@ -189,5 +195,9 @@ ValRef member(ValRef v0, Value v1, TypeSet types);
 // set operators of the lattice documented in Value::isSubsetOf()
 Value intersect(Value v0, Value v1);
 Value unionOf(Value v0, Value v1);
+
+void localAssign(Value &s0, Value s1, bool stable);
+void remoteAssign(Value &s0, Value s1, bool stable);
+bool vacuousAssign(Value v0, Value v1, bool stable);
 
 }

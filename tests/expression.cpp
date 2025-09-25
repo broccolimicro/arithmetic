@@ -355,6 +355,15 @@ TEST(Expression, Identity) {
 	cout << dut << endl;
 }
 
+TEST(Expression, Truthiness) {
+	Expression a = Expression::varOf(0);
+
+	Expression dut = isTrue(a);
+	cout << dut << endl;
+	dut.minimize();
+	cout << dut << endl;
+}
+
 TEST(Expression, Function) {
 	Expression a = Expression::varOf(0);
 	Expression b = Expression::varOf(1);

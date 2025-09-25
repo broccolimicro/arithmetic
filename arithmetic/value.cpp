@@ -49,6 +49,20 @@ bool Slice::slice(size_t from, size_t to) {
 	return true;
 }
 
+ostream &operator<<(ostream &os, Slice slice) {
+	for (size_t i = 0; i < slice.idx.size(); i++) {
+		if (slice.memb[i]) {
+			os << ".m" << slice.idx[i];
+		} else {
+			os << "[" << slice.idx[i] << "]";
+		}
+	}
+	if (slice.isSlice()) {
+		os << "[" << slice.from << ":" << slice.to << "]";
+	}
+	return os;
+}
+
 Reference::Reference(size_t uid) {
 	this->uid = uid;
 }
@@ -58,6 +72,15 @@ Reference::~Reference() {
 
 bool Reference::isUndef() const {
 	return uid == std::numeric_limits<size_t>::max();
+}
+
+ostream &operator<<(ostream &os, Reference ref) {
+	if (ref.isUndef()) {
+		os << "undef";
+	} else {
+		os << "v" << ref.uid << ref.slice;
+	}
+	return os;
 }
 
 Value::Value() {
@@ -267,9 +290,14 @@ bool Value::isSubsetOf(Value v) const {
 }
 
 void Value::set(Slice slice, Value v, bool define) {
+	//cout << "Value::set(): " << slice << " " << v << " " << define << endl;
 	Value *dst = this;
 	int i = 0;
 	for (; i < (int)slice.idx.size() and dst->type != Value::INT; i++) {
+		if (define and dst->isUndef()) {
+			*dst = Value::U(slice.memb[i] ? Value::STRUCT : Value::ARRAY);
+		}
+
 		if (slice.memb[i] and dst->type != Value::STRUCT) {
 			printf("internal:%s:%d: member operator expected struct type\n", __FILE__, __LINE__);
 			return;
@@ -301,6 +329,10 @@ void Value::set(Slice slice, Value v, bool define) {
 	}
 
 	if (accum.isSlice()) {
+		if (define and dst->isUndef()) {
+			dst->type = v.type;
+		}
+
 		if (dst->type == Value::ARRAY) {
 			if (slice.to >= v.arr.size()) {
 				if (define) {
@@ -320,29 +352,36 @@ void Value::set(Slice slice, Value v, bool define) {
 			}
 			int64_t mask = ((1l<<(slice.to-slice.from))-1l);
 			dst->ival = (dst->ival & ~(mask << slice.from)) | ((v.ival & mask) << slice.from);
-		} else {
-			printf("internal:%s:%d: slice operator expected array or integer type\n", __FILE__, __LINE__);
-			return;
 		}
-	} else if (dst->type == v.type or (dst->isUndef() and define)) {
+		printf("internal:%s:%d: slice operator expected array or integer type\n", __FILE__, __LINE__);
+		return;
+	// TODO(edward.bingham) we should really do typechecking here
+	} else {// if (dst->type == v.type or (dst->isUndef() and define)) {
 		*dst = v;
-	} else {
+	/*} else {
 		printf("error:%s:%d: type mismatch between %s:%s and %s:%s\n", __FILE__, __LINE__, dst->ctypeName(), ::to_string(*dst).c_str(), v.ctypeName(), ::to_string(v).c_str());
+		throw std::runtime_error("here");*/
 	}
+
+	//cout << "Value::set(): done " << *this << " " << *dst << endl;
 }
 
 Value Value::get(Slice slice) const {
 	Value curr = *this;
 	for (int i = 0; i < (int)slice.idx.size(); i++) {
-		if (slice.memb[i] and curr.type != Value::STRUCT) {
-			printf("internal:%s:%d: member operator expected struct type\n", __FILE__, __LINE__);
+		if (curr.isUndef()) {
 			return Value::undef();
+		} else if (slice.memb[i] and curr.type != Value::STRUCT) {
+			printf("internal:%s:%d: member operator expected struct type\n", __FILE__, __LINE__);
+			return Value::X();
 		} else if (not slice.memb[i] and curr.type != Value::ARRAY and curr.type != Value::INT) {
 			printf("internal:%s:%d: index operator expected array or int type\n", __FILE__, __LINE__);
-			return Value::undef();
-		} else if (slice.idx[i] >= curr.arr.size()) {
-			printf("error: index %zu out of bounds for array of size %zu\n", slice.idx[i], curr.arr.size());
 			return Value::X();
+		} else if (slice.idx[i] >= curr.arr.size()) {
+			if (not curr.isUnknown()) {
+				printf("error: index %zu out of bounds for array of size %zu\n", slice.idx[i], curr.arr.size());
+			}
+			return Value::undef();
 		} else if (curr.type == Value::INT) {
 			curr.ival = (curr.ival >> slice.idx[i]) & 1;
 		} else {
@@ -351,17 +390,21 @@ Value Value::get(Slice slice) const {
 	}
 
 	if (slice.isSlice()) {
-		if (curr.type == Value::ARRAY) {
+		if (curr.isUndef()) {
+			return Value::undef();
+		} else if (curr.type == Value::ARRAY) {
 			if (slice.from >= slice.to or slice.to >= curr.arr.size()) {
-				printf("error: range [%zu, %zu) out of bounds for array of size %zu\n", slice.from, slice.to, curr.arr.size());
-				return Value::X();
+				if (not curr.isUnknown()) {
+					printf("error: range [%zu, %zu) out of bounds for array of size %zu\n", slice.from, slice.to, curr.arr.size());
+				}
+				return Value::undef();
 			}
 			curr.arr = vector<Value>(curr.arr.begin()+slice.from, curr.arr.begin()+slice.to);
 		} else if (curr.type == Value::INT) {
 			curr.ival = (curr.ival >> slice.from) & ((1<<slice.to)-1);
 		} else {
 			printf("internal:%s:%d: expected array or integer type\n", __FILE__, __LINE__);
-			return Value::undef();
+			return Value::X();
 		}
 	}
 
@@ -374,6 +417,11 @@ ValRef::ValRef(Value val, Reference ref) {
 }
 
 ValRef::~ValRef() {
+}
+
+ostream &operator<<(ostream &os, ValRef lval) {
+	os << lval.val << ":" << lval.ref;
+	return os;
 }
 
 bool areSame(Value v0, Value v1) {
@@ -450,7 +498,9 @@ int order(Value v0, Value v1) {
 }
 
 ostream &operator<<(ostream &os, Value v) {
-	if (v.isUnstable()) {
+	if (v.isUndef()) {
+		os << "?";
+	} else if (v.isUnstable()) {
 		os << "X";
 	} else if (v.isNeutral()) {
 		os << "gnd";
@@ -458,6 +508,16 @@ ostream &operator<<(ostream &os, Value v) {
 		os << "vdd";
 	} else if (v.isUnknown()) {
 		os << "U";
+		if (v.type == Value::ARRAY) {
+			os << "[";
+			for (auto i = v.arr.begin(); i != v.arr.end(); i++) {
+				if (i != v.arr.begin()) {
+					os << ", ";
+				}
+				os << *i;
+			}
+			os << "]";
+		}
 	} else if (v.type == Value::STRING) {
 		os << "\"" << v.sval << "\"";
 	} else if (v.type == Value::BOOL) {
@@ -662,23 +722,23 @@ Value operator+(Value v0, Value v1) {
 		or v0.type == Value::REAL) {
 		v1 = cast(v0.type, v1);
 	}
-	if (v0.type == Value::STRING and v1.type == Value::STRING) {
-		return Value::stringOf(v0.sval + v1.sval);
-	} else if (v0.isUnstable() or v1.isUnstable()) {
+	if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X(v0.type);
+	} else if (v0.type == Value::ARRAY and v1.type == Value::ARRAY) {
+		// concatination
+		v0.arr.insert(v0.arr.end(), v1.arr.begin(), v1.arr.end());
+		return v0;
 	} else if (v0.isNeutral() or v1.isNeutral()) {
 		return Value::gnd(v0.type);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U(v0.type);
 	} else if (v0.isValid() and v1.isValid()) {
-		if (v0.type == Value::INT and v1.type == Value::INT) {
+		if (v0.type == Value::STRING and v1.type == Value::STRING) {
+			return Value::stringOf(v0.sval + v1.sval);
+		} else if (v0.type == Value::INT and v1.type == Value::INT) {
 			return Value::intOf(v0.ival + v1.ival);
 		} else if (v0.type == Value::REAL and v1.type == Value::REAL) {
 			return Value::realOf(v0.rval + v1.rval);
-		} else if (v0.type == Value::ARRAY and v1.type == Value::ARRAY) {
-			// concatination
-			v0.arr.insert(v0.arr.end(), v1.arr.begin(), v1.arr.end());
-			return v0;
 		}
 	}
 	printf("error: 'operator+' not defined for '%s' and '%s'\n", v0.ctypeName(), v1.ctypeName());
@@ -789,16 +849,16 @@ Value operator%(Value v0, Value v1) {
 }
 
 Value operator==(Value v0, Value v1) {
-	if (v0.type == Value::STRING and v1.type == Value::STRING) {
-		return Value::boolOf(v0.sval == v1.sval);
-	} else if (v0.isUnstable() or v1.isUnstable()) {
+	if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X(Value::BOOL);
 	} else if (v0.isNeutral() or v1.isNeutral()) {
 		return Value::gnd(Value::BOOL);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U(Value::BOOL);
 	} else if (v0.isValid() and v1.isValid()) {
-		if (v0.type == Value::INT and v1.type == Value::INT) {
+		if (v0.type == Value::STRING and v1.type == Value::STRING) {
+			return Value::boolOf(v0.sval == v1.sval);
+		} else if (v0.type == Value::INT and v1.type == Value::INT) {
 			return Value::boolOf(v0.ival == v1.ival);
 		} else if (v0.type == Value::REAL and v1.type == Value::REAL) {
 			return Value::boolOf(v0.rval == v1.rval);
@@ -809,16 +869,16 @@ Value operator==(Value v0, Value v1) {
 }
 
 Value operator!=(Value v0, Value v1) {
-	if (v0.type == Value::STRING and v1.type == Value::STRING) {
-		return Value::boolOf(v0.sval != v1.sval);
-	} else if (v0.isUnstable() or v1.isUnstable()) {
+	if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X(Value::BOOL);
 	} else if (v0.isNeutral() or v1.isNeutral()) {
 		return Value::gnd(Value::BOOL);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U(Value::BOOL);
 	} else if (v0.isValid() and v1.isValid()) {
-		if (v0.type == Value::INT and v1.type == Value::INT) {
+		if (v0.type == Value::STRING and v1.type == Value::STRING) {
+			return Value::boolOf(v0.sval != v1.sval);
+		} else if (v0.type == Value::INT and v1.type == Value::INT) {
 			return Value::boolOf(v0.ival != v1.ival);
 		} else if (v0.type == Value::REAL and v1.type == Value::REAL) {
 			return Value::boolOf(v0.rval != v1.rval);
@@ -829,16 +889,16 @@ Value operator!=(Value v0, Value v1) {
 }
 
 Value operator<(Value v0, Value v1) {
-	if (v0.type == Value::STRING and v1.type == Value::STRING) {
-		return Value::boolOf(v0.sval < v1.sval);
-	} else if (v0.isUnstable() or v1.isUnstable()) {
+	if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X(Value::BOOL);
 	} else if (v0.isNeutral() or v1.isNeutral()) {
 		return Value::gnd(Value::BOOL);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U(Value::BOOL);
 	} else if (v0.isValid() and v1.isValid()) {
-		if (v0.type == Value::INT and v1.type == Value::INT) {
+		if (v0.type == Value::STRING and v1.type == Value::STRING) {
+			return Value::boolOf(v0.sval < v1.sval);
+		} else if (v0.type == Value::INT and v1.type == Value::INT) {
 			return Value::boolOf(v0.ival < v1.ival);
 		} else if (v0.type == Value::REAL and v1.type == Value::REAL) {
 			return Value::boolOf(v0.rval < v1.rval);
@@ -849,16 +909,16 @@ Value operator<(Value v0, Value v1) {
 }
 
 Value operator>(Value v0, Value v1) {
-	if (v0.type == Value::STRING and v1.type == Value::STRING) {
-		return Value::boolOf(v0.sval > v1.sval);
-	} else if (v0.isUnstable() or v1.isUnstable()) {
+	if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X(Value::BOOL);
 	} else if (v0.isNeutral() or v1.isNeutral()) {
 		return Value::gnd(Value::BOOL);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U(Value::BOOL);
 	} else if (v0.isValid() and v1.isValid()) {
-		if (v0.type == Value::INT and v1.type == Value::INT) {
+		if (v0.type == Value::STRING and v1.type == Value::STRING) {
+			return Value::boolOf(v0.sval > v1.sval);
+		} else if (v0.type == Value::INT and v1.type == Value::INT) {
 			return Value::boolOf(v0.ival > v1.ival);
 		} else if (v0.type == Value::REAL and v1.type == Value::REAL) {
 			return Value::boolOf(v0.rval > v1.rval);
@@ -869,16 +929,16 @@ Value operator>(Value v0, Value v1) {
 }
 
 Value operator<=(Value v0, Value v1) {
-	if (v0.type == Value::STRING and v1.type == Value::STRING) {
-		return Value::boolOf(v0.sval <= v1.sval);
-	} else if (v0.isUnstable() or v1.isUnstable()) {
+	if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X(Value::BOOL);
 	} else if (v0.isNeutral() or v1.isNeutral()) {
 		return Value::gnd(Value::BOOL);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U(Value::BOOL);
 	} else if (v0.isValid() and v1.isValid()) {
-		if (v0.type == Value::INT and v1.type == Value::INT) {
+		if (v0.type == Value::STRING and v1.type == Value::STRING) {
+			return Value::boolOf(v0.sval <= v1.sval);
+		} else if (v0.type == Value::INT and v1.type == Value::INT) {
 			return Value::boolOf(v0.ival <= v1.ival);
 		} else if (v0.type == Value::REAL and v1.type == Value::REAL) {
 			return Value::boolOf(v0.rval <= v1.rval);
@@ -889,16 +949,16 @@ Value operator<=(Value v0, Value v1) {
 }
 
 Value operator>=(Value v0, Value v1) {
-	if (v0.type == Value::STRING and v1.type == Value::STRING) {
-		return Value::boolOf(v0.sval >= v1.sval);
-	} else if (v0.isUnstable() or v1.isUnstable()) {
+	if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X(Value::BOOL);
 	} else if (v0.isNeutral() or v1.isNeutral()) {
 		return Value::gnd(Value::BOOL);
 	} else if (v0.isUnknown() or v1.isUnknown()) {
 		return Value::U(Value::BOOL);
 	} else if (v0.isValid() and v1.isValid()) {
-		if (v0.type == Value::INT and v1.type == Value::INT) {
+		if (v0.type == Value::STRING and v1.type == Value::STRING) {
+			return Value::boolOf(v0.sval >= v1.sval);
+		} else if (v0.type == Value::INT and v1.type == Value::INT) {
 			return Value::boolOf(v0.ival >= v1.ival);
 		} else if (v0.type == Value::REAL and v1.type == Value::REAL) {
 			return Value::boolOf(v0.rval >= v1.rval);
@@ -947,6 +1007,8 @@ Value stringOf(Value v) {
 Value wireOf(Value v) {
 	if (v.type == Value::WIRE) {
 		return v;
+	} else if (v.isUnstable()) {
+		return Value::X();
 	} else if (v.type == Value::ARRAY
 		or v.type == Value::STRUCT) {
 		Value result = Value::vdd();
@@ -954,8 +1016,6 @@ Value wireOf(Value v) {
 			result = result & wireOf(*i);
 		}
 		return result;
-	} else if (v.isUnstable()) {
-		return Value::X();
 	} else if (v.isUnknown()) {
 		return Value::U();
 	} else if (v.isNeutral()) {
@@ -1155,21 +1215,29 @@ ValRef member(ValRef v0, Value v1, TypeSet types) {
 }
 
 Value intersect(Value v0, Value v1) {
-	if (v0.isUnstable() or v1.isUnstable()) {
+	if (v0.isUndef()) {
+		return v1;
+	} else if (v1.isUndef()) {
+		return v0;
+	} else if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X();
+	} else if ((v0.type == Value::ARRAY and v1.type == Value::ARRAY)
+		or (v0.type == Value::STRUCT and v1.type == Value::STRUCT and v0.sval == v1.sval)) {
+		if (v0.arr.size() < v1.arr.size()) {
+			v0.arr.resize(v1.arr.size());
+		}
+		for (size_t i = 0; i < v1.arr.size(); i++) {
+			v0.arr[i] = intersect(v0.arr[i], v1.arr[i]);
+		}
+		return v0;
 	} else if (v0.isUnknown()) {
 		return v1;
 	} else if (v1.isUnknown()
-		or (v0.type == Value::BOOL and v1.type == Value::BOOL and v0.bval == v1.bval)
-		or (v0.type == Value::INT and v1.type == Value::INT and v0.ival == v1.ival)
-		or (v0.type == Value::REAL and v1.type == Value::REAL and v0.rval == v1.rval)) {
-		return v0;
-	} else if (((v0.type == Value::ARRAY and v1.type == Value::ARRAY)
-		or (v0.type == Value::STRUCT and v1.type == Value::STRUCT and v0.sval == v1.sval))
-		and v0.arr.size() == v1.arr.size()) {
-		for (int i = 0; i < (int)v0.arr.size(); i++) {
-			v0.arr[i] = intersect(v0.arr[i], v1.arr[i]);
-		}
+		or (v0.state == v1.state and v0.state != Value::VALID) // TODO(edward.bingham) remove this to re-enable type checking
+		or (v0.type == Value::WIRE and v1.type == Value::WIRE and v0.state == v1.state)
+		or (v0.type == Value::BOOL and v1.type == Value::BOOL and v0.state == v1.state and (v0.state != Value::VALID or v0.bval == v1.bval))
+		or (v0.type == Value::INT and v1.type == Value::INT and v0.state == v1.state and (v0.state != Value::VALID or v0.ival == v1.ival))
+		or (v0.type == Value::REAL and v1.type == Value::REAL and v0.state == v1.state and (v0.state != Value::VALID or v0.rval == v1.rval))) {
 		return v0;
 	}
 	return Value::X();
@@ -1193,6 +1261,57 @@ Value unionOf(Value v0, Value v1) {
 		return v0;
 	}
 	return Value::U();
+}
+
+void localAssign(Value &s0, Value s1, bool stable) {
+	if ((s0.type == Value::ARRAY and s1.isUnknown() and s1.type == Value::ARRAY)
+		or (s0.type == Value::STRUCT and s1.isUnknown() and s1.type == Value::STRUCT)) {
+		for (size_t i = 0; i < s0.arr.size() and i < s1.arr.size(); i++) {
+			localAssign(s0.arr[i], s1.arr[i], stable);
+		}
+		// TODO(edward.bingham) bounds checking
+		return;
+	}
+
+	if (not s1.isUndef() and not s1.isUnknown()) {
+		s0 = stable ? s1 : Value::X();
+	}
+}
+
+void remoteAssign(Value &s0, Value s1, bool stable) {
+	if ((s0.type == Value::ARRAY and s1.isUnknown() and s1.type == Value::ARRAY)
+		or (s0.type == Value::STRUCT and s1.isUnknown() and s1.type == Value::STRUCT)) {
+		for (size_t i = 0; i < s0.arr.size() and i < s1.arr.size(); i++) {
+			remoteAssign(s0.arr[i], s1.arr[i], stable);
+		}
+		// TODO(edward.bingham) bounds checking
+		return;
+	}
+
+	if (not s1.isUndef()
+		and not s1.isUnknown()
+		and not areSame(s0, s1)) {
+		s0 = stable ? Value::U() : Value::X();
+	}
+}
+
+bool vacuousAssign(Value v0, Value v1, bool stable) {
+	if (v1.isUndef()) {
+		return true;
+	}
+
+	if (v1.isUnknown()) {
+		if ((v0.type == Value::ARRAY and v1.type == Value::ARRAY)
+			or (v0.type == Value::STRUCT and v1.type == Value::STRUCT)) {
+			for (size_t i = 0; i < v1.arr.size() and i < v0.arr.size(); i++) {
+				if (not vacuousAssign(v0.arr[i], v1.arr[i], stable)) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+	return areSame(v0, v1) or (stable and v0.isUnstable());
 }
 
 }

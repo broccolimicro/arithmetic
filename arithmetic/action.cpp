@@ -47,6 +47,7 @@ void Action::applyVars(const Mapping<int> &m) {
 
 void Action::evaluate(State &next, const State &curr, TypeSet types) {
 	if (lvalue.isUndef()) {
+		cout << "Action::evaluate(): undef lvalue" << endl;
 		return;
 	}
 	next.svIntersect(

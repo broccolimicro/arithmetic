@@ -87,6 +87,8 @@ struct Region {
 	void apply(vector<int> uidMap);
 };
 
+ostream &operator<<(ostream &os, const Region &r);
+
 bool vacuousAssign(const State &encoding, const Region &assignment, bool stable);
 
 }

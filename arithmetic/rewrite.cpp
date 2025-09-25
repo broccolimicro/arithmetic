@@ -203,10 +203,10 @@ RuleSet rewriteSimple() {
 
 
 
-		/*isTrue(isTrue(a)) > isTrue(a),
+		isTrue(isTrue(a)) > isTrue(a),
 		isTrue(isValid(a)) > isValid(a),
 		isValid(isTrue(a)) > isTrue(a),
-		!isValid(a) > gnd,
+		/*!isValid(a) > gnd,
 		!isTrue(a) > gnd,
 
 		(!(!a)) > (isTrue(a)),

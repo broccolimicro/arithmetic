@@ -167,8 +167,9 @@ Expression wireXor(vector<Expression> e0);
 Expression add(vector<Expression> e0);
 Expression mult(vector<Expression> e0);
 
-Expression call(string func_name, vector<Expression> args);
-Expression cast(string type_name, Expression e0);
+Expression call(string funcName, vector<Expression> args);
+Expression cast(string typeName, Expression e0);
+Expression construct(string typeName, vector<Expression> args);
 
 int passesGuard(const State &encoding, const State &global, const Expression &guard, State *total);
 Expression weakestGuard(const Expression &guard, const Expression &exclude);

@@ -429,8 +429,8 @@ Expression wireXor(vector<Expression> e0) { Expression e; return e.push(Operatio
 Expression add(vector<Expression> e0)        { Expression e; return e.push(Operation::ADD,         e.append(e0)); }
 Expression mult(vector<Expression> e0)       { Expression e; return e.push(Operation::MULTIPLY,    e.append(e0)); }
 
-Expression call(string func_name, vector<Expression> args) {
-	args.insert(args.begin(), Expression::stringOf(func_name));
+Expression call(string funcName, vector<Expression> args) {
+	args.insert(args.begin(), Expression::stringOf(funcName));
 
 	Expression result;
 	return result.push(Operation::CALL, result.append(args));
@@ -440,6 +440,12 @@ Expression cast(string typeName, Expression e0) {
 	return e0.push(Operation::CAST, {Operand::stringOf(typeName), e0.top});
 }
 
+Expression construct(string funcName, vector<Expression> args) {
+	args.insert(args.begin(), Expression::stringOf(funcName));
+
+	Expression result;
+	return result.push(Operation::STRUCT, result.append(args));
+}
 
 int passesGuard(const State &encoding, const State &global, const Expression &guard, State *total) {
 	vector<ValRef> expressions;

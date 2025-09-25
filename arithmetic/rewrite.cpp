@@ -207,6 +207,13 @@ RuleSet rewriteSimple() {
 		isTrue(isTrue(a)) > isTrue(a),
 		isTrue(isValid(a)) > isValid(a),
 		isValid(isTrue(a)) > isTrue(a),
+		isTrue(cast("bool", a)) > isTrue(a),
+		isValid(cast("bool", a)) > isValid(a),
+
+		isTrue(a&&b) > (isTrue(a)&isTrue(b)),
+		isTrue(a||b) > (isTrue(a)|isTrue(b)),
+		isTrue(a&b) > (a&b),
+		isTrue(a|b) > (a|b),
 	
 		// Simplify boolean expressions
 		(!(!a)) > (cast("bool", a)),
@@ -236,6 +243,9 @@ RuleSet rewriteSimple() {
 
 		(not (a == b)) > (a != b),
 		(not (a != b)) > (a == b),
+
+		//(a & wireOr(b)) > wireOr(a & b),
+		//(a && booleanOr(b)) > booleanOr(a && b),
 	});
 }
 

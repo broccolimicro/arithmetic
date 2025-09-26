@@ -550,49 +550,6 @@ Cost cost(ConstOperationSet ops, Operand top, vector<Type> vars) {
 	return Cost(complexity, delay);
 }
 
-bool canMap(vector<Operand> o0, Operand o1, ConstOperationSet e0, ConstOperationSet e1, bool init, map<size_t, vector<Operand> > *vars) {
-	if (o1.isConst()) {
-		for (auto i = o0.begin(); i != o0.end(); i++) {
-			if (not i->isConst() or (not areSame(i->cnst, o1.cnst) and not (i->cnst.isValid() and o1.cnst.isUnknown()))) {
-				return false;
-			}
-		}
-		return true;
-	} else if (o1.isVar()) {
-		if (vars != nullptr) {
-			auto ins = vars->insert({o1.index, o0});
-			if (ins.second) {
-				return true;
-			} else if (o0.size() != ins.first->second.size()) {
-				return false;
-			}
-			for (int i = 0; i < (int)o0.size(); i++) {
-				if (o0[i] != ins.first->second[i]) {
-					return false;
-				}
-			}
-			return true;
-		}
-		return true;
-	} else if (o1.isExpr()) {
-		for (auto i = o0.begin(); i != o0.end(); i++) {
-			if (not i->isExpr()) {
-				return false;
-			}
-			auto op0 = e0.getExpr(i->index);
-			auto op1 = e1.getExpr(o1.index);
-			if (not (op0->func == op1->func
-				and (op0->operands.size() == op1->operands.size()
-					or ((op1->isCommutative() or init)
-						and op0->operands.size() > op1->operands.size())))) {
-				return false;
-			}
-		}
-		return true;
-	}
-	return false;
-}
-
 Operand extract(OperationSet expr, size_t from, vector<size_t> operands) {
 	Operation o0 = *expr.getExpr(from);
 	Operand result = expr.pushExpr(Operation());
@@ -603,11 +560,11 @@ Operand extract(OperationSet expr, size_t from, vector<size_t> operands) {
 
 Expression subExpr(ConstOperationSet e0, Operand top) {
 	Expression result;
-	Mapping<Operand> m(Operand::undef(), false);
+	Mapping<size_t> m(std::numeric_limits<size_t>::max(), false);
 	for (ConstUpIterator i(e0, {top}); not i.done(); ++i) {
-		m.set(i->op(), result.pushExpr(Operation(*i).apply(m)));
+		m.set(i->op().index, result.pushExpr(Operation(*i).applyExprs(m)).index);
 	}
-	result.top = m.map(top);
+	result.top.applyExprs(m);
 	return result;
 }
 
@@ -788,11 +745,60 @@ Mapping<Operand> tidy(OperationSet expr, vector<Operand> top, bool rules) {
 // TODO(edward.bingham) look into "tree automata" and "regular tree grammar"
 // as a form of regex for trees instead of sequences.
 
+struct Matcher {
+	Matcher(ConstOperationSet source, const RuleSet &rules) : source(source), rules(rules) {}
+	~Matcher() {}
+
+	ConstOperationSet source;
+	const RuleSet &rules;
+	Match match;
+	vector<Rule> leaves;
+
+	bool map(vector<Operand> from, Operand to, bool top=false) {
+		if (to.isConst()) {
+			for (auto i = from.begin(); i != from.end(); i++) {
+				if (not i->isConst() or (not areSame(i->cnst, to.cnst) and not (i->cnst.isValid() and to.cnst.isUnknown()))) {
+					return false;
+				}
+			}
+			return true;
+		} else if (to.isVar()) {
+			auto ins = match.vars.insert({to.index, from});
+			if (ins.second) {
+				return true;
+			} else if (from.size() != ins.first->second.size()) {
+				return false;
+			}
+			for (int i = 0; i < (int)from.size(); i++) {
+				if (from[i] != ins.first->second[i]) {
+					return false;
+				}
+			}
+			return true;
+		} else if (to.isExpr()) {
+			for (auto i = from.begin(); i != from.end(); i++) {
+				if (not i->isExpr()) {
+					return false;
+				}
+				auto fromExpr = source.getExpr(i->index);
+				auto toExpr = rules.sub.getExpr(to.index);
+				if (not (fromExpr->func == toExpr->func
+					and (fromExpr->operands.size() == toExpr->operands.size()
+						or ((toExpr->isCommutative() or top)
+							and fromExpr->operands.size() > toExpr->operands.size())))) {
+					return false;
+				}
+			}
+			return true;
+		}
+		return false;
+	}
+};
+
 // pin - these expression IDs cannot be contained in a match except at the very
 // top of the match. These must be preserved through a replace.
 vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const RuleSet &rules, size_t count, bool fwd, bool bwd) {
-	using Leaf = pair<Operand, Operand>;
-	vector<pair<vector<Leaf>, Match> > stack;
+	vector<Matcher> stack;
 
 	// initialize the initial matches
 	vector<Operand> indices = ops.exprIndex();
@@ -800,24 +806,24 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const RuleSet &
 		// search through the rules and add all of the matching starts
 		for (auto j = rules.rules.begin(); j != rules.rules.end(); j++) {
 			// map left to right
-			Match match;
-			vector<Leaf> leaves;
-			if (canMap({*i}, j->left, ops, rules.sub, true, &match.vars)) {
-				match.expr = i->index;
-				match.replace = j->right;
-				leaves.push_back({*i, j->left});
-				stack.push_back({leaves, match});
+			{
+				Matcher next(ops, rules);
+				if (next.map({*i}, j->left, true)) {
+					next.match.expr = i->index;
+					next.match.replace = j->right;
+					next.leaves.push_back(Rule(*i, j->left));
+					stack.push_back(next);
+				}
 			}
 
 			// map right to left
 			if (not j->directed) {
-				Match match;
-				vector<Leaf> leaves;
-				if (canMap({*i}, j->right, ops, rules.sub, true, &match.vars)) {
-					match.expr = i->index;
-					match.replace = j->left;
-					leaves.push_back({*i, j->right});
-					stack.push_back({leaves, match});
+				Matcher next(ops, rules);
+				if (next.map({*i}, j->right, true)) {
+					next.match.expr = i->index;
+					next.match.replace = j->left;
+					next.leaves.push_back(Rule(*i, j->right));
+					stack.push_back(next);
 				}
 			}
 		}
@@ -830,20 +836,18 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const RuleSet &
 	// Find expression matches with depth-first search
 	vector<Match> result;
 	while (not stack.empty()) {
-		vector<Leaf> leaves = stack.back().first;
-		Match curr = stack.back().second;
+		Matcher curr = stack.back();
 		stack.pop_back();
 
-		Operand from = leaves.back().first;
-		Operand to = leaves.back().second;
-		leaves.pop_back();
+		Rule rule = curr.leaves.back();
+		curr.leaves.pop_back();
 
 		//cout << "Curr: " << curr << " from=" << from << " to=" << to << endl;
 		//cout << "Leaves: " << ::to_string(leaves) << endl;
 
-		if (to.isExpr()) {
-			auto fOp = ops.getExpr(from.index);
-			auto tOp = rules.sub.getExpr(to.index);
+		if (rule.right.isExpr()) {
+			auto fOp = ops.getExpr(rule.left.index);
+			auto tOp = rules.sub.getExpr(rule.right.index);
 
 			bool foundPin = false;
 			for (auto i = fOp->operands.begin(); i != fOp->operands.end(); i++) {
@@ -859,55 +863,48 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const RuleSet &
 			bool commute = tOp->isCommutative();
 			if (commute and tOp->operands.size() == 1u) {
 				//cout << "Elastic Commutative" << endl;
-				Match nextMatch = curr;
-				vector<Leaf> nextLeaves = leaves;
-				if (canMap(fOp->operands, tOp->operands[0], ops, rules.sub, false, &nextMatch.vars)) {
+				Matcher next = curr;
+				if (next.map(fOp->operands, tOp->operands[0])) {
 					for (size_t i = 0; i < fOp->operands.size(); i++) {
-						nextLeaves.push_back({fOp->operands[i], tOp->operands[0]});
-						if (nextMatch.top.empty()) {
-							nextMatch.top.push_back(i);
+						next.leaves.push_back(Rule(fOp->operands[i], tOp->operands[0]));
+						if (next.match.top.empty()) {
+							next.match.top.push_back(i);
 						}
 					}
-					stack.push_back({nextLeaves, nextMatch});
+					stack.push_back(next);
 				}
 			} else {
 				//cout << "Looking for Partial Permutations" << endl;
-				CombinatoricIterator it((int)fOp->operands.size(), (int)tOp->operands.size());
-				do {
-					Match nextMatch = curr;
-					vector<Leaf> nextLeaves = leaves;
-					vector<size_t> operands;
+				for (CombinatoricIterator it(fOp->operands.size(), tOp->operands.size());
+					not it.done(); (commute ? it.nextPerm() : it.nextShift())) {
+					Matcher next = curr;
 					bool found = true;
+					bool top = next.match.top.empty();
 					//cout << "Looking at [";
-					for (auto i = it.begin(); i != it.end() and found; i++) {
-						//cout << *i << "(" << fOp->operands[*i] << "==" << tOp->operands[i-it.begin()] << ") ";
-						nextLeaves.push_back({fOp->operands[*i], tOp->operands[i-it.begin()]});
-						operands.push_back(*i);
-						found = canMap({fOp->operands[*i]}, tOp->operands[i-it.begin()], ops, rules.sub, false, &nextMatch.vars);
-						//if (not found) {
-						//	cout << "XX";
-						//}
+					for (size_t i = 0; i < it.size() and found; i++) {
+						//cout << *i << "(" << fOp->operands[it[i]] << "==" << tOp->operands[i] << ") ";
+						next.leaves.push_back(Rule(fOp->operands[it[i]], tOp->operands[i]));
+						if (top) {
+							next.match.top.push_back(it[i]);
+						}
+						found = next.map({fOp->operands[it[i]]}, tOp->operands[i]);
 					}
 					//cout << "]" << endl;
 
 					if (found) {
-						//cout << "found" << endl;
-						if (nextMatch.top.empty()) {
-							sort(operands.begin(), operands.end());
-							nextMatch.top = operands;
-						}
-						stack.push_back({nextLeaves, nextMatch});
+						sort(next.match.top.begin(), next.match.top.end());
+						stack.push_back(next);
 					}
-				} while (commute ? it.nextPerm() : it.nextShift());
+				}
 			}
-		} else if (leaves.empty()) {
+		} else if (curr.leaves.empty()) {
 			//cout << "Found " << curr << endl;
-			result.push_back(curr);
+			result.push_back(curr.match);
 			if (count != 0 and result.size() >= count) {
 				return result;
 			}
 		} else {
-			stack.push_back({leaves, curr});
+			stack.push_back(curr);
 		}
 		//cout << endl;
 	}
@@ -969,7 +966,7 @@ void replace(OperationSet expr, const RuleSet &rules, Match match) {
 		}
 
 		//cout << "top=e" << match.expr << endl;
-		//cout << "after insert: " << expr.cast<Expression>() << endl;
+		//cout << "after insert: " << expr.cast<Expression>().to_string(true) << endl;
 
 		// Iterate over the replacement expression
 		map<size_t, size_t> exprMap;
@@ -1015,6 +1012,7 @@ void replace(OperationSet expr, const RuleSet &rules, Match match) {
 				} else if (op->isVar()) {
 					auto v = match.vars.find(op->index);
 					if (v != match.vars.end()) {
+						// TODO(edward.bingham) copy the expression for every combination of variables?
 						slot.operands.insert(
 							slot.operands.begin()+ins,
 							v->second.begin(), v->second.end());
@@ -1033,7 +1031,7 @@ void replace(OperationSet expr, const RuleSet &rules, Match match) {
 			expr.setExpr(slot);
 		}
 	}
-	//cout << "after mapping: " << expr.cast<Expression>() << endl;
+	//cout << "after mapping: " << expr.cast<Expression>().to_string(true) << endl;
 
 	// Let tidy handle the cleanup. There may be other references to these in the DAG
 
@@ -1053,14 +1051,14 @@ Mapping<Operand> minimize(OperationSet expr, vector<Operand> top, RuleSet rules)
 	top = result.map(top);
 	vector<Match> tokens = search(expr, top, rules, 1u);
 	while (not tokens.empty()) {
-		//cout << "Expr: " << ::to_string(top) << " " << expr.cast<Expression>() << endl;
+		//cout << "Expr: " << ::to_string(top) << " " << expr.cast<Expression>().to_string(true) << endl;
 		//cout << "Match: " << ::to_string(tokens) << endl;
 		replace(expr, rules, tokens.back());
-		//cout << "Replace: " << expr.cast<Expression>() << endl;
+		//cout << "Replace: " << expr.cast<Expression>().to_string(true) << endl;
 		Mapping<Operand> sub = tidy(expr, top);
 		top = sub.map(top);
 		result *= sub;
-		//cout << "Canon: " << ::to_string(top) << " " << expr.cast<Expression>() << endl << endl;
+		//cout << "Canon: " << ::to_string(top) << " " << expr.cast<Expression>().to_string(true) << endl << endl;
 		tokens = search(expr, top, rules, 1u);
 	}
 

@@ -891,11 +891,11 @@ Operation &Operation::applyExprs(const Mapping<int> &m) {
 	return *this;
 }
 
-
-
 Operation &Operation::apply(const Mapping<Operand> &m) {
 	for (int i = 0; i < (int)operands.size(); i++) {
-		operands[i] = m.map(operands[i]);
+		if (operands[i].isVar() or operands[i].isExpr()) {
+			operands[i] = m.map(operands[i]);
+		}
 	}
 	return *this;
 }

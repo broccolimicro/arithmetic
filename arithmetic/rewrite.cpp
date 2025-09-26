@@ -105,7 +105,7 @@ ostream &operator<<(ostream &os, const RuleSet &r) {
 	os << r.sub;
 	
 	for (int i = 0; i < (int)r.rules.size(); i++) {
-		os << i << ": " << r.rules[i].left << "(" << to_string(r.sub, r.rules[i].left) << ")" << (r.rules[i].directed ? ">" : "=") << r.rules[i].right << "(" << to_string(r.sub, r.rules[i].right) << ")" << endl;
+		os << i << ": " << r.rules[i].left << "(" << to_string(r.sub, r.rules[i].left, false) << ")" << (r.rules[i].directed ? ">" : "=") << r.rules[i].right << "(" << to_string(r.sub, r.rules[i].right, false) << ")" << endl;
 	}
 	return os;
 }
@@ -243,6 +243,11 @@ RuleSet rewriteSimple() {
 
 		(not (a == b)) > (a != b),
 		(not (a != b)) > (a == b),
+
+		(a & (b | c)) > ((a & b) | (a & c)),
+		(a && (b || c)) > ((a && b) || (a && c)),
+		((a & b) | a) > (isValid(a)),
+		((a && b) || a) > (cast("bool", a)),
 
 		//(a & wireOr(b)) > wireOr(a & b),
 		//(a && booleanOr(b)) > booleanOr(a && b),

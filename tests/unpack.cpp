@@ -30,7 +30,7 @@ TEST(Unpack, Structs) {
 		(isTrue(construct("test", {a, b}))) > (a&isTrue(b)),
 		(!construct("test", {a, b})) > construct("test", {a, !b}),
 		(construct("test", {a, b}) && construct("test", {c, d})) > construct("test", {a&c, b&&d}),
-		(construct("test", {a, b}) || construct("test", {c, d})) > construct("test", {((a&isTrue(b))|(c&isTrue(d))), b||d}),
+		(construct("test", {a, b}) || construct("test", {c, d})) > construct("test", {((a&isTrue(b))|(c&isTrue(d))), (isValid(a)&&b)||(isValid(c)&&d)}),
 
 		(construct("test", {a, b}) + construct("test", {c, d})) > construct("test", {a&c, b+d}),
 		(construct("test", {a, b}) - construct("test", {c, d})) > construct("test", {a&c, b-d}),

@@ -150,7 +150,6 @@ Cost cost(ConstOperationSet ops, Operand top, vector<Type> vars);
 bool verifyRuleFormat(ConstOperationSet ops, Operand i, bool msg=true);
 bool verifyRulesFormat(ConstOperationSet ops, Operand top, bool msg=true);
 
-bool canMap(vector<Operand> o0, Operand o1, ConstOperationSet e0, ConstOperationSet e1, bool init, map<size_t, vector<Operand> > *vars=nullptr);
 Operand extract(OperationSet expr, size_t from, vector<size_t> operands);
 Expression subExpr(ConstOperationSet e0, Operand top);
 

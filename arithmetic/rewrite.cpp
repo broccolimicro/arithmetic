@@ -244,8 +244,8 @@ RuleSet rewriteSimple() {
 		(not (a == b)) > (a != b),
 		(not (a != b)) > (a == b),
 
-		(a & (b | c)) > ((a & b) | (a & c)),
-		(a && (b || c)) > ((a && b) || (a && c)),
+		/*(a & (b | c)) > ((a & b) | (a & c)),
+		(a && (b || c)) > ((a && b) || (a && c)),*/
 		((a & b) | a) > (isValid(a)),
 		((a && b) || a) > (cast("bool", a)),
 

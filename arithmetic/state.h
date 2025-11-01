@@ -7,17 +7,15 @@
 namespace arithmetic
 {
 
-// States operate outside of the delay-insensitive value space. They
-// are used by the simulator to keep track of the current value of
-// each variable.
+// States operate outside of the delay-insensitive value space.
+// They're used by the simulator to track the value of each variable.
 struct State
 {
 	State();
 	State(int uid, Value v);
 	~State();
 
-	// Each value at index i represents the current value of the
-	// variable at index i in a ucs::variable_set structure.
+	// Value of the variable in the same position at chp::graph.vars
 	vector<Value> values;
 
 	size_t size() const;

@@ -68,14 +68,25 @@ Parallel::Parallel() {
 }
 
 Parallel::Parallel(Expression expr) {
-	actions.push_back(Action(expr));
+	Action a(expr);
+	if (not a.isVacuous()) {
+		actions.push_back(a);
+	}
 }
 
 Parallel::Parallel(Expression lvalue, Expression rvalue) {
-	actions.push_back(Action(lvalue, rvalue));
+	Action a(lvalue, rvalue);
+	if (not a.isVacuous()) {
+		actions.push_back(a);
+	}
 }
 
-Parallel::Parallel(std::initializer_list<Action> exprs) : actions(exprs) {
+Parallel::Parallel(std::initializer_list<Action> exprs) {
+	for (auto i = exprs.begin(); i != exprs.end(); i++) {
+		if (not i->isVacuous()) {
+			actions.push_back(*i);
+		}
+	}
 }
 
 Parallel::~Parallel() {
@@ -186,7 +197,9 @@ void Parallel::applyVars(const Mapping<int> &m) {
 }
 
 Parallel &Parallel::operator&=(const Action &c0) {
-	actions.push_back(c0);
+	if (not c0.isVacuous()) {
+		actions.push_back(c0);
+	}
 	return *this;
 }
 
@@ -229,7 +242,16 @@ Choice::Choice(bool skip) {
 	}
 }
 
-Choice::Choice(std::initializer_list<Parallel> exprs) : terms(exprs) {
+Choice::Choice(std::initializer_list<Parallel> exprs) {
+	bool hasVacuous = false;
+	for (auto i = exprs.begin(); i != exprs.end(); i++) {
+		if (not i->isVacuous()) {
+			terms.push_back(*i);
+		} else if (not hasVacuous) {
+			terms.push_back(*i);
+			hasVacuous = true;
+		}
+	}
 }
 
 Choice::~Choice()
@@ -346,17 +368,43 @@ Choice &Choice::operator&=(const Choice &c0) {
 }
 
 Choice &Choice::operator|=(const Action &c0) {
+	if (c0.isVacuous()) {
+		for (auto i = terms.begin(); i != terms.end(); i++) {
+			if (i->isVacuous()) {
+				return *this;
+			}
+		}
+	}
 	terms.push_back({c0});
 	return *this;
 }
 
 Choice &Choice::operator|=(const Parallel &c0) {
+	if (c0.isVacuous()) {
+		for (auto i = terms.begin(); i != terms.end(); i++) {
+			if (i->isVacuous()) {
+				return *this;
+			}
+		}
+	}
 	terms.push_back(c0);
 	return *this;
 }
 
 Choice &Choice::operator|=(const Choice &c0) {
-	terms.insert(terms.end(), c0.terms.begin(), c0.terms.end());
+	bool hasVacuous = false;
+	for (auto i = terms.begin(); i != terms.end() and not hasVacuous; i++) {
+		hasVacuous = i->isVacuous();
+	}
+
+	for (auto i = c0.terms.begin(); i != c0.terms.end(); i++) {
+		if (not i->isVacuous()) {
+			terms.push_back(*i);
+		} else if (not hasVacuous) {
+			terms.push_back(*i);
+			hasVacuous = true;
+		}
+	}
 	return *this;
 }
 

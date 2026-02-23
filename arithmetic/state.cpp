@@ -65,6 +65,42 @@ void State::set(Reference lhs, Value rhs, bool define) {
 	values[lhs.uid].set(lhs.slice, rhs, define);
 }
 
+void State::setUndef(Reference lhs) {
+	if (lhs.isUndef()) {
+		printf("error:%s:%d: variable not defined\n", __FILE__, __LINE__);
+		return;
+	}
+	if (lhs.uid >= values.size()) {
+		values.resize(lhs.uid+1);
+	}
+	Value rhs = Value::undef();
+	values[lhs.uid].set(lhs.slice, rhs, false);
+}
+
+void State::setU(Reference lhs, bool define) {
+	if (lhs.isUndef()) {
+		printf("error:%s:%d: variable not defined\n", __FILE__, __LINE__);
+		return;
+	}
+	if (lhs.uid >= values.size()) {
+		values.resize(lhs.uid+1);
+	}
+	Value rhs = Value::U(values[lhs.uid].type);
+	values[lhs.uid].set(lhs.slice, rhs, define);
+}
+
+void State::setX(Reference lhs, bool define) {
+	if (lhs.isUndef()) {
+		printf("error:%s:%d: variable not defined\n", __FILE__, __LINE__);
+		return;
+	}
+	if (lhs.uid >= values.size()) {
+		values.resize(lhs.uid+1);
+	}
+	Value rhs = Value::X(values[lhs.uid].type);
+	values[lhs.uid].set(lhs.slice, rhs, define);
+}
+
 void State::svIntersect(Reference lhs, Value rhs) {
 	if (lhs.isUndef()) {
 		cout << "State::svIntersect(): undef lhs" << endl;

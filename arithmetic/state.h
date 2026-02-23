@@ -28,6 +28,9 @@ struct State
 
 	Value get(Reference lhs) const;
 	void set(Reference lhs, Value rhs, bool define=false);
+	void setUndef(Reference lhs);  //TODO(steven.kneiser): verify
+	void setU(Reference lhs, bool define=false);  //TODO: name more explicitly?
+	void setX(Reference lhs, bool define=false);
 	void svIntersect(Reference lhs, Value rhs);
 
 	bool isSubsetOf(const State &s) const;

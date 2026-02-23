@@ -14,7 +14,7 @@ struct Slice {
 	vector<size_t> idx;
 	vector<bool> memb;
 	size_t from;
-	size_t to;
+	size_t to;  //DESIGN(steven.kneiser): exclusive bound, so not including this
 
 	bool isSlice() const;
 

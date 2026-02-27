@@ -21,7 +21,7 @@ struct Action {
 	void applyVars(const Mapping<size_t> &m);
 	void applyVars(const Mapping<int> &m);
 	
-	void evaluate(State &next, const State &curr, TypeSet types=TypeSet());
+	void evaluate(State &next, const State &curr, TypeSet types=TypeSet()) const;
 };
 
 bool areSame(Action a0, Action a1);
@@ -49,7 +49,7 @@ struct Parallel {
 	bool isVacuous() const;
 	bool isPassive() const;
 
-	State evaluate(const State &curr, TypeSet types=TypeSet());
+	State evaluate(const State &curr, TypeSet types=TypeSet()) const;
 	Expression guard();
 
 	void applyVars(const Mapping<size_t> &m);
@@ -83,7 +83,7 @@ struct Choice {
 	bool isVacuous() const;
 	bool isPassive() const;
 
-	Region evaluate(const State &curr, TypeSet types=TypeSet());
+	Region evaluate(const State &curr, TypeSet types=TypeSet()) const;
 	Expression guard();
 
 	void applyVars(const Mapping<size_t> &m);

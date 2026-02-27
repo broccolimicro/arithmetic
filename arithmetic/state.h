@@ -74,6 +74,7 @@ State interfere(State s0, const State &s1);
 
 struct Region {
 	Region();
+	Region(std::initializer_list<State> states);
 	~Region();
 
 	vector<State> states;
@@ -90,6 +91,7 @@ struct Region {
 
 ostream &operator<<(ostream &os, const Region &r);
 
+Region localAssign(State s0, Region s1, bool stable);
 bool vacuousAssign(const State &encoding, const Region &assignment, bool stable);
 
 }

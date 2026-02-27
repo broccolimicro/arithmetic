@@ -45,7 +45,7 @@ void Action::applyVars(const Mapping<int> &m) {
 	rvalue.applyVars(m);
 }
 
-void Action::evaluate(State &next, const State &curr, TypeSet types) {
+void Action::evaluate(State &next, const State &curr, TypeSet types) const {
 	if (lvalue.isUndef()) {
 		cout << "Action::evaluate(): undef lvalue" << endl;
 		return;
@@ -166,7 +166,7 @@ Parallel Parallel::mask(vector<int> cov) const {
 	return p0;
 }*/
 
-State Parallel::evaluate(const State &curr, TypeSet types) {
+State Parallel::evaluate(const State &curr, TypeSet types) const {
 	State result;
 	for (auto i = actions.begin(); i != actions.end(); i++) {
 		i->evaluate(result, curr, types);
@@ -317,7 +317,7 @@ bool Choice::isPassive() const {
 	return true;
 }
 
-Region Choice::evaluate(const State &curr, TypeSet types) {
+Region Choice::evaluate(const State &curr, TypeSet types) const {
 	Region result;
 	for (auto i = terms.begin(); i != terms.end(); i++) {
 		result.states.push_back(i->evaluate(curr, types));

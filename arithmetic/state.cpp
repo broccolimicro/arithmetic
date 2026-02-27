@@ -440,6 +440,9 @@ State interfere(State s0, const State &s1) {
 Region::Region() {
 }
 
+Region::Region(std::initializer_list<State> states) : states(states) {
+}
+
 Region::~Region() {
 }
 
@@ -478,6 +481,14 @@ void Region::apply(vector<int> uidMap) {
 	}
 }
 
+Region localAssign(State s0, Region s1, bool stable) {
+	Region result;
+	for (auto i = s1.states.begin(); i != s1.states.end(); i++) {
+		result.states.push_back(localAssign(s0, *i, stable));
+	}
+	return result;
+}
+
 bool vacuousAssign(const State &s0, const Region &r1, bool stable) {
 	for (auto s1 = r1.states.begin(); s1 != r1.states.end(); s1++) {
 		if (vacuousAssign(s0, *s1, stable)) {
@@ -498,6 +509,5 @@ ostream &operator<<(ostream &os, const Region &r) {
 	os << "]";
 	return os;
 }
-
 
 }

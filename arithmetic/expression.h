@@ -173,5 +173,6 @@ Expression construct(string typeName, vector<Expression> args);
 
 int passesGuard(const State &encoding, const State &global, const Expression &guard, State *total);
 Expression weakestGuard(const Expression &guard, const Expression &exclude);
+vector<int> passesConstraint(const Region &r0, const Expression &mutex);
 
 }

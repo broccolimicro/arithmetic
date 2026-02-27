@@ -516,6 +516,17 @@ Expression weakestGuard(const Expression &guard, const Expression &exclude) {
 	return guard;
 }
 
+vector<int> passesConstraint(const Region &r0, const Expression &mutex) {
+	vector<int> result;
+	for (int i = 0; i < (int)r0.states.size(); i++) {
+		ValRef v0 = evaluate(mutex, mutex.top, r0.states[i]);
+		if (v0.val.isValid()) {
+			result.push_back(i);
+		}
+	}
+	return result;
+}
+
 void Expression::minimize(RuleSet rules) {
 	this->top = arithmetic::minimize(*this, {this->top}, rules).map(this->top);
 }

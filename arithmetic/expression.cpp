@@ -171,13 +171,18 @@ bool Expression::isNull() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is null after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
-	if (top.isVar() or top.isType() or (top.isConst() and not top.cnst.isUnstable())) {
+	if (top.isVar() or top.isUndef() or top.isType() or (top.isConst() and not top.cnst.isUnstable())) {
 		return false;
 	}
 	vector<Operand> idx = exprIndex();
 	for (auto i = idx.begin(); i != idx.end(); i++) {
-		for (auto j = getExpr(i->index)->operands.begin(); j != getExpr(i->index)->operands.end(); j++) {
-			if (j->isVar() or j->isType() or (j->isConst() and not j->cnst.isUnstable())) {
+		auto expr = getExpr(i->index);
+		if (expr->func == Operation::CALL) {
+			return false;
+		}
+
+		for (auto j = expr->operands.begin(); j != expr->operands.end(); j++) {
+			if (j->isVar() or j->isUndef() or j->isType() or (j->isConst() and not j->cnst.isUnstable())) {
 				return false;
 			}
 		}
@@ -189,13 +194,18 @@ bool Expression::isConstant() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is constant after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
-	if (top.isVar() or top.isType() or (top.isConst() and top.cnst.isUnstable())) {
+	if (top.isVar() or top.isUndef() or top.isType() or (top.isConst() and top.cnst.isUnstable())) {
 		return false;
 	}
 	vector<Operand> idx = exprIndex();
 	for (auto i = idx.begin(); i != idx.end(); i++) {
-		for (auto j = getExpr(i->index)->operands.begin(); j != getExpr(i->index)->operands.end(); j++) {
-			if (j->isVar() or (j->isConst() and j->cnst.isUnstable())) {
+		auto expr = getExpr(i->index);
+		if (expr->func == Operation::CALL) {
+			return false;
+		}
+
+		for (auto j = expr->operands.begin(); j != expr->operands.end(); j++) {
+			if (j->isVar() or j->isUndef() or (j->isConst() and j->cnst.isUnstable())) {
 				return false;
 			}
 		}
@@ -207,13 +217,18 @@ bool Expression::isValid() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is constant after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
-	if (top.isVar() or (top.isConst() and (top.cnst.isUnstable() or top.cnst.isNeutral()))) {
+	if (top.isVar() or top.isUndef() or (top.isConst() and (top.cnst.isUnstable() or top.cnst.isNeutral()))) {
 		return false;
 	}
 	vector<Operand> idx = exprIndex();
 	for (auto i = idx.begin(); i != idx.end(); i++) {
-		for (auto j = getExpr(i->index)->operands.begin(); j != getExpr(i->index)->operands.end(); j++) {
-			if (j->isVar() or (j->isConst() and (j->cnst.isUnstable() or j->cnst.isNeutral()))) {
+		auto expr = getExpr(i->index);
+		if (expr->func == Operation::CALL) {
+			return false;
+		}
+
+		for (auto j = expr->operands.begin(); j != expr->operands.end(); j++) {
+			if (j->isVar() or j->isUndef() or (j->isConst() and (j->cnst.isUnstable() or j->cnst.isNeutral()))) {
 				return false;
 			}
 		}
@@ -225,13 +240,18 @@ bool Expression::isNeutral() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is null after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
-	if (top.isVar() or (top.isConst() and (top.cnst.isUnstable() or top.cnst.isValid()))) {
+	if (top.isVar() or top.isUndef() or (top.isConst() and (top.cnst.isUnstable() or top.cnst.isValid()))) {
 		return false;
 	}
 	vector<Operand> idx = exprIndex();
 	for (auto i = idx.begin(); i != idx.end(); i++) {
-		for (auto j = getExpr(i->index)->operands.begin(); j != getExpr(i->index)->operands.end(); j++) {
-			if (j->isVar() or (j->isConst() and (j->cnst.isUnstable() or j->cnst.isValid()))) {
+		auto expr = getExpr(i->index);
+		if (expr->func == Operation::CALL) {
+			return false;
+		}
+
+		for (auto j = expr->operands.begin(); j != expr->operands.end(); j++) {
+			if (j->isVar() or j->isUndef() or (j->isConst() and (j->cnst.isUnstable() or j->cnst.isValid()))) {
 				return false;
 			}
 		}

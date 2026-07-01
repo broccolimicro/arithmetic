@@ -5,12 +5,12 @@ namespace arithmetic
 {
 
 Action::Action() {
-	this->lvalue = Expression::vdd();
+	this->lvalue = Expression::undef();
 	this->rvalue = Expression::vdd();
 }
 
 Action::Action(Expression rvalue) {
-	this->lvalue = Expression::vdd();
+	this->lvalue = Expression::undef();
 	this->rvalue = rvalue;
 }
 

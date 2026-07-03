@@ -84,9 +84,9 @@ Expression Expression::arrOf(vector<Value> arr) {
 	return result;
 }
 
-Expression Expression::structOf(string name, vector<Value> arr) {
+Expression Expression::structOf(ucs::TagId type, vector<Value> arr) {
 	Expression result;
-	result.top = Operand::structOf(name, arr);
+	result.top = Operand::structOf(type, arr);
 	return result;
 }
 
@@ -102,9 +102,15 @@ Expression Expression::varOf(size_t index) {
 	return result;
 }
 
-Expression Expression::typeOf(Operand::Type type) {
+Expression Expression::typeOf(ucs::TagId tag) {
 	Expression result;
-	result.top = Operand::typeOf(type);
+	result.top = Operand::typeOf(tag);
+	return result;
+}
+
+Expression Expression::termOf(ucs::TagId tag) {
+	Expression result;
+	result.top = Operand::termOf(tag);
 	return result;
 }
 
@@ -171,7 +177,7 @@ bool Expression::isNull() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is null after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
-	if (top.isVar() or top.isUndef() or top.isType() or (top.isConst() and not top.cnst.isUnstable())) {
+	if (top.isVar() or top.isUndef() or (top.isConst() and not top.cnst.isUnstable())) {
 		return false;
 	}
 	vector<Operand> idx = exprIndex();
@@ -182,7 +188,7 @@ bool Expression::isNull() const {
 		}
 
 		for (auto j = expr->operands.begin(); j != expr->operands.end(); j++) {
-			if (j->isVar() or j->isUndef() or j->isType() or (j->isConst() and not j->cnst.isUnstable())) {
+			if (j->isVar() or j->isUndef() or (j->isConst() and not j->cnst.isUnstable())) {
 				return false;
 			}
 		}
@@ -194,7 +200,7 @@ bool Expression::isConstant() const {
 	// TODO(edward.bingham) This is wrong. I should do constant propagation here
 	// then check if the top Expression is constant after constant propagation using quantified element elimination
 	// TODO(edward.bingham) implement quantified element elimination using cylindrical algebraic decomposition.
-	if (top.isVar() or top.isUndef() or top.isType() or (top.isConst() and top.cnst.isUnstable())) {
+	if (top.isVar() or top.isUndef() or (top.isConst() and top.cnst.isUnstable())) {
 		return false;
 	}
 	vector<Operand> idx = exprIndex();
@@ -448,6 +454,21 @@ Expression wireAnd(vector<Expression> e0) { Expression e; return e.push(Operatio
 Expression wireXor(vector<Expression> e0) { Expression e; return e.push(Operation::WIRE_XOR, e.append(e0)); }
 Expression add(vector<Expression> e0)        { Expression e; return e.push(Operation::ADD,         e.append(e0)); }
 Expression mult(vector<Expression> e0)       { Expression e; return e.push(Operation::MULTIPLY,    e.append(e0)); }
+
+Expression memberCall(Expression recv, string funcName, vector<Expression> args) {
+	args.insert(args.begin(), recv);
+	args.insert(args.begin(), Expression::stringOf(funcName));
+
+	Expression result;
+	return result.push(Operation::MEMBER_CALL, result.append(args));
+}
+
+Expression memberCall(string funcName, vector<Expression> args) {
+	args.insert(args.begin(), Expression::stringOf(funcName));
+
+	Expression result;
+	return result.push(Operation::MEMBER_CALL, result.append(args));
+}
 
 Expression call(string funcName, vector<Expression> args) {
 	args.insert(args.begin(), Expression::stringOf(funcName));

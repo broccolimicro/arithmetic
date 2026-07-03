@@ -2,6 +2,8 @@
 
 #include <common/standard.h>
 #include <common/mapping.h>
+#include <common/index_vector.h>
+#include <common/type.h>
 
 #include "state.h"
 #include "type.h"
@@ -15,7 +17,6 @@ struct Operand {
 		CONST  = 0,
 		VAR    = 1,
 		EXPR   = 2,
-		TYPE   = 3,
 	};
 
 	Operand(Value v = Value());
@@ -38,7 +39,6 @@ struct Operand {
 	bool isConst() const;
 	bool isExpr() const;
 	bool isVar() const;
-	bool isType() const;
 
 	ValRef get(State values=State(), vector<ValRef> expressions=vector<ValRef>()) const;
 	void set(State &values, vector<ValRef> &expressions, ValRef v) const;
@@ -55,8 +55,10 @@ struct Operand {
 	static Operand intOf(int64_t ival);
 	static Operand realOf(double rval);
 	static Operand arrOf(vector<Value> arr);
-	static Operand structOf(string name, vector<Value> arr);
+	static Operand structOf(ucs::TagId type, vector<Value> arr);
 	static Operand stringOf(string sval);
+	static Operand typeOf(ucs::TagId tag);
+	static Operand termOf(ucs::TagId tag);
 
 	static Operand exprOf(size_t index);
 	Operand &offsetExpr(int off);
@@ -66,8 +68,6 @@ struct Operand {
 	Operand &applyVars(const Mapping<int> &m);
 	Operand &applyExprs(const Mapping<size_t> &m);
 	Operand &applyExprs(const Mapping<int> &m);
-	
-	static Operand typeOf(Type type);
 };
 
 ostream &operator<<(ostream &os, Operand o);
@@ -93,7 +93,16 @@ struct Operator {
 
 	bool commutative;
 	bool reflexive;
+
+	bool is(string prefix, string trigger, string infix, string postfix) const;
+
+	string to_string() const;
 };
+
+ostream &operator<<(ostream &os, const Operator &o);
+
+bool operator==(Operator o0, Operator o1);
+bool operator!=(Operator o0, Operator o1);
 
 struct Operation {
 	enum OpType : int {
@@ -132,6 +141,7 @@ struct Operation {
 		MOD,
 
 		CALL,
+		MEMBER_CALL,
 		CAST,
 
 		ARRAY,

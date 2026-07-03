@@ -2,6 +2,7 @@
 
 #include <common/standard.h>
 #include <common/interface.h>
+#include <common/type.h>
 #include "type.h"
 
 namespace arithmetic
@@ -43,20 +44,22 @@ ostream &operator<<(ostream &os, Reference ref);
 // implement.
 struct Value {
 	enum ValType : int32_t {
-		UNDEF = -7,
-		WIRE = -6,
+		UNDEF = -1,
+		WIRE = 0,
 		// can only be used to dereference a member of a structure
-		STRING = -5,
-		BOOL = -4,
+		STRING = 1,
+		BOOL = 2,
 		// INT and REAL are both considered "VALID"
-		INT = -3,
-		REAL = -2,
+		INT = 3,
+		REAL = 4,
 		// ARRAY and STRUCT have separate validities for each value
-		ARRAY = -1,
+		ARRAY = 5,
 		// By default, all operators on STRUCTs behave like operators on ARRAYs
 		// arr stores all of the members
 		// sval stores the name of the structure type for lookup
-		STRUCT = 0
+		STRUCT = 6,
+		TYPE   = 7,
+		TERM   = 8
 	};
 
 	enum StateType : int8_t {
@@ -80,14 +83,25 @@ struct Value {
 	~Value();
 
 	ValType type;
+
+	// used for WIRE, BOOL, INT, REAL
 	StateType state;
+
 	union {
+		// used for BOOL
 		bool bval;
+		// used for INT
 		int64_t ival;
+		// used for REAL
 		double rval;
 	};
+	// used for STRING
 	string sval;
 
+	// used for TYPE, TERM, STRUCT
+	ucs::TagId tag;
+
+	// used for ARRAY, STRUCT
 	vector<Value> arr;
 
 	bool isUndef() const;
@@ -109,7 +123,9 @@ struct Value {
 	static Value intOf(int64_t ival);
 	static Value realOf(double rval);
 	static Value arrOf(vector<Value> arr);
-	static Value structOf(string name, vector<Value> arr);	
+	static Value structOf(ucs::TagId name, vector<Value> arr);	
+	static Value typeOf(ucs::TagId tag);
+	static Value termOf(ucs::TagId tag);
 
 	bool isSubsetOf(Value v) const;
 
@@ -132,10 +148,10 @@ struct ValRef {
 ostream &operator<<(ostream &os, ValRef lval);
 
 _CONST_INTERFACE_ARG(TypeSet,
-	(int, memberIndex, (string type, string name) const, (type, name)));
+	(int, memberIndex, (ucs::TagId type, string name) const, (type, name)));
 
 _INTERFACE_ARG(Caller,
-	(ValRef, evaluateCall, (string name, vector<ValRef> args), (name, args)));
+	(ValRef, evaluateCall, (ucs::TagId term, vector<ValRef> args, bool member), (term, args, member)));
 
 bool areSame(Value v0, Value v1);
 int order(Value v0, Value v1);

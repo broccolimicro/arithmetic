@@ -33,10 +33,11 @@ struct Expression {
 	static Expression intOf(int64_t ival);
 	static Expression realOf(double rval);
 	static Expression arrOf(vector<Value> arr);
-	static Expression structOf(string name, vector<Value> arr);
+	static Expression structOf(ucs::TagId type, vector<Value> arr);
 	static Expression stringOf(string sval);
 	static Expression varOf(size_t index);
-	static Expression typeOf(Operand::Type type);
+	static Expression typeOf(ucs::TagId tag);
+	static Expression termOf(ucs::TagId tag);
 
 	vector<Operand> exprIndex() const;
 	const Operation *getExpr(size_t index) const;
@@ -167,6 +168,8 @@ Expression wireXor(vector<Expression> e0);
 Expression add(vector<Expression> e0);
 Expression mult(vector<Expression> e0);
 
+Expression memberCall(Expression recv, string funcName, vector<Expression> args);
+Expression memberCall(string funcName, vector<Expression> args);
 Expression call(string funcName, vector<Expression> args);
 Expression cast(string typeName, Expression e0);
 Expression construct(string typeName, vector<Expression> args);

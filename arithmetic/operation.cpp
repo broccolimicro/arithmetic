@@ -67,10 +67,6 @@ bool Operand::isVar() const {
 	return type == VAR;
 }
 
-bool Operand::isType() const {
-	return type == TYPE;
-}
-
 ValRef Operand::get(State values, vector<ValRef> expressions) const {
 	switch (type)
 	{
@@ -148,12 +144,20 @@ Operand Operand::arrOf(vector<Value> arr) {
 	return Operand(Value::arrOf(arr));
 }
 
-Operand Operand::structOf(string name, vector<Value> arr) {
-	return Operand(Value::structOf(name, arr));
+Operand Operand::structOf(ucs::TagId type, vector<Value> arr) {
+	return Operand(Value::structOf(type, arr));
 }
 
 Operand Operand::stringOf(string sval) {
 	return Operand(Value::stringOf(sval));
+}
+
+Operand Operand::typeOf(ucs::TagId tag) {
+	return Operand(Value::typeOf(tag));
+}
+
+Operand Operand::termOf(ucs::TagId tag) {
+	return Operand(Value::termOf(tag));
 }
 
 Operand Operand::exprOf(size_t index) {
@@ -217,14 +221,6 @@ Operand &Operand::applyExprs(const Mapping<int> &m) {
 	return *this;
 }
 
-
-Operand Operand::typeOf(Operand::Type type) {
-	Operand result;
-	result.type = TYPE;
-	result.index = type;
-	return result;
-}
-
 ostream &operator<<(ostream &os, Operand o) {
 	if (o.isConst()) {
 		os << o.cnst;
@@ -232,8 +228,6 @@ ostream &operator<<(ostream &os, Operand o) {
 		os << "v" << o.index;
 	} else if (o.isExpr()) {
 		os << "e" << o.index;
-	} else if (o.isType()) {
-		os << "f" << o.index;
 	} else {
 		os << "undef";
 	}
@@ -243,7 +237,7 @@ ostream &operator<<(ostream &os, Operand o) {
 bool operator==(Operand o0, Operand o1) {
 	return o0.type == o1.type and (
 		(o0.isConst() and areSame(o0.cnst, o1.cnst))
-		or ((o0.isVar() or o0.isExpr() or o0.isType()) and o0.index == o1.index)
+		or ((o0.isVar() or o0.isExpr()) and o0.index == o1.index)
 		or o0.isUndef());
 }
 
@@ -253,7 +247,7 @@ bool operator!=(Operand o0, Operand o1) {
 
 bool operator<(Operand o0, Operand o1) {
 	return o0.type < o1.type or (o0.type == o1.type
-		and (o0.isVar() or o0.isExpr() or o0.isType())
+		and (o0.isVar() or o0.isExpr())
 		and o0.index < o1.index);
 }
 
@@ -272,6 +266,41 @@ Operator::Operator(string prefix, string trigger, string infix, string postfix, 
 }
 
 Operator::~Operator() {
+}
+
+bool Operator::is(string prefix, string trigger, string infix, string postfix) const {
+	return this->prefix == prefix and this->trigger == trigger and this->infix == infix and this->postfix == postfix;
+}
+
+string Operator::to_string() const {
+	string result;
+	if (not trigger.empty()) {
+		result = "a" + trigger;
+		if (not infix.empty()) {
+			result += infix + "b";
+		}
+		result += postfix;
+	} else {
+		result += prefix + "a";
+		if (not infix.empty()) {
+			result += infix + "b";
+		}
+		result += postfix;
+	}
+	return result;
+}
+
+ostream &operator<<(ostream &os, const Operator &o) {
+	os << o.to_string();
+	return os;
+}
+
+bool operator==(Operator o0, Operator o1) {
+	return o0.prefix == o1.prefix and o0.trigger == o1.trigger and o0.infix == o1.infix and o0.postfix == o1.postfix;
+}
+
+bool operator!=(Operator o0, Operator o1) {
+	return not (o0 == o1);
 }
 
 Operation::Operation() {
@@ -341,6 +370,7 @@ void Operation::loadOperators() {
 		set(OpType::DIVIDE, Operator("", "", "/", ""));
 		set(OpType::MOD, Operator("", "", "%", ""));
 
+		set(OpType::MEMBER_CALL, Operator("", "(", ",", ")"));
 		set(OpType::CALL, Operator("", "(", ",", ")"));
 		set(OpType::CAST, Operator("(", ")", "", ""));
 
@@ -739,29 +769,33 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 			return args[0];
 		}
 		return (args[0].val %  args[1].val);
-	} else if (func == Operation::CALL) {
-		if (args.empty() or args[0].val.type != Value::STRING) {
-			printf("internal:%s:%d: call (()) operator expected string name, found %s\n", __FILE__, __LINE__, ::to_string(args[0].val).c_str());
+	} else if (func == Operation::CALL or func == Operation::MEMBER_CALL) {
+		if (args.empty() or args[0].val.type != Value::TERM) {
+			printf("internal:%s:%d: call (()) operator expected term, found %s\n", __FILE__, __LINE__, ::to_string(args[0].val).c_str());
 			return Value::X();
 		}
-		string name = args[0].val.sval;
+		ucs::TagId term = args[0].val.tag;
 		args.erase(args.begin());
 		if (caller.empty()) {
-			printf("internal:%s:%d: function calls (%s(%s)) not implemented\n", __FILE__, __LINE__, name.c_str(), ::to_string(args).c_str());
+			printf("internal:%s:%d: function calls (%s(%s)) not implemented\n", __FILE__, __LINE__, term.to_string().c_str(), ::to_string(args).c_str());
 			return Value::X();
 		}
-		return caller.evaluateCall(name, args);
+		return caller.evaluateCall(term, args, (func == Operation::MEMBER_CALL));
 	} else if (func == Operation::CAST) {
 		if (args.size() != 2u) {
 			printf("internal:%s:%d: cast ((type)val) operator expected two operands, found %zu\n", __FILE__, __LINE__, args.size());
 			return Value::X();
-		} else if (args[0].val.type != Value::STRING) {
-			printf("internal:%s:%d: cast ((type)val) operator expected type string, found %s\n", __FILE__, __LINE__, ::to_string(args[0].val).c_str());
+		}
+
+		if (args[0].val.type == Value::TYPE) {
+			//return cast(args[0].val.tag, args[1].val);
+			printf("internal:%s:%d: cast with TagId not yet implemented\n", __FILE__, __LINE__);
+		} else if (args[0].val.type == Value::STRING) {
+			return cast(args[0].val.sval, args[1].val);
+		} else {
+			printf("internal:%s:%d: cast ((type)val) operator expected type, found %s\n", __FILE__, __LINE__, ::to_string(args[0].val).c_str());
 			return Value::X();
 		}
-		string type = args[0].val.sval;
-		args.erase(args.begin());
-		return cast(type, args[1].val);
 	} else if (func == Operation::ARRAY) { // concat arrays
 		vector<Value> arr;
 		for (size_t i = 0; i < args.size(); i++) {
@@ -773,7 +807,7 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 	} else if (func == Operation::INDEX and args.size() == 3) { // slice
 		return index(args[0], args[1].val, args[1].val);
 	} else if (func == Operation::STRUCT) { // concat arrays
-		if (args.empty() or args[0].val.type != Value::STRING) {
+		if (args.empty() or args[0].val.type != Value::TYPE) {
 			printf("internal:%s:%d: struct ({}) operator expected string name, found %s\n", __FILE__, __LINE__, ::to_string(args[0].val).c_str());
 			return Value::X();
 		}
@@ -781,7 +815,7 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 		for (size_t i = 1; i < args.size(); i++) {
 			arr.push_back(args[i].val);
 		}
-		return Value::structOf(args[0].val.sval, arr);
+		return Value::structOf(args[0].val.tag, arr);
 	} else if (func == Operation::MEMBER and not types.empty()) {
 		if (args.size() != 2u) {
 			printf("internal:%s:%d: '.' operator expects 2 arguments, found %zu\n", __FILE__, __LINE__, args.size());

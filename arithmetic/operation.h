@@ -3,7 +3,6 @@
 #include <common/standard.h>
 #include <common/mapping.h>
 #include <common/index_vector.h>
-#include <common/type.h>
 
 #include "state.h"
 #include "type.h"
@@ -55,10 +54,10 @@ struct Operand {
 	static Operand intOf(int64_t ival);
 	static Operand realOf(double rval);
 	static Operand arrOf(vector<Value> arr);
-	static Operand structOf(ucs::TagId type, vector<Value> arr);
+	static Operand structOf(string type, vector<Value> arr);
 	static Operand stringOf(string sval);
-	static Operand typeOf(ucs::TagId tag);
-	static Operand termOf(ucs::TagId tag);
+	static Operand typeOf(string tag);
+	static Operand termOf(string tag);
 
 	static Operand exprOf(size_t index);
 	Operand &offsetExpr(int off);

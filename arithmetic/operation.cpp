@@ -144,7 +144,7 @@ Operand Operand::arrOf(vector<Value> arr) {
 	return Operand(Value::arrOf(arr));
 }
 
-Operand Operand::structOf(ucs::TagId type, vector<Value> arr) {
+Operand Operand::structOf(string type, vector<Value> arr) {
 	return Operand(Value::structOf(type, arr));
 }
 
@@ -152,11 +152,11 @@ Operand Operand::stringOf(string sval) {
 	return Operand(Value::stringOf(sval));
 }
 
-Operand Operand::typeOf(ucs::TagId tag) {
+Operand Operand::typeOf(string tag) {
 	return Operand(Value::typeOf(tag));
 }
 
-Operand Operand::termOf(ucs::TagId tag) {
+Operand Operand::termOf(string tag) {
 	return Operand(Value::termOf(tag));
 }
 
@@ -774,10 +774,10 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 			printf("internal:%s:%d: call (()) operator expected term, found %s\n", __FILE__, __LINE__, ::to_string(args[0].val).c_str());
 			return Value::X();
 		}
-		ucs::TagId term = args[0].val.tag;
+		string term = args[0].val.sval;
 		args.erase(args.begin());
 		if (caller.empty()) {
-			printf("internal:%s:%d: function calls (%s(%s)) not implemented\n", __FILE__, __LINE__, term.to_string().c_str(), ::to_string(args).c_str());
+			printf("internal:%s:%d: function calls (%s(%s)) not implemented\n", __FILE__, __LINE__, term.c_str(), ::to_string(args).c_str());
 			return Value::X();
 		}
 		return caller.evaluateCall(term, args, (func == Operation::MEMBER_CALL));
@@ -789,7 +789,7 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 
 		if (args[0].val.type == Value::TYPE) {
 			//return cast(args[0].val.tag, args[1].val);
-			printf("internal:%s:%d: cast with TagId not yet implemented\n", __FILE__, __LINE__);
+			printf("internal:%s:%d: cast with tag not yet implemented\n", __FILE__, __LINE__);
 		} else if (args[0].val.type == Value::STRING) {
 			return cast(args[0].val.sval, args[1].val);
 		} else {
@@ -815,7 +815,7 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 		for (size_t i = 1; i < args.size(); i++) {
 			arr.push_back(args[i].val);
 		}
-		return Value::structOf(args[0].val.tag, arr);
+		return Value::structOf(args[0].val.sval, arr);
 	} else if (func == Operation::MEMBER and not types.empty()) {
 		if (args.size() != 2u) {
 			printf("internal:%s:%d: '.' operator expects 2 arguments, found %zu\n", __FILE__, __LINE__, args.size());

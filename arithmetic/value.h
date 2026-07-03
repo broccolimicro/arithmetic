@@ -2,7 +2,6 @@
 
 #include <common/standard.h>
 #include <common/interface.h>
-#include <common/type.h>
 #include "type.h"
 
 namespace arithmetic
@@ -95,11 +94,8 @@ struct Value {
 		// used for REAL
 		double rval;
 	};
-	// used for STRING
+	// used for STRING, TYPE, TERM, STRUCT
 	string sval;
-
-	// used for TYPE, TERM, STRUCT
-	ucs::TagId tag;
 
 	// used for ARRAY, STRUCT
 	vector<Value> arr;
@@ -123,9 +119,9 @@ struct Value {
 	static Value intOf(int64_t ival);
 	static Value realOf(double rval);
 	static Value arrOf(vector<Value> arr);
-	static Value structOf(ucs::TagId name, vector<Value> arr);	
-	static Value typeOf(ucs::TagId tag);
-	static Value termOf(ucs::TagId tag);
+	static Value structOf(std::string name, vector<Value> arr);	
+	static Value typeOf(std::string tag);
+	static Value termOf(std::string tag);
 
 	bool isSubsetOf(Value v) const;
 
@@ -148,10 +144,10 @@ struct ValRef {
 ostream &operator<<(ostream &os, ValRef lval);
 
 _CONST_INTERFACE_ARG(TypeSet,
-	(int, memberIndex, (ucs::TagId type, string name) const, (type, name)));
+	(int, memberIndex, (std::string type, string name) const, (type, name)));
 
 _INTERFACE_ARG(Caller,
-	(ValRef, evaluateCall, (ucs::TagId term, vector<ValRef> args, bool member), (term, args, member)));
+	(ValRef, evaluateCall, (std::string term, vector<ValRef> args, bool member), (term, args, member)));
 
 bool areSame(Value v0, Value v1);
 int order(Value v0, Value v1);

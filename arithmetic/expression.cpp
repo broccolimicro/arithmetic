@@ -84,7 +84,7 @@ Expression Expression::arrOf(vector<Value> arr) {
 	return result;
 }
 
-Expression Expression::structOf(ucs::TagId type, vector<Value> arr) {
+Expression Expression::structOf(string type, vector<Value> arr) {
 	Expression result;
 	result.top = Operand::structOf(type, arr);
 	return result;
@@ -102,13 +102,13 @@ Expression Expression::varOf(size_t index) {
 	return result;
 }
 
-Expression Expression::typeOf(ucs::TagId tag) {
+Expression Expression::typeOf(string tag) {
 	Expression result;
 	result.top = Operand::typeOf(tag);
 	return result;
 }
 
-Expression Expression::termOf(ucs::TagId tag) {
+Expression Expression::termOf(string tag) {
 	Expression result;
 	result.top = Operand::termOf(tag);
 	return result;

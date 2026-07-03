@@ -33,11 +33,11 @@ struct Expression {
 	static Expression intOf(int64_t ival);
 	static Expression realOf(double rval);
 	static Expression arrOf(vector<Value> arr);
-	static Expression structOf(ucs::TagId type, vector<Value> arr);
+	static Expression structOf(string type, vector<Value> arr);
 	static Expression stringOf(string sval);
 	static Expression varOf(size_t index);
-	static Expression typeOf(ucs::TagId tag);
-	static Expression termOf(ucs::TagId tag);
+	static Expression typeOf(string tag);
+	static Expression termOf(string tag);
 
 	vector<Operand> exprIndex() const;
 	const Operation *getExpr(size_t index) const;

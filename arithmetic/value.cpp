@@ -246,28 +246,28 @@ Value Value::arrOf(vector<Value> arr) {
 	return v;
 }
 
-Value Value::structOf(ucs::TagId type, vector<Value> arr) {
+Value Value::structOf(std::string type, vector<Value> arr) {
 	Value v;
 	v.state = StateType::VALID;
 	v.type = ValType::STRUCT;
-	v.tag = type;
+	v.sval = type;
 	v.arr = arr;
 	return v;
 }
 
-Value Value::typeOf(ucs::TagId tag) {
+Value Value::typeOf(std::string tag) {
 	Value v;
 	v.state = StateType::UNKNOWN;
 	v.type = ValType::TYPE;
-	v.tag = tag;
+	v.sval = tag;
 	return v;
 }
 
-Value Value::termOf(ucs::TagId tag) {
+Value Value::termOf(std::string tag) {
 	Value v;
 	v.state = StateType::UNKNOWN;
 	v.type = ValType::TERM;
-	v.tag = tag;
+	v.sval = tag;
 	return v;
 }
 
@@ -447,8 +447,8 @@ bool areSame(Value v0, Value v1) {
 		or (v0.type == Value::INT and v1.type == Value::INT and v0.ival == v1.ival)
 		or (v0.type == Value::REAL and v1.type == Value::REAL and v0.rval == v1.rval)
 		or (v0.type == Value::STRING and v1.type == Value::STRING and v0.sval == v1.sval)
-		or (v0.type == Value::TERM and v1.type == Value::TERM and v0.tag == v1.tag)
-		or (v0.type == Value::TYPE and v1.type == Value::TYPE and v0.tag == v1.tag)
+		or (v0.type == Value::TERM and v1.type == Value::TERM and v0.sval == v1.sval)
+		or (v0.type == Value::TYPE and v1.type == Value::TYPE and v0.sval == v1.sval)
 	)) {
 		return true;
 	}
@@ -485,16 +485,16 @@ int order(Value v0, Value v1) {
 			or (v0.type == Value::INT and v1.type == Value::INT and v0.ival < v1.ival)
 			or (v0.type == Value::REAL and v1.type == Value::REAL and v0.rval < v1.rval)
 			or (v0.type == Value::STRING and v1.type == Value::STRING and v0.sval < v1.sval)
-			or (v0.type == Value::TERM and v1.type == Value::TERM and v0.tag < v1.tag)
-			or (v0.type == Value::TYPE and v1.type == Value::TYPE and v0.tag < v1.tag)
+			or (v0.type == Value::TERM and v1.type == Value::TERM and v0.sval < v1.sval)
+			or (v0.type == Value::TYPE and v1.type == Value::TYPE and v0.sval < v1.sval)
 		) {
 			return -1;
 		} else if ((v0.type == Value::BOOL and v1.type == Value::BOOL and v0.bval > v1.bval)
 			or (v0.type == Value::INT and v1.type == Value::INT and v0.ival > v1.ival)
 			or (v0.type == Value::REAL and v1.type == Value::REAL and v0.rval > v1.rval)
 			or (v0.type == Value::STRING and v1.type == Value::STRING and v0.sval > v1.sval)
-			or (v0.type == Value::TERM and v1.type == Value::TERM and v0.tag > v1.tag)
-			or (v0.type == Value::TYPE and v1.type == Value::TYPE and v0.tag > v1.tag)
+			or (v0.type == Value::TERM and v1.type == Value::TERM and v0.sval > v1.sval)
+			or (v0.type == Value::TYPE and v1.type == Value::TYPE and v0.sval > v1.sval)
 		) {
 			return 1;
 		}
@@ -562,7 +562,7 @@ ostream &operator<<(ostream &os, Value v) {
 		}
 		os << "]";
 	} else if (v.type == Value::STRUCT) {
-		os << v.tag << "{";
+		os << v.sval << "{";
 		for (auto i = v.arr.begin(); i != v.arr.end(); i++) {
 			if (i != v.arr.begin()) {
 				os << ", ";
@@ -571,9 +571,9 @@ ostream &operator<<(ostream &os, Value v) {
 		}
 		os << "}";
 	} else if (v.type == Value::TERM) {
-		os << "f" << v.tag;
+		os << "f" << v.sval;
 	} else if (v.type == Value::TYPE) {
-		os << "t" << v.tag;
+		os << "t" << v.sval;
 	} else {
 		os << "cerror(" << v.type << ")";
 	}
@@ -1227,7 +1227,7 @@ ValRef index(ValRef v, Value f, Value t) {
 
 Value member(Value v0, Value v1, TypeSet types) {
 	if (v0.type == Value::STRUCT and v1.type == Value::STRING) {
-		int idx = types.memberIndex(v0.tag, v1.sval);
+		int idx = types.memberIndex(v0.sval, v1.sval);
 		if (idx >= 0 and idx < (int)v0.arr.size()) {
 			return v0.arr[idx];
 		}
@@ -1240,7 +1240,7 @@ Value member(Value v0, Value v1, TypeSet types) {
 
 ValRef member(ValRef v0, Value v1, TypeSet types) {
 	if (v0.val.type == Value::STRUCT and v1.type == Value::STRING) {
-		int idx = types.memberIndex(v0.val.tag, v1.sval);
+		int idx = types.memberIndex(v0.val.sval, v1.sval);
 		if (idx >= 0 and idx < (int)v0.val.arr.size()) {
 			v0.val = v0.val.arr[idx];
 			if (not v0.ref.isUndef()) {
@@ -1248,7 +1248,7 @@ ValRef member(ValRef v0, Value v1, TypeSet types) {
 			}
 			return v0;
 		}
-		printf("internal: member %s(%d) out of bounds for structure '%s' of size %zu\n", v1.sval.c_str(), idx, v0.val.tag.to_string().c_str(), v0.val.arr.size());
+		printf("internal: member %s(%d) out of bounds for structure '%s' of size %zu\n", v1.sval.c_str(), idx, v0.val.sval.c_str(), v0.val.arr.size());
 		return Value::X();
 	}
 	printf("error: 'operator.' not defined for '%s' and '%s'\n", v0.val.ctypeName(), v1.ctypeName());
@@ -1263,7 +1263,7 @@ Value intersect(Value v0, Value v1) {
 	} else if (v0.isUnstable() or v1.isUnstable()) {
 		return Value::X();
 	} else if ((v0.type == Value::ARRAY and v1.type == Value::ARRAY)
-		or (v0.type == Value::STRUCT and v1.type == Value::STRUCT and v0.tag == v1.tag)) {
+		or (v0.type == Value::STRUCT and v1.type == Value::STRUCT and v0.sval == v1.sval)) {
 		if (v0.arr.size() < v1.arr.size()) {
 			v0.arr.resize(v1.arr.size());
 		}
@@ -1294,7 +1294,7 @@ Value unionOf(Value v0, Value v1) {
 		or (v0.type == Value::REAL and v1.type == Value::REAL and v0.rval == v1.rval)) {
 		return v0;
 	} else if (((v0.type == Value::ARRAY and v1.type == Value::ARRAY)
-		or (v0.type == Value::STRUCT and v1.type == Value::STRUCT and v0.tag == v1.tag))
+		or (v0.type == Value::STRUCT and v1.type == Value::STRUCT and v0.sval == v1.sval))
 		and v0.arr.size() == v1.arr.size()) {
 		for (int i = 0; i < (int)v0.arr.size(); i++) {
 			v0.arr[i] = intersect(v0.arr[i], v1.arr[i]);

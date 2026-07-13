@@ -149,6 +149,9 @@ _CONST_INTERFACE_ARG(TypeSet,
 _INTERFACE_ARG(Caller,
 	(ValRef, evaluateCall, (std::string term, vector<ValRef> args, bool member), (term, args, member)));
 
+_INTERFACE_ARG(CallerConstExpr,
+	(Value, evaluateCallConstExpr, (std::string term, vector<Value> args, bool member), (term, args, member)));
+
 bool areSame(Value v0, Value v1);
 int order(Value v0, Value v1);
 

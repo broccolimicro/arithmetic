@@ -9,7 +9,6 @@
 #include "rewrite.h"
 #include "algorithm.h"
 
-
 namespace arithmetic {
 
 Expression::Expression(Operand top) {
@@ -286,6 +285,14 @@ bool Expression::isWire() const {
 		}
 	}
 	return false;
+}
+
+bool Expression::isMember() const {
+	return arithmetic::isMember(sub, top);
+}
+
+Expression Expression::popMember() {
+	return arithmetic::popMember(sub, top);
 }
 
 Expression &Expression::applyVars(const Mapping<size_t> &m) {

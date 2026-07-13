@@ -62,6 +62,9 @@ struct Expression {
 	bool isNeutral() const;
 	bool isWire() const;
 
+	bool isMember() const;
+	Expression popMember();
+
 	Expression &applyVars(const Mapping<size_t> &m);
 	Expression &applyVars(const Mapping<int> &m);
 	Expression &apply(const Mapping<Operand> &m);

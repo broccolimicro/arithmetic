@@ -485,6 +485,28 @@ ValRef evaluate(ConstOperationSet ops, Operand top, State values, TypeSet types,
 	return exprs[prev];
 }
 
+Value evaluateConstExpr(ConstOperationSet ops, Operand top) {
+	if (not top.isExpr()) {
+		return top.getConst();
+	}
+
+	size_t prev = 0;
+	vector<Value> exprs;
+	for (auto i = ConstUpIterator(ops, {top}); not i.done(); ++i) {
+		if (i->exprIndex >= exprs.size()) {
+			exprs.resize(i->exprIndex+1, Value::X());
+		}
+		exprs[i->exprIndex] = i->evaluateConstExpr(exprs);
+		prev = i->exprIndex;
+	}
+
+	if (prev >= exprs.size()) {
+		printf("internal:%s:%d: malformed expression structure\n", __FILE__, __LINE__);
+		return Value::X();
+	}
+	return exprs[prev];
+}
+
 size_t lvalueBase(ConstOperationSet ops, Operand top, TypeSet types) {
 	if (top.isVar()) {
 		return top.index;
@@ -566,6 +588,72 @@ Expression subExpr(ConstOperationSet e0, Operand top) {
 	}
 	result.top.applyExprs(m);
 	return result;
+}
+
+bool isMember(ConstOperationSet e0, Operand top) {
+	while (true) {
+		if (not top.isExpr()) {
+			return false;
+		}
+
+		const Operation *op = e0.getExpr(top.index);
+		if (op == nullptr) {
+			return false;
+		}
+
+		if (op->func == Operation::MEMBER) {
+			return true;
+		} else if (op->func != Operation::IDENTITY) {
+			return false;
+		}
+
+		if (op->operands.empty()) {
+			return false;
+		}
+
+		top = op->operands[0];
+	}
+	return false;
+}
+
+Expression popMember(OperationSet e0, Operand top) {
+	while (true) {
+		if (not top.isExpr()) {
+			return Expression();
+		}
+
+		const Operation *op = e0.getExpr(top.index);
+		if (op == nullptr) {
+			return Expression();
+		}
+
+		if (op->func == Operation::MEMBER) {
+			Expression result;
+			if (op->operands.size() == 2u) {
+				result = subExpr(e0, op->operands[1]);
+			}
+
+			size_t prev = top.index;
+			if (not op->operands.empty()) {
+				top = op->operands[0];
+			} else {
+				top = Operand::undef();
+			}
+			e0.eraseExpr(prev);
+			return result;
+		} else if (op->func != Operation::IDENTITY) {
+			return Expression();
+		}
+
+		size_t prev = top.index;
+		if (not op->operands.empty()) {
+			top = op->operands[0];
+		} else {
+			top = Operand::undef();
+		}
+		e0.eraseExpr(prev);
+	}
+	return Expression();
 }
 
 // tidy() does a few things:

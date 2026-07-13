@@ -144,6 +144,7 @@ struct Match {
 ostream &operator<<(ostream &os, Match m);
 
 ValRef evaluate(ConstOperationSet expr, Operand top, State values, TypeSet types=TypeSet(), Caller caller=Caller());
+Value evaluateConstExpr(ConstOperationSet expr, Operand top);
 size_t lvalueBase(ConstOperationSet ops, Operand top, TypeSet types=TypeSet());
 Cost cost(ConstOperationSet ops, Operand top, vector<Type> vars);
 
@@ -152,6 +153,8 @@ bool verifyRulesFormat(ConstOperationSet ops, Operand top, bool msg=true);
 
 Operand extract(OperationSet expr, size_t from, vector<size_t> operands);
 Expression subExpr(ConstOperationSet e0, Operand top);
+bool isMember(ConstOperationSet e0, Operand top);
+Expression popMember(OperationSet e0, Operand top);
 
 Mapping<Operand> tidy(OperationSet expr, vector<Operand> top, bool rules=false);
 

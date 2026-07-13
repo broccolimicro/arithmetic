@@ -91,6 +91,26 @@ ValRef Operand::get(State values, vector<ValRef> expressions) const {
 	}
 }
 
+Value Operand::getConst(vector<Value> expressions) const {
+	switch (type)
+	{
+	case CONST:
+		return cnst;
+	case VAR:
+		printf("error: variable found in constexpr %d\n", (int)index);
+		return Value::X();
+	case EXPR:
+		if (index < expressions.size()) {
+			return expressions[index];
+		} else {
+			printf("error: expression not defined %d/%d\n", (int)index, (int)expressions.size());
+		}
+		return Value::X();
+	default:
+	return Value::X();
+	}
+}
+
 void Operand::set(State &values, vector<ValRef> &expressions, ValRef v) const {
 	if (isExpr()) {
 		if (index < expressions.size()) {
@@ -788,9 +808,6 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 		}
 
 		if (args[0].val.type == Value::TYPE) {
-			//return cast(args[0].val.tag, args[1].val);
-			printf("internal:%s:%d: cast with tag not yet implemented\n", __FILE__, __LINE__);
-		} else if (args[0].val.type == Value::STRING) {
 			return cast(args[0].val.sval, args[1].val);
 		} else {
 			printf("internal:%s:%d: cast ((type)val) operator expected type, found %s\n", __FILE__, __LINE__, ::to_string(args[0].val).c_str());
@@ -839,6 +856,258 @@ ValRef Operation::evaluate(State values, vector<ValRef> expressions, TypeSet typ
 	}
 
 	return Operation::evaluate(func, args, types, caller);
+}
+
+Value Operation::evaluateConstExpr(int func, vector<Value> args, TypeSet types, CallerConstExpr caller) {
+	if (func == Operation::VALIDITY) {
+		if (args.size() != 1u) {
+			printf("internal:%s:%d: validity operator expected 1 operand, found %zu\n", __FILE__, __LINE__, args.size());
+			return Value::X();
+		}
+		return isValid(args[0]);
+	} else if (func == Operation::WIRE_NOT) {
+		if (args.size() != 1u) {
+			printf("internal:%s:%d: wire not (~) operator expected 1 operand, found %zu\n", __FILE__, __LINE__, args.size());
+			return Value::X();
+		}
+		return ~args[0];
+	} else if (func == Operation::WIRE_OR) {
+		if (args.size() == 1u) {
+			return wireOf(args[0]);
+		}
+		Value result = args[0];
+		for (size_t i = 1u; i < args.size(); i++) {
+			result = result | args[i];
+		}
+		return result;
+	} else if (func == Operation::WIRE_AND) {
+		if (args.size() == 1u) {
+			return wireOf(args[0]);
+		}
+		Value result = args[0];
+		for (size_t i = 1u; i < args.size(); i++) {
+			result = result & args[i];
+		}
+		return result;
+	} else if (func == Operation::WIRE_XOR) {
+		if (args.size() == 1u) {
+			return wireOf(args[0]);
+		}
+		Value result = args[0];
+		for (size_t i = 1u; i < args.size(); i++) {
+			result = result ^ args[i];
+		}
+		return result;
+	} else if (func == Operation::TRUTHINESS) {
+		if (args.size() != 1u) {
+			printf("internal:%s:%d: truthiness operator expected 1 operand, found %zu\n", __FILE__, __LINE__, args.size());
+			return Value::X();
+		}
+		return isTrue(args[0]);
+	} else if (func == Operation::BOOLEAN_NOT) {
+		if (args.size() != 1u) {
+			printf("internal:%s:%d: boolean not operator expected 1 operand, found %zu\n", __FILE__, __LINE__, args.size());
+			return Value::X();
+		}
+		return !args[0];
+	} else if (func == Operation::BOOLEAN_OR) {
+ 		if (args.size() == 1u) {
+			return boolOf(args[0]);
+		}
+		Value result = args[0];
+		for (size_t i = 1u; i < args.size(); i++) {
+			result = result or args[i];
+		}
+		return result;
+	} else if (func == Operation::BOOLEAN_AND) {
+ 		if (args.size() == 1u) {
+			return boolOf(args[0]);
+		}
+		Value result = args[0];
+		for (size_t i = 1u; i < args.size(); i++) {
+			result = result and args[i];
+		}
+		return result;
+	} else if (func == Operation::BOOLEAN_XOR) {
+ 		if (args.size() == 1u) {
+			return boolOf(args[0]);
+		}
+		Value result = args[0];
+		for (size_t i = 1u; i < args.size(); i++) {
+			result = (result and !args[i]) or (!result and args[i]);
+		}
+		return result;
+	} else if (func == Operation::EQUAL) {
+		if (args.size() == 1u) {
+			return args[0];
+		}
+		return (args[0] == args[1]);
+	} else if (func == Operation::NOT_EQUAL) {
+		if (args.size() == 1u) {
+			return args[0];
+		}
+		return (args[0] != args[1]);
+	} else if (func == Operation::LESS) {
+		if (args.size() == 1u) {
+			return args[0];
+		}
+		return (args[0] <  args[1]);
+	} else if (func == Operation::GREATER) {
+		if (args.size() == 1u) {
+			return args[0];
+		}
+		return (args[0] >  args[1]);
+	} else if (func == Operation::LESS_EQUAL) {
+		if (args.size() == 1u) {
+			return args[0];
+		}
+		return (args[0] <= args[1]);
+	} else if (func == Operation::GREATER_EQUAL) {
+		if (args.size() == 1u) {
+			return args[0];
+		}
+		return (args[0] >= args[1]);
+	} else if (func == Operation::NEGATIVE) {
+		return args[0] < Value::intOf(0);
+	} else if (func == Operation::TERNARY) { // ternary operator
+		if (args.size() == 1u) {
+			return args[0];
+		} else if (args.size() == 2u) {
+			args.push_back(Value::X());
+		}
+		return args[0] ? args[1] : args[2];
+	} else if (func == Operation::IDENTITY) {
+		if (args.size() != 1u) {
+			printf("internal:%s:%d: identity (+) operator expected 1 operand, found %zu\n", __FILE__, __LINE__, args.size());
+			return Value::X();
+		}
+		return args[0];
+	} else if (func == Operation::NEGATION) {
+		if (args.size() != 1u) {
+			printf("internal:%s:%d: negation (-) operator expected 1 operand, found %zu\n", __FILE__, __LINE__, args.size());
+			return Value::X();
+		}
+		return -args[0];
+	} else if (func == Operation::INVERSE) {
+		if (args.size() != 1u) {
+			printf("internal:%s:%d: inverse (1/x) operator expected 1 operand, found %zu\n", __FILE__, __LINE__, args.size());
+			return Value::X();
+		}
+		return inv(args[0]);
+	} else if (func == Operation::SHIFT_LEFT) {
+		if (args.size() == 1u) {
+			return args[0];
+		}
+		return (args[0] << args[1]);
+	} else if (func == Operation::SHIFT_RIGHT) { 
+		if (args.size() == 1u) {
+			return args[0];
+		}
+		return (args[0] >> args[1]);
+	} else if (func == Operation::ADD) {
+ 		if (args.size() == 1u) {
+			return args[0];
+		}
+		Value result = args[0];
+		for (size_t i = 1u; i < args.size(); i++) {
+			result = result + args[i];
+		}
+		return result;
+	} else if (func == Operation::SUBTRACT) {
+		if (args.size() == 1u) {
+			return args[0];
+		}
+		Value result = args[0];
+		for (size_t i = 1u; i < args.size(); i++) {
+			result = result - args[i];
+		}
+		return result;
+	} else if (func == Operation::MULTIPLY) {
+ 		if (args.size() == 1u) {
+			return args[0];
+		}
+		Value result = args[0];
+		for (size_t i = 1u; i < args.size(); i++) {
+			result = result * args[i];
+		}
+		return result;
+	} else if (func == Operation::DIVIDE) { 
+		if (args.size() == 1u) {
+			return args[0];
+		}
+		return (args[0] /  args[1]);
+	} else if (func == Operation::MOD) { 
+		if (args.size() == 1u) {
+			return args[0];
+		}
+		return (args[0] %  args[1]);
+	} else if (func == Operation::CALL or func == Operation::MEMBER_CALL) {
+		if (args.empty() or args[0].type != Value::TERM) {
+			printf("internal:%s:%d: call (()) operator expected term, found %s\n", __FILE__, __LINE__, ::to_string(args[0]).c_str());
+			return Value::X();
+		}
+		string term = args[0].sval;
+		args.erase(args.begin());
+		if (caller.empty()) {
+			printf("internal:%s:%d: function calls (%s(%s)) not implemented\n", __FILE__, __LINE__, term.c_str(), ::to_string(args).c_str());
+			return Value::X();
+		}
+		return caller.evaluateCallConstExpr(term, args, (func == Operation::MEMBER_CALL));
+	} else if (func == Operation::CAST) {
+		if (args.size() != 2u) {
+			printf("internal:%s:%d: cast ((type)val) operator expected two operands, found %zu\n", __FILE__, __LINE__, args.size());
+			return Value::X();
+		}
+
+		if (args[0].type == Value::TYPE) {
+			return cast(args[0].sval, args[1]);
+		} else {
+			printf("internal:%s:%d: cast ((type)val) operator expected type, found %s\n", __FILE__, __LINE__, ::to_string(args[0]).c_str());
+			return Value::X();
+		}
+	} else if (func == Operation::ARRAY) { // concat arrays
+		vector<Value> arr;
+		for (size_t i = 0; i < args.size(); i++) {
+			arr.push_back(args[i]);
+		}
+		return Value::arrOf(arr);
+	} else if (func == Operation::INDEX and args.size() == 2) { // index
+		return index(args[0], args[1]);
+	} else if (func == Operation::INDEX and args.size() == 3) { // slice
+		return index(args[0], args[1], args[1]);
+	} else if (func == Operation::STRUCT) { // concat arrays
+		if (args.empty() or args[0].type != Value::TYPE) {
+			printf("internal:%s:%d: struct ({}) operator expected type name, found %s\n", __FILE__, __LINE__, ::to_string(args[0]).c_str());
+			return Value::X();
+		}
+		vector<Value> arr;
+		for (size_t i = 1; i < args.size(); i++) {
+			arr.push_back(args[i]);
+		}
+		return Value::structOf(args[0].sval, arr);
+	} else if (func == Operation::MEMBER and not types.empty()) {
+		if (args.size() != 2u) {
+			printf("internal:%s:%d: '.' operator expects 2 arguments, found %zu\n", __FILE__, __LINE__, args.size());
+			return Value::X();
+		} else if (args[1].type != Value::STRING) {
+			printf("internal:%s:%d: '.' operator expected string name, found %s\n", __FILE__, __LINE__, ::to_string(args[1]).c_str());
+			return Value::X();
+		}
+			
+		return member(args[0], args[1], types);
+	}
+	printf("internal:%s:%d: function %d not implemented\n", __FILE__, __LINE__, func);
+	return Value::X();
+}
+
+Value Operation::evaluateConstExpr(vector<Value> expressions, TypeSet types, CallerConstExpr caller) const {
+	vector<Value> args;
+	args.reserve(operands.size());
+	for (int i = 0; i < (int)operands.size(); i++) {
+		args.push_back(operands[i].getConst(expressions));
+	}
+
+	return Operation::evaluateConstExpr(func, args, types, caller);
 }
 
 // only used in arithemtic::Expression::passesGuard at the moment for CHP sim

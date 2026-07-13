@@ -40,6 +40,7 @@ struct Operand {
 	bool isVar() const;
 
 	ValRef get(State values=State(), vector<ValRef> expressions=vector<ValRef>()) const;
+	Value getConst(vector<Value> expressions=vector<Value>()) const;
 	void set(State &values, vector<ValRef> &expressions, ValRef v) const;
 
 	// Undefined
@@ -175,6 +176,9 @@ struct Operation {
 
 	static ValRef evaluate(int func, vector<ValRef> args, TypeSet types=TypeSet(), Caller caller=Caller());
 	ValRef evaluate(State values, vector<ValRef> expressions, TypeSet types=TypeSet(), Caller caller=Caller()) const;
+	static Value evaluateConstExpr(int func, vector<Value> args, TypeSet types=TypeSet(), CallerConstExpr caller=CallerConstExpr());
+	Value evaluateConstExpr(vector<Value> expressions, TypeSet types=TypeSet(), CallerConstExpr caller=CallerConstExpr()) const;
+
 	void propagate(State &result, const State &global, vector<ValRef> &expressions, const vector<ValRef> gexpressions, Value v) const;
 	Operation &applyVars(const Mapping<size_t> &m);
 	Operation &applyVars(const Mapping<int> &m);

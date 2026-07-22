@@ -1,5 +1,6 @@
 #pragma once
 
+#include "state.h"
 #include "expression.h"
 
 namespace arithmetic
@@ -33,6 +34,7 @@ struct Parallel {
 	Parallel(Expression expr);
 	Parallel(Expression lvalue, Expression rvalue);
 	Parallel(std::initializer_list<Action> exprs);
+	Parallel(const State &state);
 	~Parallel();
 
 	vector<Action> actions;
@@ -67,6 +69,7 @@ struct Choice {
 	Choice();
 	Choice(bool skip);
 	Choice(std::initializer_list<Parallel> exprs);
+	Choice(const Region &region);
 	~Choice();
 
 	vector<Parallel> terms;

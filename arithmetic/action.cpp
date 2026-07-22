@@ -89,8 +89,15 @@ Parallel::Parallel(std::initializer_list<Action> exprs) {
 	}
 }
 
-Parallel::~Parallel() {
+Parallel::Parallel(const State &state) {
+	for (int i = 0; i < (int)state.values.size(); i++) {
+		if (not state.values[i].isUnknown()) {
+			actions.push_back(Action(Expression::varOf(i), Expression(state.values[i])));
+		}
+	}
+}
 
+Parallel::~Parallel() {
 }
 
 vector<Action>::iterator Parallel::begin() {
@@ -251,6 +258,12 @@ Choice::Choice(std::initializer_list<Parallel> exprs) {
 			terms.push_back(*i);
 			hasVacuous = true;
 		}
+	}
+}
+
+Choice::Choice(const Region &region) {
+	for (const State &state : region.states) {
+		terms.push_back(Parallel(state));
 	}
 }
 

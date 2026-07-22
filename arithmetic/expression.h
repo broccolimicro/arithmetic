@@ -19,6 +19,8 @@ struct Expression {
 	Expression(Operand top = Operand::undef());
 	Expression(int func, vector<Operand> args);
 	Expression(int func, vector<Expression> args);
+	Expression(const State &state);
+	Expression(const Region &region);
 	~Expression();
 
 	SimpleOperationSet sub;

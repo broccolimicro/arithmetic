@@ -26,6 +26,53 @@ Expression::Expression(int func, vector<Expression> args) {
 	top = pushExpr(Operation(func, append(args)));
 }
 
+Expression::Expression(const State &state) {
+	Operation::loadOperators();
+
+	vector<Operand> args;
+	for (int i = 0; i < (int)state.values.size(); i++) {
+		if (state.values[i].isUnknown()) {
+			continue;
+		}
+
+		if (state.values[i].isNeutral()) {
+			args.push_back(pushExpr(Operation(Operation::WIRE_NOT, {Operand::varOf(i)})));
+		} else if (state.values[i].type == Value::WIRE) {
+			args.push_back(Operand::varOf(i));
+		} else {
+			Operand op = pushExpr(Operation(Operation::EQUAL, {Operand::varOf(i), Operand(state.values[i])}));
+			args.push_back(pushExpr(Operation(Operation::TRUTHINESS, {op})));
+		}
+	}
+
+	if (args.empty()) {
+		top = Operand::vdd();
+	} else if (args.size() == 1u) {
+		top = args[0];
+	} else {
+		top = pushExpr(Operation(Operation::WIRE_AND, args));
+	}
+}
+
+Expression::Expression(const Region &region) {
+	Operation::loadOperators();
+
+	vector<Expression> states;
+	for (const State &state : region.states) {
+		states.push_back(Expression(state));
+	}
+
+	vector<Operand> args = append(states);
+
+	if (args.empty()) {
+		top = Operand::gnd();
+	} else if (args.size() == 1u) {
+		top = args[0];
+	} else {
+		top = pushExpr(Operation(Operation::WIRE_OR, args));
+	}
+}
+
 Expression::~Expression() {
 }
 

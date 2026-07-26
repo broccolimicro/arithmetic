@@ -71,7 +71,7 @@ struct Expression {
 	Expression &applyVars(const Mapping<int> &m);
 	Expression &apply(const Mapping<Operand> &m);
 
-	string to_string(bool debug=false) const;
+	string to_string(bool debug=false, ucs::ConstNetlist symbols=ucs::ConstNetlist()) const;
 
 	Expression operator()(Expression idx) const;
 	Expression operator()(Expression from, Expression to) const;

@@ -415,8 +415,8 @@ bool areSame(Expression e0, Expression e1) {
 	return i.done() and j.done();
 }
 
-string Expression::to_string(bool debug) const {
-	return arithmetic::to_string(*this, this->top, debug);
+string Expression::to_string(bool debug, ucs::ConstNetlist symbols) const {
+	return arithmetic::to_string(*this, this->top, debug, symbols);
 }
 
 ostream &operator<<(ostream &os, Expression e) {

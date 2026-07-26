@@ -59,8 +59,8 @@ bool areSame(Action a0, Action a1) {
 	return areSame(a0.lvalue, a1.lvalue) and areSame(a0.rvalue, a1.rvalue);
 }
 
-std::string Action::to_string(bool debug) const {
-	return lvalue.to_string(debug) + "=" + rvalue.to_string(debug);
+std::string Action::to_string(bool debug, ucs::ConstNetlist symbols) const {
+	return lvalue.to_string(debug, symbols) + "=" + rvalue.to_string(debug, symbols);
 }
 
 ostream &operator<<(ostream &os, const Action &a) {
@@ -219,13 +219,13 @@ Parallel &Parallel::operator&=(const Parallel &c0) {
 	return *this;
 }
 
-std::string Parallel::to_string(bool debug) const {
+std::string Parallel::to_string(bool debug, ucs::ConstNetlist symbols) const {
 	std::string result;
 	for (int i = 0; i < (int)actions.size(); i++) {
 		if (i != 0) {
 			result += ",";
 		}
-		result += actions[i].to_string(debug);
+		result += actions[i].to_string(debug, symbols);
 	}
 	return result;
 }
@@ -435,13 +435,13 @@ Choice &Choice::operator|=(const Choice &c0) {
 	return *this;
 }
 
-std::string Choice::to_string(bool debug) const {
+std::string Choice::to_string(bool debug, ucs::ConstNetlist symbols) const {
 	std::string result;
 	for (int i = 0; i < (int)terms.size(); i++) {
 		if (i != 0) {
 			result += ":";
 		}
-		result += terms[i].to_string(debug);
+		result += terms[i].to_string(debug, symbols);
 	}
 	return result;
 }

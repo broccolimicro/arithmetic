@@ -59,8 +59,12 @@ bool areSame(Action a0, Action a1) {
 	return areSame(a0.lvalue, a1.lvalue) and areSame(a0.rvalue, a1.rvalue);
 }
 
+std::string Action::to_string(bool debug) const {
+	return lvalue.to_string(debug) + "=" + rvalue.to_string(debug);
+}
+
 ostream &operator<<(ostream &os, const Action &a) {
-	os << a.lvalue << "=" << a.rvalue;
+	os << a.to_string();
 	return os;
 }
 
@@ -215,6 +219,17 @@ Parallel &Parallel::operator&=(const Parallel &c0) {
 	return *this;
 }
 
+std::string Parallel::to_string(bool debug) const {
+	std::string result;
+	for (int i = 0; i < (int)actions.size(); i++) {
+		if (i != 0) {
+			result += ",";
+		}
+		result += actions[i].to_string(debug);
+	}
+	return result;
+}
+
 bool areSame(Parallel p0, Parallel p1) {
 	if (p0.actions.size() != p1.actions.size()) {
 		return false;
@@ -229,12 +244,7 @@ bool areSame(Parallel p0, Parallel p1) {
 }
 
 ostream &operator<<(ostream &os, const Parallel &p) {
-	for (int i = 0; i < (int)p.actions.size(); i++) {
-		if (i != 0) {
-			os << ",";
-		}
-		os << p.actions[i];
-	}
+	os << p.to_string();
 	return os;
 }
 
@@ -425,6 +435,17 @@ Choice &Choice::operator|=(const Choice &c0) {
 	return *this;
 }
 
+std::string Choice::to_string(bool debug) const {
+	std::string result;
+	for (int i = 0; i < (int)terms.size(); i++) {
+		if (i != 0) {
+			result += ":";
+		}
+		result += terms[i].to_string(debug);
+	}
+	return result;
+}
+
 bool areSame(Choice c0, Choice c1) {
 	if (c0.terms.size() != c1.terms.size()) {
 		return false;
@@ -439,12 +460,7 @@ bool areSame(Choice c0, Choice c1) {
 }
 
 ostream &operator<<(ostream &os, const Choice &c) {
-	for (int i = 0; i < (int)c.terms.size(); i++) {
-		if (i != 0) {
-			os << ":";
-		}
-		os << c.terms[i];
-	}
+	os << c.to_string();
 	return os;
 }
 

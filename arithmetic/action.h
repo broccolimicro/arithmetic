@@ -3,6 +3,8 @@
 #include "state.h"
 #include "expression.h"
 
+#include <string>
+
 namespace arithmetic
 {
 
@@ -23,6 +25,8 @@ struct Action {
 	void applyVars(const Mapping<int> &m);
 	
 	void evaluate(State &next, const State &curr, TypeSet types=TypeSet()) const;
+
+	std::string to_string(bool debug = false) const;
 };
 
 bool areSame(Action a0, Action a1);
@@ -59,6 +63,8 @@ struct Parallel {
 
 	Parallel &operator&=(const Action &c0);
 	Parallel &operator&=(const Parallel &c0);
+
+	std::string to_string(bool debug = false) const;
 };
 
 bool areSame(Parallel p0, Parallel p1);
@@ -99,6 +105,8 @@ struct Choice {
 	Choice &operator|=(const Action &c0);
 	Choice &operator|=(const Parallel &c0);
 	Choice &operator|=(const Choice &c0);
+
+	std::string to_string(bool debug = false) const;
 };
 
 bool areSame(Choice c0, Choice c1);

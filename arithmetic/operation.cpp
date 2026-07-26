@@ -240,16 +240,22 @@ Operand &Operand::applyExprs(const Mapping<int> &m) {
 	return *this;
 }
 
-ostream &operator<<(ostream &os, Operand o) {
-	if (o.isConst()) {
-		os << o.cnst;
-	} else if (o.isVar()) {
-		os << "v" << o.index;
-	} else if (o.isExpr()) {
-		os << "e" << o.index;
-	} else {
-		os << "undef";
+std::string Operand::to_string(ucs::ConstNetlist nets) const {
+	if (isConst()) {
+		return cnst.to_string();
+	} else if (isVar()) {
+		if (nets.empty()) {
+			return "v" + ::to_string(index);
+		}
+		return nets.netAt(index);
+	} else if (isExpr()) {
+		return "e" + ::to_string(index);
 	}
+	return "undef";
+}
+
+ostream &operator<<(ostream &os, Operand o) {
+	os << o.to_string();
 	return os;
 }
 
@@ -1264,6 +1270,40 @@ void Operation::tidy() {
 	}
 }
 
+std::string Operation::to_string(ucs::ConstNetlist nets) const {
+	std::string result;
+	result += "e" + ::to_string(exprIndex) + " = ";
+	Operator op;
+	if (func >= 0 and func < (int)Operation::operators.size()) {
+		op = Operation::operators[func];
+	} else {
+		op = Operation::operators[Operation::IDENTITY];
+		printf("error: unrecognized operator\n");
+	}
+
+	result += op.prefix;
+	if (not operands.empty()) {
+		result += operands[0].to_string(nets);
+	}
+
+	if (not op.trigger.empty()) {
+		result += op.trigger;
+	} else if (operands.size() > 1u) {
+		result += op.infix;
+	}
+
+	for (int i = 1; i < (int)operands.size(); i++) {
+		if (i != 1) {
+			result += op.infix;
+		}
+		result += operands[i].to_string(nets);
+	}
+	result += op.postfix;
+	result += "  (" + ::to_string(func) + ")";
+	return result;
+}
+
+
 bool operator==(Operation o0, Operation o1) {
 	if (o0.func != o1.func or 
 		o0.operands.size() != o1.operands.size()) {
@@ -1283,34 +1323,7 @@ bool operator!=(Operation o0, Operation o1) {
 }
 
 ostream &operator<<(ostream &os, Operation o) {
-	os << "e" << o.exprIndex << " = ";
-	Operator op;
-	if (o.func >= 0 and o.func < (int)Operation::operators.size()) {
-		op = Operation::operators[o.func];
-	} else {
-		op = Operation::operators[Operation::IDENTITY];
-		printf("error: unrecognized operator\n");
-	}
-
-	os << op.prefix;
-	if (not o.operands.empty()) {
-		os << o.operands[0];
-	}
-
-	if (not op.trigger.empty()) {
-		os << op.trigger;
-	} else if (o.operands.size() > 1u) {
-		os << op.infix;
-	}
-
-	for (int i = 1; i < (int)o.operands.size(); i++) {
-		if (i != 1) {
-			os << op.infix;
-		}
-		os << o.operands[i];
-	}
-	os << op.postfix;
-	os << "  (" << o.func << ")";
+	os << o.to_string();
 	return os;
 }
 

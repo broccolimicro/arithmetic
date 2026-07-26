@@ -414,48 +414,44 @@ bool operator!=(const PostOrderDFSIterator &i0, const PostOrderDFSIterator &i1) 
 	return !(i0 == i1);
 }
 
-string to_string(ConstOperationSet ops, Operand top, bool debug) {
-	std::ostringstream result;
+string to_string(ConstOperationSet ops, Operand top, bool debug, ucs::ConstNetlist symbols) {
+	string result;
 	if (debug) {
-		result << "top: " << top << endl;
+		result += "top: " + top.to_string(symbols) + "\n";
 		vector<Operand> idx = ops.exprIndex();
 		for (auto i = idx.rbegin(); i != idx.rend(); i++) {
-			result << *ops.getExpr(i->index) << endl;
+			result += ops.getExpr(i->index)->to_string(symbols) + "\n";
 		}
-
 	} else {
 		index_vector<string> strs;
 		for (ConstUpIterator i(ops, {top}); not i.done(); ++i) {
 			Operator func = Operation::operators[i->func];
-			std::ostringstream oss;
-			oss << "(";
-			oss << func.prefix;
+			string sub = "(" + func.prefix;
 			for (int j = 0; j < (int)i->operands.size(); j++) {
 				if (i->operands[j].isExpr()) {
-					oss << strs[i->operands[j].index];
+					sub += strs[i->operands[j].index];
 				} else {
-					oss << i->operands[j];
+					sub += i->operands[j].to_string(symbols);
 				}
 				if (j == 0 and not func.trigger.empty()) {
-					oss << func.trigger;
+					sub += func.trigger;
 				} else if (j == (int)i->operands.size()-1) {
-					oss << func.postfix;
+					sub += func.postfix;
 				} else {
-					oss << func.infix;
+					sub += func.infix;
 				}
 			}
-
-			oss << ")";
-			strs.emplace_at(i->op().index, oss.str());
+			sub += ")";
+			strs.emplace_at(i->op().index, sub);
 		}
 
 		if (top.isExpr()) {
-			result << strs[top.index];
+			result += strs[top.index];
 		} else {
-			result << top;
+			result += top.to_string(symbols);
 		}
 	}
-	return result.str();
+	return result;
 }
 
 ostream &operator<<(ostream &os, Match m) {

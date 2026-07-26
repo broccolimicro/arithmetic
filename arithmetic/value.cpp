@@ -49,17 +49,23 @@ bool Slice::slice(size_t from, size_t to) {
 	return true;
 }
 
-ostream &operator<<(ostream &os, Slice slice) {
-	for (size_t i = 0; i < slice.idx.size(); i++) {
-		if (slice.memb[i]) {
-			os << ".m" << slice.idx[i];
+std::string Slice::to_string() const {
+	std::string result;
+	for (size_t i = 0; i < idx.size(); i++) {
+		if (memb[i]) {
+			result += ".m" + ::to_string(idx[i]);
 		} else {
-			os << "[" << slice.idx[i] << "]";
+			result += "[" + ::to_string(idx[i]) + "]";
 		}
 	}
-	if (slice.isSlice()) {
-		os << "[" << slice.from << ":" << slice.to << "]";
+	if (isSlice()) {
+		result += "[" + ::to_string(from) + ":" + ::to_string(to) + "]";
 	}
+	return result;
+}
+
+ostream &operator<<(ostream &os, Slice slice) {
+	os << slice.to_string();
 	return os;
 }
 
@@ -74,12 +80,17 @@ bool Reference::isUndef() const {
 	return uid == std::numeric_limits<size_t>::max();
 }
 
-ostream &operator<<(ostream &os, Reference ref) {
-	if (ref.isUndef()) {
-		os << "undef";
-	} else {
-		os << "v" << ref.uid << ref.slice;
+std::string Reference::to_string(ucs::ConstNetlist nets) const {
+	if (isUndef()) {
+		return "undef";
+	} else if (nets.empty()) {
+		return "v" + ::to_string(uid) + slice.to_string();
 	}
+	return nets.netAt(uid) + slice.to_string();
+}
+
+ostream &operator<<(ostream &os, Reference ref) {
+	os << ref.to_string();
 	return os;
 }
 
@@ -435,6 +446,68 @@ Value Value::get(Slice slice) const {
 	return curr;
 }
 
+std::string Value::to_string() const {
+	if (isUndef()) {
+		return "?";
+	} else if (isUnstable()) {
+		return "X";
+	} else if (isNeutral()) {
+		return "gnd";
+	} else if (type == Value::WIRE and isValid()) {
+		return "vdd";
+	} else if (isUnknown()) {
+		std::string result = "U";
+		if (type == Value::ARRAY) {
+			result += "[";
+			for (auto i = arr.begin(); i != arr.end(); i++) {
+				if (i != arr.begin()) {
+					result += ", ";
+				}
+				result += i->to_string();
+			}
+			result += "]";
+		}
+		return result;
+	} else if (type == Value::STRING) {
+		return "\"" + sval + "\"";
+	} else if (type == Value::BOOL) {
+		if (not bval) {
+			return "false";
+		} else if (bval) {
+			return "true";
+		}
+	} else if (type == Value::INT) {
+		return ::to_string(ival);
+	} else if (type == Value::REAL) {
+		return ::to_string(rval);
+	} else if (type == Value::ARRAY) {
+		std::string result = "[";
+		for (auto i = arr.begin(); i != arr.end(); i++) {
+			if (i != arr.begin()) {
+				result += ", ";
+			}
+			result += i->to_string();
+		}
+		result += "]";
+		return result;
+	} else if (type == Value::STRUCT) {
+		std::string result = sval + "{";
+		for (auto i = arr.begin(); i != arr.end(); i++) {
+			if (i != arr.begin()) {
+				result += ", ";
+			}
+			result += i->to_string();
+		}
+		result += "}";
+		return result;
+	} else if (type == Value::TERM) {
+		return sval;
+	} else if (type == Value::TYPE) {
+		return sval;
+	}
+	return "cerror(" + ::to_string(type) + ")";
+}
+
 ValRef::ValRef(Value val, Reference ref) {
 	this->val = val;
 	this->ref = ref;
@@ -443,21 +516,25 @@ ValRef::ValRef(Value val, Reference ref) {
 ValRef::~ValRef() {
 }
 
+std::string ValRef::to_string(ucs::ConstNetlist nets) const {
+	return val.to_string() + ":" + ref.to_string(nets);
+}
+
 ostream &operator<<(ostream &os, ValRef lval) {
-	os << lval.val << ":" << lval.ref;
+	os << lval.to_string();
 	return os;
 }
 
 bool areSame(Value v0, Value v1) {
-	if (v0.state == v1.state and (not v0.isValid()
+	if ((v0.type == Value::TERM and v1.type == Value::TERM and v0.sval == v1.sval)
+		or (v0.type == Value::TYPE and v1.type == Value::TYPE and v0.sval == v1.sval)
+		or (v0.state == v1.state and (not v0.isValid()
 		or (v0.type == Value::WIRE and v1.type == Value::WIRE)
 		or (v0.type == Value::BOOL and v1.type == Value::BOOL and v0.bval == v1.bval)
 		or (v0.type == Value::INT and v1.type == Value::INT and v0.ival == v1.ival)
 		or (v0.type == Value::REAL and v1.type == Value::REAL and v0.rval == v1.rval)
 		or (v0.type == Value::STRING and v1.type == Value::STRING and v0.sval == v1.sval)
-		or (v0.type == Value::TERM and v1.type == Value::TERM and v0.sval == v1.sval)
-		or (v0.type == Value::TYPE and v1.type == Value::TYPE and v0.sval == v1.sval)
-	)) {
+		))) {
 		return true;
 	}
 
@@ -528,63 +605,7 @@ int order(Value v0, Value v1) {
 }
 
 ostream &operator<<(ostream &os, Value v) {
-	if (v.isUndef()) {
-		os << "?";
-	} else if (v.isUnstable()) {
-		os << "X";
-	} else if (v.isNeutral()) {
-		os << "gnd";
-	} else if (v.type == Value::WIRE and v.isValid()) {
-		os << "vdd";
-	} else if (v.isUnknown()) {
-		os << "U";
-		if (v.type == Value::ARRAY) {
-			os << "[";
-			for (auto i = v.arr.begin(); i != v.arr.end(); i++) {
-				if (i != v.arr.begin()) {
-					os << ", ";
-				}
-				os << *i;
-			}
-			os << "]";
-		}
-	} else if (v.type == Value::STRING) {
-		os << "\"" << v.sval << "\"";
-	} else if (v.type == Value::BOOL) {
-		if (not v.bval) {
-			os << "false";
-		} else if (v.bval) {
-			os << "true";
-		}
-	} else if (v.type == Value::INT) {
-		os << v.ival;
-	} else if (v.type == Value::REAL) {
-		os << v.rval;
-	} else if (v.type == Value::ARRAY) {
-		os << "[";
-		for (auto i = v.arr.begin(); i != v.arr.end(); i++) {
-			if (i != v.arr.begin()) {
-				os << ", ";
-			}
-			os << *i;
-		}
-		os << "]";
-	} else if (v.type == Value::STRUCT) {
-		os << v.sval << "{";
-		for (auto i = v.arr.begin(); i != v.arr.end(); i++) {
-			if (i != v.arr.begin()) {
-				os << ", ";
-			}
-			os << *i;
-		}
-		os << "}";
-	} else if (v.type == Value::TERM) {
-		os << "f" << v.sval;
-	} else if (v.type == Value::TYPE) {
-		os << "t" << v.sval;
-	} else {
-		os << "cerror(" << v.type << ")";
-	}
+	os << v.to_string();
 	return os;
 }
 

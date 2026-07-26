@@ -3,6 +3,7 @@
 #include <common/standard.h>
 #include <common/mapping.h>
 #include <common/index_vector.h>
+#include <common/net.h>
 
 #include "state.h"
 #include "type.h"
@@ -68,6 +69,8 @@ struct Operand {
 	Operand &applyVars(const Mapping<int> &m);
 	Operand &applyExprs(const Mapping<size_t> &m);
 	Operand &applyExprs(const Mapping<int> &m);
+
+	std::string to_string(ucs::ConstNetlist nets=ucs::ConstNetlist()) const;
 };
 
 ostream &operator<<(ostream &os, Operand o);
@@ -191,6 +194,8 @@ struct Operation {
 	Operand op() const;
 
 	void tidy();
+
+	std::string to_string(ucs::ConstNetlist nets=ucs::ConstNetlist()) const;
 };
 
 bool operator==(Operation o0, Operation o1);

@@ -2,6 +2,7 @@
 
 #include <common/standard.h>
 #include <common/interface.h>
+#include <common/net.h>
 #include "type.h"
 
 namespace arithmetic
@@ -21,6 +22,8 @@ struct Slice {
 	bool index(size_t index);
 	bool member(size_t index);
 	bool slice(size_t from, size_t to);
+
+	std::string to_string() const;
 };
 
 ostream &operator<<(ostream &os, Slice slice);
@@ -33,6 +36,8 @@ struct Reference {
 	Slice slice;
 
 	bool isUndef() const;
+
+	std::string to_string(ucs::ConstNetlist nets=ucs::ConstNetlist()) const;
 };
 
 ostream &operator<<(ostream &os, Reference ref);
@@ -131,6 +136,8 @@ struct Value {
 
 	void set(Slice slice, Value v, bool define=false);
 	Value get(Slice slice) const;
+
+	std::string to_string() const;
 };
 
 struct ValRef {
@@ -139,6 +146,8 @@ struct ValRef {
 
 	Value val;
 	Reference ref;
+
+	std::string to_string(ucs::ConstNetlist nets=ucs::ConstNetlist()) const;
 };
 
 ostream &operator<<(ostream &os, ValRef lval);

@@ -91,7 +91,7 @@ Parallel::Parallel(std::initializer_list<Action> exprs) {
 
 Parallel::Parallel(const State &state) {
 	for (int i = 0; i < (int)state.values.size(); i++) {
-		if (not state.values[i].isUnknown()) {
+		if (not state.values[i].isUndef()) {
 			actions.push_back(Action(Expression::varOf(i), Expression(state.values[i])));
 		}
 	}
@@ -259,6 +259,10 @@ Choice::Choice(std::initializer_list<Parallel> exprs) {
 			hasVacuous = true;
 		}
 	}
+}
+
+Choice::Choice(const State &state) {
+	terms.push_back(Parallel(state));
 }
 
 Choice::Choice(const Region &region) {

@@ -69,6 +69,7 @@ struct Choice {
 	Choice();
 	Choice(bool skip);
 	Choice(std::initializer_list<Parallel> exprs);
+	Choice(const State &state);
 	Choice(const Region &region);
 	~Choice();
 

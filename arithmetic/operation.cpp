@@ -76,9 +76,8 @@ ValRef Operand::get(State values, vector<ValRef> expressions) const {
 		if (index < values.size()) {
 			return ValRef(values[index], index);
 		} else {
-			printf("error: variable not defined %d/%d\n", (int)index, (int)values.size());
+			return ValRef(Value::undef(), index);
 		}
-		return Value::X();
 	case EXPR:
 		if (index < expressions.size()) {
 			return expressions[index];

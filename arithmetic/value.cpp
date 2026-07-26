@@ -126,19 +126,27 @@ bool Value::isUndef() const {
 }
 
 bool Value::isValid() const {
-	return state == StateType::VALID;
+	return state == StateType::VALID
+		and type != ValType::TYPE
+		and type != ValType::TERM;
 }
 
 bool Value::isNeutral() const {
-	return state == StateType::NEUTRAL;
+	return state == StateType::NEUTRAL
+		and type != ValType::TYPE
+		and type != ValType::TERM;
 }
 
 bool Value::isUnstable() const {
-	return state == StateType::UNSTABLE;
+	return state == StateType::UNSTABLE
+		and type != ValType::TYPE
+		and type != ValType::TERM;
 }
 
 bool Value::isUnknown() const {
-	return state == StateType::UNKNOWN;
+	return state == StateType::UNKNOWN
+		and type != ValType::TYPE
+		and type != ValType::TERM;
 }
 
 bool Value::isTrue() const {

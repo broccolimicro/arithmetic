@@ -375,7 +375,7 @@ void Operation::loadOperators() {
 		set(OpType::BOOLEAN_XOR, Operator("", "", "^^", "", Operator::COMMUTATIVE));
 
 		set(OpType::EQUAL, Operator("", "", "==", ""));
-		set(OpType::NOT_EQUAL, Operator("", "", "~=", ""));
+		set(OpType::NOT_EQUAL, Operator("", "", "!=", ""));
 		set(OpType::LESS, Operator("", "", "<", ""));
 		set(OpType::GREATER, Operator("", "", ">", ""));
 		set(OpType::LESS_EQUAL, Operator("", "", "<=", ""));

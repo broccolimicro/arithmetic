@@ -58,8 +58,7 @@ struct Operand {
 	static Operand arrOf(vector<Value> arr);
 	static Operand structOf(string type, vector<Value> arr);
 	static Operand stringOf(string sval);
-	static Operand typeOf(string tag);
-	static Operand termOf(string tag);
+	static Operand labelOf(string tag);
 
 	static Operand exprOf(size_t index);
 	Operand &offsetExpr(int off);
@@ -70,7 +69,7 @@ struct Operand {
 	Operand &applyExprs(const Mapping<size_t> &m);
 	Operand &applyExprs(const Mapping<int> &m);
 
-	std::string to_string(ucs::ConstNetlist nets=ucs::ConstNetlist()) const;
+	std::string to_string(bool debug=false, ucs::ConstNetlist nets=ucs::ConstNetlist()) const;
 };
 
 ostream &operator<<(ostream &os, Operand o);
@@ -195,7 +194,7 @@ struct Operation {
 
 	void tidy();
 
-	std::string to_string(ucs::ConstNetlist nets=ucs::ConstNetlist()) const;
+	std::string to_string(bool debug=false, ucs::ConstNetlist nets=ucs::ConstNetlist()) const;
 };
 
 bool operator==(Operation o0, Operation o1);

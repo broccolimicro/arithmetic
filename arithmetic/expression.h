@@ -38,8 +38,7 @@ struct Expression {
 	static Expression structOf(string type, vector<Value> arr);
 	static Expression stringOf(string sval);
 	static Expression varOf(size_t index);
-	static Expression typeOf(string tag);
-	static Expression termOf(string tag);
+	static Expression labelOf(string tag);
 
 	vector<Operand> exprIndex() const;
 	const Operation *getExpr(size_t index) const;

@@ -1,6 +1,8 @@
 #include "action.h"
 #include "algorithm.h"
 
+#include <common/message.h>
+
 namespace arithmetic
 {
 
@@ -47,7 +49,7 @@ void Action::applyVars(const Mapping<int> &m) {
 
 void Action::evaluate(State &next, const State &curr, TypeSet types) const {
 	if (lvalue.isUndef()) {
-		cout << "Action::evaluate(): undef lvalue" << endl;
+		error("", "undef lvalue " + to_string(), __FILE__, __LINE__);
 		return;
 	}
 	next.svIntersect(

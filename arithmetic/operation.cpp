@@ -171,12 +171,8 @@ Operand Operand::stringOf(string sval) {
 	return Operand(Value::stringOf(sval));
 }
 
-Operand Operand::typeOf(string tag) {
-	return Operand(Value::typeOf(tag));
-}
-
-Operand Operand::termOf(string tag) {
-	return Operand(Value::termOf(tag));
+Operand Operand::labelOf(string tag) {
+	return Operand(Value::labelOf(tag));
 }
 
 Operand Operand::exprOf(size_t index) {
@@ -240,12 +236,15 @@ Operand &Operand::applyExprs(const Mapping<int> &m) {
 	return *this;
 }
 
-std::string Operand::to_string(ucs::ConstNetlist nets) const {
+std::string Operand::to_string(bool debug, ucs::ConstNetlist nets) const {
 	if (isConst()) {
-		return cnst.to_string();
+		return cnst.to_string(debug);
 	} else if (isVar()) {
 		if (nets.empty()) {
 			return "v" + ::to_string(index);
+		}
+		if (debug) {
+			return "v:" + nets.netAt(index);
 		}
 		return nets.netAt(index);
 	} else if (isExpr()) {
@@ -795,7 +794,7 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 		}
 		return (args[0].val %  args[1].val);
 	} else if (func == Operation::CALL or func == Operation::MEMBER_CALL) {
-		if (args.empty() or args[0].val.type != Value::TERM) {
+		if (args.empty() or args[0].val.type != Value::LABEL) {
 			printf("internal:%s:%d: call (()) operator expected term, found %s\n", __FILE__, __LINE__, ::to_string(args[0].val).c_str());
 			return Value::X();
 		}
@@ -812,7 +811,7 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 			return Value::X();
 		}
 
-		if (args[0].val.type == Value::TYPE) {
+		if (args[0].val.type == Value::LABEL) {
 			return cast(args[0].val.sval, args[1].val);
 		} else {
 			printf("internal:%s:%d: cast ((type)val) operator expected type, found %s\n", __FILE__, __LINE__, ::to_string(args[0].val).c_str());
@@ -829,7 +828,7 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 	} else if (func == Operation::INDEX and args.size() == 3) { // slice
 		return index(args[0], args[1].val, args[1].val);
 	} else if (func == Operation::STRUCT) { // concat arrays
-		if (args.empty() or args[0].val.type != Value::TYPE) {
+		if (args.empty() or args[0].val.type != Value::LABEL) {
 			printf("internal:%s:%d: struct ({}) operator expected string name, found %s\n", __FILE__, __LINE__, ::to_string(args[0].val).c_str());
 			return Value::X();
 		}
@@ -1047,7 +1046,7 @@ Value Operation::evaluateConstExpr(int func, vector<Value> args, TypeSet types, 
 		}
 		return (args[0] %  args[1]);
 	} else if (func == Operation::CALL or func == Operation::MEMBER_CALL) {
-		if (args.empty() or args[0].type != Value::TERM) {
+		if (args.empty() or args[0].type != Value::LABEL) {
 			printf("internal:%s:%d: call (()) operator expected term, found %s\n", __FILE__, __LINE__, ::to_string(args[0]).c_str());
 			return Value::X();
 		}
@@ -1064,7 +1063,7 @@ Value Operation::evaluateConstExpr(int func, vector<Value> args, TypeSet types, 
 			return Value::X();
 		}
 
-		if (args[0].type == Value::TYPE) {
+		if (args[0].type == Value::LABEL) {
 			return cast(args[0].sval, args[1]);
 		} else {
 			printf("internal:%s:%d: cast ((type)val) operator expected type, found %s\n", __FILE__, __LINE__, ::to_string(args[0]).c_str());
@@ -1081,7 +1080,7 @@ Value Operation::evaluateConstExpr(int func, vector<Value> args, TypeSet types, 
 	} else if (func == Operation::INDEX and args.size() == 3) { // slice
 		return index(args[0], args[1], args[1]);
 	} else if (func == Operation::STRUCT) { // concat arrays
-		if (args.empty() or args[0].type != Value::TYPE) {
+		if (args.empty() or args[0].type != Value::LABEL) {
 			printf("internal:%s:%d: struct ({}) operator expected type name, found %s\n", __FILE__, __LINE__, ::to_string(args[0]).c_str());
 			return Value::X();
 		}
@@ -1270,7 +1269,7 @@ void Operation::tidy() {
 	}
 }
 
-std::string Operation::to_string(ucs::ConstNetlist nets) const {
+std::string Operation::to_string(bool debug, ucs::ConstNetlist nets) const {
 	std::string result;
 	result += "e" + ::to_string(exprIndex) + " = ";
 	Operator op;
@@ -1283,7 +1282,7 @@ std::string Operation::to_string(ucs::ConstNetlist nets) const {
 
 	result += op.prefix;
 	if (not operands.empty()) {
-		result += operands[0].to_string(nets);
+		result += operands[0].to_string(debug, nets);
 	}
 
 	if (not op.trigger.empty()) {
@@ -1296,7 +1295,7 @@ std::string Operation::to_string(ucs::ConstNetlist nets) const {
 		if (i != 1) {
 			result += op.infix;
 		}
-		result += operands[i].to_string(nets);
+		result += operands[i].to_string(debug, nets);
 	}
 	result += op.postfix;
 	result += "  (" + ::to_string(func) + ")";

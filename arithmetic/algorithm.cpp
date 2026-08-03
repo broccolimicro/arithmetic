@@ -417,10 +417,10 @@ bool operator!=(const PostOrderDFSIterator &i0, const PostOrderDFSIterator &i1) 
 string to_string(ConstOperationSet ops, Operand top, bool debug, ucs::ConstNetlist symbols) {
 	string result;
 	if (debug) {
-		result += "top: " + top.to_string(symbols) + "\n";
+		result += "top: " + top.to_string(debug, symbols) + "\n";
 		vector<Operand> idx = ops.exprIndex();
 		for (auto i = idx.rbegin(); i != idx.rend(); i++) {
-			result += ops.getExpr(i->index)->to_string(symbols) + "\n";
+			result += ops.getExpr(i->index)->to_string(debug, symbols) + "\n";
 		}
 	} else {
 		index_vector<string> strs;
@@ -431,7 +431,7 @@ string to_string(ConstOperationSet ops, Operand top, bool debug, ucs::ConstNetli
 				if (i->operands[j].isExpr()) {
 					sub += strs[i->operands[j].index];
 				} else {
-					sub += i->operands[j].to_string(symbols);
+					sub += i->operands[j].to_string(debug, symbols);
 				}
 				if (j == 0 and not func.trigger.empty()) {
 					sub += func.trigger;
@@ -448,7 +448,7 @@ string to_string(ConstOperationSet ops, Operand top, bool debug, ucs::ConstNetli
 		if (top.isExpr()) {
 			result += strs[top.index];
 		} else {
-			result += top.to_string(symbols);
+			result += top.to_string(debug, symbols);
 		}
 	}
 	return result;

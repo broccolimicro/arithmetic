@@ -62,8 +62,7 @@ struct Value {
 		// arr stores all of the members
 		// sval stores the name of the structure type for lookup
 		STRUCT = 6,
-		TYPE   = 7,
-		TERM   = 8
+		LABEL  = 7,
 	};
 
 	enum StateType : int8_t {
@@ -99,7 +98,7 @@ struct Value {
 		// used for REAL
 		double rval;
 	};
-	// used for STRING, TYPE, TERM, STRUCT
+	// used for STRING, LABEL, STRUCT
 	string sval;
 
 	// used for ARRAY, STRUCT
@@ -125,8 +124,7 @@ struct Value {
 	static Value realOf(double rval);
 	static Value arrOf(vector<Value> arr);
 	static Value structOf(std::string name, vector<Value> arr);	
-	static Value typeOf(std::string tag);
-	static Value termOf(std::string tag);
+	static Value labelOf(std::string tag);
 
 	bool isSubsetOf(Value v) const;
 
@@ -137,7 +135,7 @@ struct Value {
 	void set(Slice slice, Value v, bool define=false);
 	Value get(Slice slice) const;
 
-	std::string to_string() const;
+	std::string to_string(bool debug=false) const;
 };
 
 struct ValRef {

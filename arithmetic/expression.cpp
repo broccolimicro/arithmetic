@@ -148,15 +148,9 @@ Expression Expression::varOf(size_t index) {
 	return result;
 }
 
-Expression Expression::typeOf(string tag) {
+Expression Expression::labelOf(string tag) {
 	Expression result;
-	result.top = Operand::typeOf(tag);
-	return result;
-}
-
-Expression Expression::termOf(string tag) {
-	Expression result;
-	result.top = Operand::termOf(tag);
+	result.top = Operand::labelOf(tag);
 	return result;
 }
 
@@ -511,32 +505,32 @@ Expression mult(vector<Expression> e0)       { Expression e; return e.push(Opera
 
 Expression memberCall(Expression recv, string funcName, vector<Expression> args) {
 	args.insert(args.begin(), recv);
-	args.insert(args.begin(), Expression::termOf(funcName));
+	args.insert(args.begin(), Expression::labelOf(funcName));
 
 	Expression result;
 	return result.push(Operation::MEMBER_CALL, result.append(args));
 }
 
 Expression memberCall(string funcName, vector<Expression> args) {
-	args.insert(args.begin(), Expression::termOf(funcName));
+	args.insert(args.begin(), Expression::labelOf(funcName));
 
 	Expression result;
 	return result.push(Operation::MEMBER_CALL, result.append(args));
 }
 
 Expression call(string funcName, vector<Expression> args) {
-	args.insert(args.begin(), Expression::termOf(funcName));
+	args.insert(args.begin(), Expression::labelOf(funcName));
 
 	Expression result;
 	return result.push(Operation::CALL, result.append(args));
 }
 
 Expression cast(string typeName, Expression e0) {
-	return e0.push(Operation::CAST, {Operand::typeOf(typeName), e0.top});
+	return e0.push(Operation::CAST, {Operand::labelOf(typeName), e0.top});
 }
 
 Expression construct(string funcName, vector<Expression> args) {
-	args.insert(args.begin(), Expression::typeOf(funcName));
+	args.insert(args.begin(), Expression::labelOf(funcName));
 
 	Expression result;
 	return result.push(Operation::STRUCT, result.append(args));

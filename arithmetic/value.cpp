@@ -138,26 +138,22 @@ bool Value::isUndef() const {
 
 bool Value::isValid() const {
 	return state == StateType::VALID
-		and type != ValType::TYPE
-		and type != ValType::TERM;
+		and type != ValType::LABEL;
 }
 
 bool Value::isNeutral() const {
 	return state == StateType::NEUTRAL
-		and type != ValType::TYPE
-		and type != ValType::TERM;
+		and type != ValType::LABEL;
 }
 
 bool Value::isUnstable() const {
 	return state == StateType::UNSTABLE
-		and type != ValType::TYPE
-		and type != ValType::TERM;
+		and type != ValType::LABEL;
 }
 
 bool Value::isUnknown() const {
 	return state == StateType::UNKNOWN
-		and type != ValType::TYPE
-		and type != ValType::TERM;
+		and type != ValType::LABEL;
 }
 
 bool Value::isTrue() const {
@@ -274,18 +270,10 @@ Value Value::structOf(std::string type, vector<Value> arr) {
 	return v;
 }
 
-Value Value::typeOf(std::string tag) {
+Value Value::labelOf(std::string tag) {
 	Value v;
 	v.state = StateType::UNKNOWN;
-	v.type = ValType::TYPE;
-	v.sval = tag;
-	return v;
-}
-
-Value Value::termOf(std::string tag) {
-	Value v;
-	v.state = StateType::UNKNOWN;
-	v.type = ValType::TERM;
+	v.type = ValType::LABEL;
 	v.sval = tag;
 	return v;
 }
@@ -446,14 +434,20 @@ Value Value::get(Slice slice) const {
 	return curr;
 }
 
-std::string Value::to_string() const {
+std::string Value::to_string(bool debug) const {
 	if (isUndef()) {
 		return "?";
 	} else if (isUnstable()) {
 		return "X";
 	} else if (isNeutral()) {
+		if (debug) {
+			return "w:gnd";
+		}
 		return "gnd";
 	} else if (type == Value::WIRE and isValid()) {
+		if (debug) {
+			return "w:vdd";
+		}
 		return "vdd";
 	} else if (isUnknown()) {
 		std::string result = "U";
@@ -471,14 +465,27 @@ std::string Value::to_string() const {
 	} else if (type == Value::STRING) {
 		return "\"" + sval + "\"";
 	} else if (type == Value::BOOL) {
+		if (debug) {
+			if (not bval) {
+				return "b:false";
+			} else if (bval) {
+				return "b:true";
+			}
+		}
 		if (not bval) {
 			return "false";
 		} else if (bval) {
 			return "true";
 		}
 	} else if (type == Value::INT) {
+		if (debug) {
+			return "i:" + ::to_string(ival);
+		}
 		return ::to_string(ival);
 	} else if (type == Value::REAL) {
+		if (debug) {
+			return "r:" + ::to_string(rval);
+		}
 		return ::to_string(rval);
 	} else if (type == Value::ARRAY) {
 		std::string result = "[";
@@ -500,9 +507,10 @@ std::string Value::to_string() const {
 		}
 		result += "}";
 		return result;
-	} else if (type == Value::TERM) {
-		return sval;
-	} else if (type == Value::TYPE) {
+	} else if (type == Value::LABEL) {
+		if (debug) {
+			return "l:" + sval;
+		}
 		return sval;
 	}
 	return "cerror(" + ::to_string(type) + ")";
@@ -526,8 +534,7 @@ ostream &operator<<(ostream &os, ValRef lval) {
 }
 
 bool areSame(Value v0, Value v1) {
-	if ((v0.type == Value::TERM and v1.type == Value::TERM and v0.sval == v1.sval)
-		or (v0.type == Value::TYPE and v1.type == Value::TYPE and v0.sval == v1.sval)
+	if ((v0.type == Value::LABEL and v1.type == Value::LABEL and v0.sval == v1.sval)
 		or (v0.state == v1.state and (not v0.isValid()
 		or (v0.type == Value::WIRE and v1.type == Value::WIRE)
 		or (v0.type == Value::BOOL and v1.type == Value::BOOL and v0.bval == v1.bval)
@@ -570,16 +577,14 @@ int order(Value v0, Value v1) {
 			or (v0.type == Value::INT and v1.type == Value::INT and v0.ival < v1.ival)
 			or (v0.type == Value::REAL and v1.type == Value::REAL and v0.rval < v1.rval)
 			or (v0.type == Value::STRING and v1.type == Value::STRING and v0.sval < v1.sval)
-			or (v0.type == Value::TERM and v1.type == Value::TERM and v0.sval < v1.sval)
-			or (v0.type == Value::TYPE and v1.type == Value::TYPE and v0.sval < v1.sval)
+			or (v0.type == Value::LABEL and v1.type == Value::LABEL and v0.sval < v1.sval)
 		) {
 			return -1;
 		} else if ((v0.type == Value::BOOL and v1.type == Value::BOOL and v0.bval > v1.bval)
 			or (v0.type == Value::INT and v1.type == Value::INT and v0.ival > v1.ival)
 			or (v0.type == Value::REAL and v1.type == Value::REAL and v0.rval > v1.rval)
 			or (v0.type == Value::STRING and v1.type == Value::STRING and v0.sval > v1.sval)
-			or (v0.type == Value::TERM and v1.type == Value::TERM and v0.sval > v1.sval)
-			or (v0.type == Value::TYPE and v1.type == Value::TYPE and v0.sval > v1.sval)
+			or (v0.type == Value::LABEL and v1.type == Value::LABEL and v0.sval > v1.sval)
 		) {
 			return 1;
 		}

@@ -48,8 +48,8 @@ struct Expression {
 
 	void clear();
 	void tidy();
-	void minimize(RuleSet rules=RuleSet());
-	Expression minimized(RuleSet rules=RuleSet());
+	Expression &minimize(RuleSet rules=RuleSet());
+	Expression minimized(RuleSet rules=RuleSet()) const;
 	size_t size() const;
 
 	Operand append(Expression arg);

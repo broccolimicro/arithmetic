@@ -50,7 +50,6 @@ struct Value {
 	enum ValType : int32_t {
 		UNDEF = -1,
 		WIRE = 0,
-		// can only be used to dereference a member of a structure
 		STRING = 1,
 		BOOL = 2,
 		// INT and REAL are both considered "VALID"
@@ -62,6 +61,7 @@ struct Value {
 		// arr stores all of the members
 		// sval stores the name of the structure type for lookup
 		STRUCT = 6,
+		// Used for function names and member dereferences
 		LABEL  = 7,
 	};
 

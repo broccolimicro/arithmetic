@@ -577,12 +577,14 @@ Operand extract(OperationSet expr, size_t from, vector<size_t> operands) {
 }
 
 Expression subExpr(ConstOperationSet e0, Operand top) {
-	Expression result;
-	Mapping<size_t> m(std::numeric_limits<size_t>::max(), false);
-	for (ConstUpIterator i(e0, {top}); not i.done(); ++i) {
-		m.set(i->op().index, result.pushExpr(Operation(*i).applyExprs(m)).index);
+	Expression result(top);
+	if (top.isExpr()) {
+		Mapping<size_t> m(std::numeric_limits<size_t>::max(), false);
+		for (ConstUpIterator i(e0, {top}); not i.done(); ++i) {
+			m.set(i->op().index, result.pushExpr(Operation(*i).applyExprs(m)).index);
+		}
+		result.top.applyExprs(m);
 	}
-	result.top.applyExprs(m);
 	return result;
 }
 

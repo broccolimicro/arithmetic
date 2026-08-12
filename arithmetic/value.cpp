@@ -1191,6 +1191,9 @@ Value index(Value v, Value i) {
 		}
 		printf("error: index %ld out of bounds for array of size %zu\n", (long)i.ival, v.arr.size());
 		return Value::X();
+	} else if (v.type == Value::INT and i.type == Value::INT) {
+		v.ival = (v.ival >> i.ival) & 1;
+		return v;
 	}
 	printf("error: 'operator[]' not defined for '%s' and '%s'\n", v.ctypeName(), i.ctypeName());
 	return Value::X();
@@ -1213,6 +1216,12 @@ ValRef index(ValRef v, Value i) {
 		}
 		printf("error: index %ld out of bounds for array of size %zu\n", (long)i.ival, v.val.arr.size());
 		return Value::X();
+	}  else if (v.val.type == Value::INT and i.type == Value::INT) {
+		v.val.ival = (v.val.ival >> i.ival) & 1;
+		if (not v.ref.isUndef()) {
+			v.ref.slice.index((size_t)i.ival);
+		}
+		return v;
 	}
 	printf("error: 'operator[]' not defined for '%s' and '%s'\n", v.val.ctypeName(), i.ctypeName());
 	return Value::X();
@@ -1232,6 +1241,9 @@ Value index(Value v, Value f, Value t) {
 		}
 		printf("error: range [%ld, %ld) out of bounds for array of size %zu\n", (long)f.ival, (long)t.ival, v.arr.size());
 		return Value::X(Value::ARRAY);
+	} else if (v.type == Value::INT and f.type == Value::INT and t.type == Value::INT) {
+		v.ival = (v.ival >> f.ival) & ((1 << (t.ival - f.ival))-1);
+		return v;
 	}
 	printf("error: 'operator[]' not defined for '%s', '%s', and '%s'\n", v.ctypeName(), f.ctypeName(), t.ctypeName());
 	return Value::X(Value::ARRAY);
@@ -1254,6 +1266,12 @@ ValRef index(ValRef v, Value f, Value t) {
 		}
 		printf("error: range [%ld, %ld) out of bounds for array of size %zu\n", (long)f.ival, (long)t.ival, v.val.arr.size());
 		return Value::X(Value::ARRAY);
+	} else if (v.val.type == Value::INT and f.type == Value::INT and t.type == Value::INT) {
+		v.val.ival = (v.val.ival >> f.ival) & ((1 << (t.ival - f.ival))-1);
+		if (not v.ref.isUndef()) {
+			v.ref.slice.slice((size_t)f.ival, (size_t)t.ival);
+		}
+		return v;
 	}
 	printf("error: 'operator[]' not defined for '%s', '%s', and '%s'\n", v.val.ctypeName(), f.ctypeName(), t.ctypeName());
 	return Value::X(Value::ARRAY);

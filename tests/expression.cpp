@@ -378,6 +378,24 @@ TEST(Expression, Function) {
 	cout << dut << endl;
 }
 
+TEST(Expression, Minimize) {
+	Expression a = Expression::varOf(0);
+	Expression b = Expression::varOf(1);
+	Expression c = Expression::varOf(2);
+	Expression d = Expression::varOf(3);
+
+	Expression dut = isTrue(ident(ident(a))&&ident(ident(b))&&c==d);
+	dut.tidy();
+	cout << dut.to_string(true) << endl;
+	dut.minimize();
+
+	Expression expect = isTrue(a)&isTrue(b)&isTrue(c==d);
+	expect.tidy();
+	cout << "found: " << dut.to_string(true) << endl;
+	cout << "expected: " << expect.to_string(true) << endl;
+	EXPECT_TRUE(areSame(dut, expect));
+}
+
 TEST(Expression, Apply) {
 	Expression a = Expression::varOf(0);
 	Expression b = Expression::varOf(1);

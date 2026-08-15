@@ -881,34 +881,35 @@ struct Matcher {
 	}
 };
 
+
+
 // pin - these expression IDs cannot be contained in a match except at the very
 // top of the match. These must be preserved through a replace.
 vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const RuleSet &rules, size_t count, bool fwd, bool bwd) {
 	vector<Matcher> stack;
 
 	// initialize the initial matches
-	vector<Operand> indices = ops.exprIndex();
-	for (auto i = indices.begin(); i != indices.end(); i++) {
+	for (const Operand &op : ops.exprIndex()) {
 		// search through the rules and add all of the matching starts
-		for (auto j = rules.rules.begin(); j != rules.rules.end(); j++) {
+		for (const Rule &rule : rules.rules) {
 			// map left to right
 			{
 				Matcher next(ops, rules);
-				if (next.map({*i}, j->left, true)) {
-					next.match.expr = i->index;
-					next.match.replace = j->right;
-					next.leaves.push_back(Rule(*i, j->left));
+				if (next.map({op}, rule.left, true)) {
+					next.match.expr = op.index;
+					next.match.replace = rule.right;
+					next.leaves.push_back(Rule(op, rule.left));
 					stack.push_back(next);
 				}
 			}
 
 			// map right to left
-			if (not j->directed) {
+			if (not rule.directed) {
 				Matcher next(ops, rules);
-				if (next.map({*i}, j->right, true)) {
-					next.match.expr = i->index;
-					next.match.replace = j->left;
-					next.leaves.push_back(Rule(*i, j->right));
+				if (next.map({op}, rule.right, true)) {
+					next.match.expr = op.index;
+					next.match.replace = rule.left;
+					next.leaves.push_back(Rule(op, rule.right));
 					stack.push_back(next);
 				}
 			}

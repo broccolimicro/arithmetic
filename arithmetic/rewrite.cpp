@@ -18,6 +18,11 @@ Rule::Rule(Operand left, Operand right, bool directed) {
 Rule::~Rule() {
 }
 
+ostream &operator<<(ostream &os, const Rule &r) {
+	os << r.left << (r.directed ? ">" : "=") << r.right << endl;
+	return os;
+}
+
 RuleSet::RuleSet() {
 }
 

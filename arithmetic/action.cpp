@@ -221,6 +221,9 @@ Parallel &Parallel::operator&=(const Parallel &c0) {
 }
 
 std::string Parallel::to_string(bool debug, ucs::ConstNetlist symbols) const {
+	if (actions.empty()) {
+		return "skip";
+	}
 	std::string result;
 	for (int i = 0; i < (int)actions.size(); i++) {
 		if (i != 0) {
@@ -437,6 +440,9 @@ Choice &Choice::operator|=(const Choice &c0) {
 }
 
 std::string Choice::to_string(bool debug, ucs::ConstNetlist symbols) const {
+	if (terms.empty()) {
+		return "gnd";
+	}
 	std::string result;
 	for (int i = 0; i < (int)terms.size(); i++) {
 		if (i != 0) {

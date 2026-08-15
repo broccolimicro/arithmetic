@@ -297,20 +297,14 @@ bool Operator::is(string prefix, string trigger, string infix, string postfix) c
 }
 
 string Operator::to_string() const {
-	string result;
+	string result = prefix + "a";
 	if (not trigger.empty()) {
-		result = "a" + trigger;
-		if (not infix.empty()) {
-			result += infix + "b";
-		}
-		result += postfix;
-	} else {
-		result += prefix + "a";
-		if (not infix.empty()) {
-			result += infix + "b";
-		}
-		result += postfix;
+		result += trigger + "b";
 	}
+	if (not infix.empty()) {
+		result += infix + (trigger.empty() ? "b" : "c");
+	}
+	result += postfix;
 	return result;
 }
 
@@ -391,8 +385,8 @@ void Operation::loadOperators() {
 		set(OpType::ADD, Operator("", "", "+", "", Operator::COMMUTATIVE));
 		set(OpType::SUBTRACT, Operator("", "", "-", ""));
 		set(OpType::MULTIPLY, Operator("", "", "*", "", Operator::COMMUTATIVE));
-		set(OpType::DIVIDE, Operator("", "", "/", ""));
-		set(OpType::MOD, Operator("", "", "%", ""));
+		set(OpType::INTDIV, Operator("", "", "/", ""));
+		set(OpType::INTMOD, Operator("", "", "%", ""));
 
 		set(OpType::MEMBER_CALL, Operator("", "(", ",", ")"));
 		set(OpType::CALL, Operator("", "(", ",", ")"));
@@ -405,7 +399,7 @@ void Operation::loadOperators() {
 		set(OpType::MEMBER, Operator("", ".", "", ""));
 
 		//printf("loaded %d operators\n", (int)Operation::operators.size());
-	} 
+	}
 }
 
 pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
@@ -516,7 +510,7 @@ pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
 			if (ovr[0] > 0.0) {
 				cost += ovr[0];
 			}
-			
+
 			result.width = ovr[1];
 			if (args[i].coeff < result.coeff) {
 				result.coeff = args[i].coeff;
@@ -540,7 +534,7 @@ pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
 		}
 		result.delay += result.width;
 		return {result, cost};
-	} else if (func == Operation::DIVIDE or func == Operation::MOD) { // modulus "%"
+	} else if (func == Operation::INTDIV or func == Operation::INTMOD) { // modulus "%"
 		// TODO(edward.bingham) I'm really not sure about this
 		result = args[0];
 		cost = 0.0;
@@ -751,7 +745,7 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 			return args[0];
 		}
 		return (args[0].val << args[1].val);
-	} else if (func == Operation::SHIFT_RIGHT) { 
+	} else if (func == Operation::SHIFT_RIGHT) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
@@ -783,12 +777,12 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 			result = result * args[i].val;
 		}
 		return result;
-	} else if (func == Operation::DIVIDE) { 
+	} else if (func == Operation::INTDIV) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0].val /  args[1].val);
-	} else if (func == Operation::MOD) { 
+	} else if (func == Operation::INTMOD) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
@@ -845,7 +839,7 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 			printf("internal:%s:%d: '.' operator expected string name, found %s\n", __FILE__, __LINE__, ::to_string(args[1].val).c_str());
 			return Value::X();
 		}
-			
+
 		return member(args[0], args[1].val, types);
 	}
 	printf("internal:%s:%d: function %d not implemented\n", __FILE__, __LINE__, func);
@@ -1003,7 +997,7 @@ Value Operation::evaluateConstExpr(int func, vector<Value> args, TypeSet types, 
 			return args[0];
 		}
 		return (args[0] << args[1]);
-	} else if (func == Operation::SHIFT_RIGHT) { 
+	} else if (func == Operation::SHIFT_RIGHT) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
@@ -1035,12 +1029,12 @@ Value Operation::evaluateConstExpr(int func, vector<Value> args, TypeSet types, 
 			result = result * args[i];
 		}
 		return result;
-	} else if (func == Operation::DIVIDE) { 
+	} else if (func == Operation::INTDIV) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
 		return (args[0] /  args[1]);
-	} else if (func == Operation::MOD) { 
+	} else if (func == Operation::INTMOD) {
 		if (args.size() == 1u) {
 			return args[0];
 		}
@@ -1097,7 +1091,7 @@ Value Operation::evaluateConstExpr(int func, vector<Value> args, TypeSet types, 
 			printf("internal:%s:%d: '.' operator expected string name, found %s\n", __FILE__, __LINE__, ::to_string(args[1]).c_str());
 			return Value::X();
 		}
-			
+
 		return member(args[0], args[1], types);
 	}
 	printf("internal:%s:%d: function %d not implemented\n", __FILE__, __LINE__, func);
@@ -1167,7 +1161,7 @@ void Operation::propagate(State &result, const State &global, vector<ValRef> &ex
 				operands[i].set(result, expressions, Value::U(v.type));
 			}
 		}
-	} 
+	}
 }
 
 Operation &Operation::applyVars(const Mapping<size_t> &m) {
@@ -1304,7 +1298,7 @@ std::string Operation::to_string(bool debug, ucs::ConstNetlist nets) const {
 
 
 bool operator==(Operation o0, Operation o1) {
-	if (o0.func != o1.func or 
+	if (o0.func != o1.func or
 		o0.operands.size() != o1.operands.size()) {
 		return false;
 	}

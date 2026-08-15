@@ -16,6 +16,8 @@ struct Rule {
 	bool directed;
 };
 
+ostream &operator<<(ostream &os, const Rule &r);
+
 struct RuleSet {
 	RuleSet();
 	RuleSet(std::initializer_list<Expression> lst);

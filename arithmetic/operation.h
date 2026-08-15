@@ -109,12 +109,15 @@ bool operator!=(Operator o0, Operator o1);
 struct Operation {
 	enum OpType : int {
 		UNDEF = -1,
+
+		// Wire operations
 		VALIDITY,
 		WIRE_NOT,
 		WIRE_OR,
 		WIRE_AND,
 		WIRE_XOR,
-		
+
+		// Boolean operations
 		TRUTHINESS,
 		BOOLEAN_NOT,
 		BOOLEAN_OR,
@@ -130,22 +133,26 @@ struct Operation {
 		NEGATIVE,
 		TERNARY,
 
+		// Field operations
 		IDENTITY,
 		NEGATION,
 		INVERSE,
+		ADD,
+		MULTIPLY,
 
+		// Integer operations
 		SHIFT_LEFT,
 		SHIFT_RIGHT,
-		ADD,
 		SUBTRACT,
-		MULTIPLY,
-		DIVIDE,
-		MOD,
+		INTDIV,
+		INTMOD,
 
+		// Type operations
 		CALL,
 		MEMBER_CALL,
 		CAST,
 
+		// Group operations
 		ARRAY,
 		INDEX,
 

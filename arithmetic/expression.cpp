@@ -426,9 +426,9 @@ Expression isTrue(Expression e)     { return e.push(Operation::TRUTHINESS,  {e.t
 Expression isNegative(Expression e) { return e.push(Operation::NEGATIVE,    {e.top}); }
 Expression operator!(Expression e)  { return e.push(Operation::BOOLEAN_NOT, {e.top}); }
 Expression inv(Expression e)        { return e.push(Operation::INVERSE,     {e.top}); }
-Expression operator|(Expression e0, Expression e1) { return e0.push(Operation::WIRE_OR,   {e0.top, e0.append(e1)}); }
-Expression operator&(Expression e0, Expression e1) { return e0.push(Operation::WIRE_AND,   {e0.top, e0.append(e1)}); }
-Expression operator^ (Expression e0, Expression e1) { return e0.push(Operation::WIRE_XOR,   {e0.top, e0.append(e1)}); }
+Expression operator|(Expression e0, Expression e1) { return e0.push(Operation::WIRE_OR,        {e0.top, e0.append(e1)}); }
+Expression operator&(Expression e0, Expression e1) { return e0.push(Operation::WIRE_AND,       {e0.top, e0.append(e1)}); }
+Expression operator^ (Expression e0, Expression e1) { return e0.push(Operation::WIRE_XOR,      {e0.top, e0.append(e1)}); }
 Expression booleanXor(Expression e0, Expression e1) { return e0.push(Operation::BOOLEAN_XOR,   {e0.top, e0.append(e1)}); }
 Expression operator==(Expression e0, Expression e1) { return e0.push(Operation::EQUAL,         {e0.top, e0.append(e1)}); }
 Expression operator!=(Expression e0, Expression e1) { return e0.push(Operation::NOT_EQUAL,     {e0.top, e0.append(e1)}); }
@@ -441,13 +441,13 @@ Expression operator>>(Expression e0, Expression e1) { return e0.push(Operation::
 Expression operator+ (Expression e0, Expression e1) { return e0.push(Operation::ADD,           {e0.top, e0.append(e1)}); }
 Expression operator- (Expression e0, Expression e1) { return e0.push(Operation::SUBTRACT,      {e0.top, e0.append(e1)}); }
 Expression operator* (Expression e0, Expression e1) { return e0.push(Operation::MULTIPLY,      {e0.top, e0.append(e1)}); }
-Expression operator/ (Expression e0, Expression e1) { return e0.push(Operation::DIVIDE,        {e0.top, e0.append(e1)}); }
-Expression operator% (Expression e0, Expression e1) { return e0.push(Operation::MOD,           {e0.top, e0.append(e1)}); }
-Expression operator&& (Expression e0, Expression e1) { return e0.push(Operation::BOOLEAN_AND,   {e0.top, e0.append(e1)}); }
-Expression operator|| (Expression e0, Expression e1) { return e0.push(Operation::BOOLEAN_OR,    {e0.top, e0.append(e1)}); }
-Expression operator|| (Expression e0, Operand e1) { return e0.push(Operation::BOOLEAN_OR,    {e0.top, e1}); }
-Expression operator&& (Expression e0, Operand e1) { return e0.push(Operation::BOOLEAN_AND,   {e0.top, e1}); }
-Expression operator^ (Expression e0, Operand e1) { return e0.push(Operation::WIRE_XOR,   {e0.top, e1}); }
+Expression operator/ (Expression e0, Expression e1) { return e0.push(Operation::INTDIV,        {e0.top, e0.append(e1)}); }
+Expression operator% (Expression e0, Expression e1) { return e0.push(Operation::INTMOD,        {e0.top, e0.append(e1)}); }
+Expression operator&& (Expression e0, Expression e1) { return e0.push(Operation::BOOLEAN_AND,  {e0.top, e0.append(e1)}); }
+Expression operator|| (Expression e0, Expression e1) { return e0.push(Operation::BOOLEAN_OR,   {e0.top, e0.append(e1)}); }
+Expression operator|| (Expression e0, Operand e1) { return e0.push(Operation::BOOLEAN_OR,   {e0.top, e1}); }
+Expression operator&& (Expression e0, Operand e1) { return e0.push(Operation::BOOLEAN_AND,  {e0.top, e1}); }
+Expression operator^ (Expression e0, Operand e1) { return e0.push(Operation::WIRE_XOR,      {e0.top, e1}); }
 Expression booleanXor(Expression e0, Operand e1) { return e0.push(Operation::BOOLEAN_XOR,   {e0.top, e1}); }
 Expression operator==(Expression e0, Operand e1) { return e0.push(Operation::EQUAL,         {e0.top, e1}); }
 Expression operator!=(Expression e0, Operand e1) { return e0.push(Operation::NOT_EQUAL,     {e0.top, e1}); }
@@ -460,13 +460,13 @@ Expression operator>>(Expression e0, Operand e1) { return e0.push(Operation::SHI
 Expression operator+ (Expression e0, Operand e1) { return e0.push(Operation::ADD,           {e0.top, e1}); }
 Expression operator- (Expression e0, Operand e1) { return e0.push(Operation::SUBTRACT,      {e0.top, e1}); }
 Expression operator* (Expression e0, Operand e1) { return e0.push(Operation::MULTIPLY,      {e0.top, e1}); }
-Expression operator/ (Expression e0, Operand e1) { return e0.push(Operation::DIVIDE,        {e0.top, e1}); }
-Expression operator% (Expression e0, Operand e1) { return e0.push(Operation::MOD,           {e0.top, e1}); }
-Expression operator& (Expression e0, Operand e1) { return e0.push(Operation::WIRE_AND,   {e0.top, e1}); }
-Expression operator| (Expression e0, Operand e1) { return e0.push(Operation::WIRE_OR,    {e0.top, e1}); }
+Expression operator/ (Expression e0, Operand e1) { return e0.push(Operation::INTDIV,        {e0.top, e1}); }
+Expression operator% (Expression e0, Operand e1) { return e0.push(Operation::INTMOD,        {e0.top, e1}); }
+Expression operator& (Expression e0, Operand e1) { return e0.push(Operation::WIRE_AND,      {e0.top, e1}); }
+Expression operator| (Expression e0, Operand e1) { return e0.push(Operation::WIRE_OR,       {e0.top, e1}); }
 Expression operator||(Operand e0, Expression e1) { return e1.push(Operation::BOOLEAN_OR,    {e0, e1.top}); }
 Expression operator&&(Operand e0, Expression e1) { return e1.push(Operation::BOOLEAN_AND,   {e0, e1.top}); }
-Expression operator^ (Operand e0, Expression e1) { return e1.push(Operation::WIRE_XOR,   {e0, e1.top}); }
+Expression operator^ (Operand e0, Expression e1) { return e1.push(Operation::WIRE_XOR,      {e0, e1.top}); }
 Expression booleanXor(Operand e0, Expression e1) { return e1.push(Operation::BOOLEAN_XOR,   {e0, e1.top}); }
 Expression operator==(Operand e0, Expression e1) { return e1.push(Operation::EQUAL,         {e0, e1.top}); }
 Expression operator!=(Operand e0, Expression e1) { return e1.push(Operation::NOT_EQUAL,     {e0, e1.top}); }
@@ -479,10 +479,10 @@ Expression operator>>(Operand e0, Expression e1) { return e1.push(Operation::SHI
 Expression operator+ (Operand e0, Expression e1) { return e1.push(Operation::ADD,           {e0, e1.top}); }
 Expression operator- (Operand e0, Expression e1) { return e1.push(Operation::SUBTRACT,      {e0, e1.top}); }
 Expression operator* (Operand e0, Expression e1) { return e1.push(Operation::MULTIPLY,      {e0, e1.top}); }
-Expression operator/ (Operand e0, Expression e1) { return e1.push(Operation::DIVIDE,        {e0, e1.top}); }
-Expression operator% (Operand e0, Expression e1) { return e1.push(Operation::MOD,           {e0, e1.top}); }
-Expression operator& (Operand e0, Expression e1) { return e1.push(Operation::WIRE_AND,   {e0, e1.top}); }
-Expression operator| (Operand e0, Expression e1) { return e1.push(Operation::WIRE_OR,    {e0, e1.top}); }
+Expression operator/ (Operand e0, Expression e1) { return e1.push(Operation::INTDIV,        {e0, e1.top}); }
+Expression operator% (Operand e0, Expression e1) { return e1.push(Operation::INTMOD,        {e0, e1.top}); }
+Expression operator& (Operand e0, Expression e1) { return e1.push(Operation::WIRE_AND,      {e0, e1.top}); }
+Expression operator| (Operand e0, Expression e1) { return e1.push(Operation::WIRE_OR,       {e0, e1.top}); }
 
 Expression booleanOr(Expression e0)  { return e0.push(Operation::BOOLEAN_OR,  {e0.top}); }
 Expression booleanAnd(Expression e0) { return e0.push(Operation::BOOLEAN_AND, {e0.top}); }

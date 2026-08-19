@@ -397,13 +397,24 @@ Expression Expression::operator()(Expression from, Operand to) const {
 }
 
 bool areSame(Expression e0, Expression e1) {
-	if (e0.top != e1.top) {
+	if ((not e0.top.isExpr() or not e1.top.isExpr()) and e0.top != e1.top) {
 		return false;
 	}
 	auto i = ConstDownIterator(e0, {e0.top}), j = ConstDownIterator(e1, {e1.top});
 	for (; not i.done() and not j.done(); ++i, ++j) {
-		if (*i != *j) {
+		const Operation &o0 = i.get();
+		const Operation &o1 = j.get();
+
+		if (o0.func != o1.func or
+			o0.operands.size() != o1.operands.size()) {
 			return false;
+		}
+
+		for (int k = 0; k < (int)o0.operands.size(); k++) {
+			if ((not o0.operands[k].isExpr() or not o1.operands[k].isExpr())
+				and o0.operands[k] != o1.operands[k]) {
+				return false;
+			}
 		}
 	}
 	return i.done() and j.done();

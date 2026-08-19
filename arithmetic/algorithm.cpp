@@ -1,5 +1,6 @@
 #include "algorithm.h"
 
+#include <common/standard.h>
 #include <common/text.h>
 #include <common/combinatoric.h>
 #include <common/message.h>
@@ -831,6 +832,26 @@ Mapping<Operand> tidy(OperationSet expr, vector<Operand> top, bool rules) {
 // TODO(edward.bingham) look into "tree automata" and "regular tree grammar"
 // as a form of regex for trees instead of sequences.
 
+struct Leaf {
+	Operand to;
+	Operand from;
+	std::vector<size_t> sub;
+
+	Leaf(Operand to, Operand from, std::vector<size_t> sub=std::vector<size_t>()) {
+		this->to = to;
+		this->from = from;
+		this->sub = sub;
+	}
+
+	~Leaf() {
+	}
+};
+
+ostream &operator<<(ostream &os, const Leaf &leaf) {
+	os << leaf.from << ::to_string(leaf.sub) << " -> " << leaf.to;
+	return os;
+}
+
 struct Matcher {
 	Matcher(ConstOperationSet source, const RuleSet &rules) : source(source), rules(rules) {}
 	~Matcher() {}
@@ -838,7 +859,7 @@ struct Matcher {
 	ConstOperationSet source;
 	const RuleSet &rules;
 	Match match;
-	vector<Rule> leaves;
+	vector<Leaf> leaves;
 
 	bool map(vector<Operand> from, Operand to, bool top=false) {
 		if (to.isConst()) {
@@ -870,8 +891,7 @@ struct Matcher {
 				auto toExpr = rules.sub.getExpr(to.index);
 				if (not (fromExpr->func == toExpr->func
 					and (fromExpr->operands.size() == toExpr->operands.size()
-						or ((toExpr->isCommutative() or top)
-							and fromExpr->operands.size() > toExpr->operands.size())))) {
+						or (top and fromExpr->operands.size() > toExpr->operands.size())))) {
 					return false;
 				}
 			}
@@ -881,44 +901,34 @@ struct Matcher {
 	}
 };
 
-
+void tryInitialMapping(vector<Matcher> &stack, ConstOperationSet ops, const RuleSet &rules, const Operand &match, const Operand &from, const Operand &to) {
+	Matcher next(ops, rules);
+	if (next.map({match}, from, true)) {
+		next.match.expr = match.index;
+		next.match.replace = to;
+		next.leaves.push_back(Leaf(from, match));
+		stack.push_back(next);
+	}
+}
 
 // pin - these expression IDs cannot be contained in a match except at the very
 // top of the match. These must be preserved through a replace.
 vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const RuleSet &rules, size_t count, bool fwd, bool bwd) {
 	vector<Matcher> stack;
 
-	// initialize the initial matches
+	// search through the rules and add all of the matching starts
 	for (const Operand &op : ops.exprIndex()) {
-		// search through the rules and add all of the matching starts
 		for (const Rule &rule : rules.rules) {
-			// map left to right
-			{
-				Matcher next(ops, rules);
-				if (next.map({op}, rule.left, true)) {
-					next.match.expr = op.index;
-					next.match.replace = rule.right;
-					next.leaves.push_back(Rule(op, rule.left));
-					stack.push_back(next);
-				}
-			}
-
-			// map right to left
+			tryInitialMapping(stack, ops, rules, op, rule.left, rule.right); // map left to right
 			if (not rule.directed) {
-				Matcher next(ops, rules);
-				if (next.map({op}, rule.right, true)) {
-					next.match.expr = op.index;
-					next.match.replace = rule.left;
-					next.leaves.push_back(Rule(op, rule.right));
-					stack.push_back(next);
-				}
+				tryInitialMapping(stack, ops, rules, op, rule.right, rule.left); // map right to left
 			}
 		}
 	}
 
 	//cout << "Search:" << endl;
 	//for (int i = 0; i < (int)stack.size(); i++) {
-	//	cout << "Stack " << i << ": " << ::to_string(stack[i].first) << " " << stack[i].second << endl;
+	//	cout << "Stack " << i << ": " << stack[i].match << " " << ::to_string(stack[i].leaves) << endl;
 	//}
 	// Find expression matches with depth-first search
 	vector<Match> result;
@@ -926,24 +936,17 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const RuleSet &
 		Matcher curr = stack.back();
 		stack.pop_back();
 
-		Rule rule = curr.leaves.back();
+		Leaf leaf = curr.leaves.back();
 		curr.leaves.pop_back();
 
-		//cout << "Curr: " << curr << " from=" << from << " to=" << to << endl;
-		//cout << "Leaves: " << ::to_string(leaves) << endl;
+		//cout << "Curr: " << curr.match << " leaf=" << leaf << endl;
+		//cout << "Leaves: " << ::to_string(curr.leaves) << endl;
 
-		if (rule.right.isExpr()) {
-			auto fOp = ops.getExpr(rule.left.index);
-			auto tOp = rules.sub.getExpr(rule.right.index);
+		if (leaf.to.isExpr()) {
+			auto fOp = ops.getExpr(leaf.from.index);
+			auto tOp = rules.sub.getExpr(leaf.to.index);
 
-			bool foundPin = false;
-			for (auto i = fOp->operands.begin(); i != fOp->operands.end(); i++) {
-				if (i->isExpr() and find(pin.begin(), pin.end(), *i) != pin.end()) {
-					foundPin = true;
-					break;
-				}
-			}
-			if (foundPin) {
+			if (vector_intersects_unsorted(fOp->operands, pin)) {
 				continue;
 			}
 
@@ -953,39 +956,42 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const RuleSet &
 				Matcher next = curr;
 				if (next.map(fOp->operands, tOp->operands[0])) {
 					for (size_t i = 0; i < fOp->operands.size(); i++) {
-						next.leaves.push_back(Rule(fOp->operands[i], tOp->operands[0]));
-						if (next.match.top.empty()) {
+						next.leaves.push_back(Leaf(tOp->operands[0], fOp->operands[i]));
+					}
+
+					if (next.match.top.empty()) {
+						for (size_t i = 0; i < fOp->operands.size(); i++) {
 							next.match.top.push_back(i);
 						}
 					}
 					stack.push_back(next);
 				}
-			} else {
+			// TODO(edward.bingham) this is too restrictive
+			} else if (curr.match.top.empty() or fOp->operands.size() == tOp->operands.size()) {
 				//cout << "Looking for Partial Permutations" << endl;
 				for (CombinatoricIterator it(fOp->operands.size(), tOp->operands.size());
 					not it.done(); (commute ? it.nextPerm() : it.nextShift())) {
 					Matcher next = curr;
-					bool found = true;
-					bool top = next.match.top.empty();
+
 					//cout << "Looking at [";
+					bool found = true;
 					for (size_t i = 0; i < it.size() and found; i++) {
-						//cout << *i << "(" << fOp->operands[it[i]] << "==" << tOp->operands[i] << ") ";
-						next.leaves.push_back(Rule(fOp->operands[it[i]], tOp->operands[i]));
-						if (top) {
-							next.match.top.push_back(it[i]);
-						}
+						//cout << it[i] << "(" << fOp->operands[it[i]] << "==" << tOp->operands[i] << ") ";
+						next.leaves.push_back(Leaf(tOp->operands[i], fOp->operands[it[i]]));
 						found = next.map({fOp->operands[it[i]]}, tOp->operands[i]);
 					}
 					//cout << "]" << endl;
 
 					if (found) {
-						sort(next.match.top.begin(), next.match.top.end());
+						if (next.match.top.empty()) {
+							next.match.top = it.get(true);
+						}
 						stack.push_back(next);
 					}
 				}
 			}
 		} else if (curr.leaves.empty()) {
-			//cout << "Found " << curr << endl;
+			//cout << "Found " << curr.match << endl;
 			result.push_back(curr.match);
 			if (count != 0 and result.size() >= count) {
 				return result;

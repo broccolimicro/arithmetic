@@ -861,41 +861,35 @@ struct Matcher {
 	Match match;
 	vector<Leaf> leaves;
 
-	bool map(vector<Operand> from, Operand to, bool top=false) {
+	bool map(Operation fromOp, Operand to) {
 		if (to.isConst()) {
-			for (auto i = from.begin(); i != from.end(); i++) {
-				if (not i->isConst() or (not areSame(i->cnst, to.cnst) and not (i->cnst.isValid() and to.cnst.isUnknown()))) {
-					return false;
-				}
-			}
-			return true;
-		} else if (to.isVar()) {
-			auto ins = match.vars.insert({to.index, from});
-			if (ins.second) {
-				return true;
-			} else if (from.size() != ins.first->second.size()) {
+			if (fromOp.func != Operation::IDENTITY or fromOp.operands.size() != 1u) {
 				return false;
 			}
-			for (int i = 0; i < (int)from.size(); i++) {
-				if (from[i] != ins.first->second[i]) {
+			const Operand &from = fromOp.operands[0];
+			return from.isConst()
+				and (areSame(from.cnst, to.cnst)
+					or (from.cnst.isValid()
+						and to.cnst.isUnknown()));
+		} else if (to.isVar()) {
+			auto ins = match.vars.insert({to.index, fromOp});
+			return ins.second or fromOp == ins.first->second;
+		} else if (to.isExpr() and fromOp.func == Operation::IDENTITY) {
+			for (const Operand &from : fromOp.operands) {
+				if (not from.isExpr()) {
+					return false;
+				}
+				auto fromExpr = source.getExpr(from.index);
+				auto toExpr = rules.sub.getExpr(to.index);
+				if (fromExpr->func != toExpr->func
+					or fromExpr->operands.size() < toExpr->operands.size()) {
 					return false;
 				}
 			}
 			return true;
 		} else if (to.isExpr()) {
-			for (auto i = from.begin(); i != from.end(); i++) {
-				if (not i->isExpr()) {
-					return false;
-				}
-				auto fromExpr = source.getExpr(i->index);
-				auto toExpr = rules.sub.getExpr(to.index);
-				if (not (fromExpr->func == toExpr->func
-					and (fromExpr->operands.size() == toExpr->operands.size()
-						or (top and fromExpr->operands.size() > toExpr->operands.size())))) {
-					return false;
-				}
-			}
-			return true;
+			auto toExpr = rules.sub.getExpr(to.index);
+			return fromOp.func == toExpr->func and fromOp.operands.size() >= toExpr->operands.size();
 		}
 		return false;
 	}
@@ -903,7 +897,7 @@ struct Matcher {
 
 void tryInitialMapping(vector<Matcher> &stack, ConstOperationSet ops, const RuleSet &rules, const Operand &match, const Operand &from, const Operand &to) {
 	Matcher next(ops, rules);
-	if (next.map({match}, from, true)) {
+	if (next.map(match, from)) {
 		next.match.expr = match.index;
 		next.match.replace = to;
 		next.leaves.push_back(Leaf(from, match));
@@ -954,7 +948,7 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const RuleSet &
 			if (commute and tOp->operands.size() == 1u) {
 				//cout << "Elastic Commutative" << endl;
 				Matcher next = curr;
-				if (next.map(fOp->operands, tOp->operands[0])) {
+				if (next.map(Operation(Operation::IDENTITY, fOp->operands), tOp->operands[0])) {
 					for (size_t i = 0; i < fOp->operands.size(); i++) {
 						next.leaves.push_back(Leaf(tOp->operands[0], fOp->operands[i]));
 					}
@@ -966,30 +960,67 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const RuleSet &
 					}
 					stack.push_back(next);
 				}
-			// TODO(edward.bingham) this is too restrictive
-			} else if (curr.match.top.empty() or fOp->operands.size() == tOp->operands.size()) {
-				//cout << "Looking for Partial Permutations" << endl;
-				for (CombinatoricIterator it(fOp->operands.size(), tOp->operands.size());
-					not it.done(); (commute ? it.nextPerm() : it.nextShift())) {
+			} else {
+				// TODO(edward.bingham) maybe I need an operand to represent "all other operands"?
+
+				// at top, I don't need the groups to be collectively exhausive, otherwise I do
+				// if not commutative, the groups need to be consecutive/cohesive. Otherwise, they can be any order
+				// variables can always match any number of operands (a sub expr)
+				// constants can only match one operand
+				// expressions can match any number of operands, but only if commutative? otherwise, they can only match one
+
+				std::vector<size_t> lo, hi;
+				for (const Operand &op : tOp->operands) {
+					lo.push_back(1);
+					if (op.isVar() or (commute and op.isExpr())) {
+						hi.push_back(0);
+					} else {
+						hi.push_back(1);
+					}
+				}
+
+				for (PartitionIterator part(fOp->operands.size(), lo, hi, not curr.match.top.empty()); not part.done(); part.nextPart()) {
 					Matcher next = curr;
+					const auto &it = part.get();
 
 					//cout << "Looking at [";
 					bool found = true;
 					for (size_t i = 0; i < it.size() and found; i++) {
-						//cout << it[i] << "(" << fOp->operands[it[i]] << "==" << tOp->operands[i] << ") ";
-						next.leaves.push_back(Leaf(tOp->operands[i], fOp->operands[it[i]]));
-						found = next.map({fOp->operands[it[i]]}, tOp->operands[i]);
+						std::vector<Operand> fromOps;
+						//cout << ::to_string(it[i]) << "(";
+						for (size_t j = 0; j < it[i].size(); j++) {
+							//cout << fOp->operands[it[i][j]] << "==" << tOp->operands[i] << " ";
+							next.leaves.push_back(Leaf(tOp->operands[i], fOp->operands[it[i][j]]));
+							fromOps.push_back(fOp->operands[it[i][j]]);
+						}
+						//cout << ") ";
+						if (fromOps.size() == 1u) {
+							found = next.map(fromOps[0], tOp->operands[i]);
+						} else {
+							found = next.map(Operation(fOp->func, fromOps), tOp->operands[i]);
+						}
 					}
-					//cout << "]" << endl;
+					//cout << "] -> ";
 
 					if (found) {
+						//cout << "yes" << endl;
 						if (next.match.top.empty()) {
-							next.match.top = it.get(true);
+							for (size_t i = 0; i < it.size(); i++) {
+								next.match.top.insert(next.match.top.end(), it[i].begin(), it[i].end());
+							}
 						}
+						sort(next.match.top.begin(), next.match.top.end());
+						next.match.top.erase(unique(next.match.top.begin(), next.match.top.end()), next.match.top.end());
 						stack.push_back(next);
+					} else {
+						//cout << "no" << endl;
 					}
 				}
 			}
+
+
+
+
 		} else if (curr.leaves.empty()) {
 			//cout << "Found " << curr.match << endl;
 			result.push_back(curr.match);
@@ -1030,9 +1061,15 @@ void replace(OperationSet expr, const RuleSet &rules, Match match) {
 		if (match.replace.isVar()) {
 			auto v = match.vars.find(match.replace.index);
 			if (v != match.vars.end()) {
-				slot.operands.insert(
-					slot.operands.begin()+match.top[0],
-					v->second.begin(), v->second.end());
+				if (v->second.func == Operation::IDENTITY) {
+					slot.operands.insert(
+						slot.operands.begin()+match.top[0],
+						v->second.operands.begin(), v->second.operands.end());
+				} else {
+					slot.operands.insert(
+						slot.operands.begin()+match.top[0],
+						expr.pushExpr(v->second));
+				}
 			} else {
 				printf("variable not mapped\n");
 			}
@@ -1106,10 +1143,17 @@ void replace(OperationSet expr, const RuleSet &rules, Match match) {
 					auto v = match.vars.find(op->index);
 					if (v != match.vars.end()) {
 						// TODO(edward.bingham) copy the expression for every combination of variables?
-						slot.operands.insert(
-							slot.operands.begin()+ins,
-							v->second.begin(), v->second.end());
-						ins += v->second.size();
+						if (v->second.func == Operation::IDENTITY) {
+							slot.operands.insert(
+								slot.operands.begin()+ins,
+								v->second.operands.begin(), v->second.operands.end());
+							ins += v->second.operands.size();
+						} else {
+							slot.operands.insert(
+								slot.operands.begin()+ins,
+								expr.pushExpr(v->second));
+							++ins;
+						}
 					} else {
 						printf("variable not mapped\n");
 					}
@@ -1202,4 +1246,3 @@ Mapping<Operand> minimize(OperationSet expr, vector<Operand> top, RuleSet rules)
 }*/
 
 }
-

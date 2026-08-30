@@ -331,6 +331,11 @@ Operation::Operation(int func, vector<Operand> args, size_t exprIndex) {
 	set(func, args);
 }
 
+Operation::Operation(Operand arg, size_t exprIndex) {
+	this->exprIndex = exprIndex;
+	set(IDENTITY, {arg});
+}
+
 Operation::~Operation() {
 }
 

@@ -138,7 +138,7 @@ struct Match {
 	vector<size_t> top;
 
 	// map variable index to Operand in this
-	map<size_t, vector<Operand> > vars;
+	map<size_t, Operation> vars;
 };
 
 ostream &operator<<(ostream &os, Match m);

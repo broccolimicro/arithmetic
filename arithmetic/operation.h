@@ -162,6 +162,7 @@ struct Operation {
 
 	Operation();
 	Operation(int func, vector<Operand> args, size_t exprIndex=std::numeric_limits<size_t>::max());
+	Operation(Operand arg, size_t exprIndex=std::numeric_limits<size_t>::max());
 	~Operation();
 
 	static Operation undef(size_t exprIndex=std::numeric_limits<size_t>::max());

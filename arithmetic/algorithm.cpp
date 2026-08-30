@@ -1017,10 +1017,6 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const RuleSet &
 					}
 				}
 			}
-
-
-
-
 		} else if (curr.leaves.empty()) {
 			//cout << "Found " << curr.match << endl;
 			result.push_back(curr.match);
@@ -1101,6 +1097,13 @@ void replace(OperationSet expr, const RuleSet &rules, Match match) {
 		// Iterate over the replacement expression
 		map<size_t, size_t> exprMap;
 		for (auto curr = ConstDownIterator(rules.sub, {match.replace}); not curr.done(); ++curr) {
+			// TODO(edward.bingham) to support elastic operations (wireAnd, booleanAnd, etc):
+			//  1. Identify and remember the most recent elastic operation in the replacement rule, assume there cannot be elastic operation inside elastic operation in the replacement rule
+			//  2. If we encounter an elastic operation in the replacement rule, pre-walk the replacement rule and identify all variables
+			//  3. Lookup those variables and create the appropriate Lattice Iterator, we'll be mapping a single expression in the replacement rule to all of the iterations of the lattice
+			//  4. Create those operations and insert them into the exprMap, for each operation, also keep track of the variable assignments
+			//  5. When exprMap has more than one entry, replicate the replacement across the operations.
+
 			// Along the way, compute the exprIndex mapping
 			auto pos = exprMap.insert({curr->exprIndex, 0});
 			if (pos.second) {

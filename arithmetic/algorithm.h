@@ -137,7 +137,7 @@ struct Match {
 	// operand, but in the commutative cases, it'll only be specific operands.
 	vector<size_t> top;
 
-	// map variable index to Operand in this
+	// map variable index in the replacement rule to Operation in searched expression
 	map<size_t, Operation> vars;
 };
 

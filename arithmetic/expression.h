@@ -45,6 +45,7 @@ struct Expression {
 	bool setExpr(Operation o);
 	Operand pushExpr(Operation o);
 	bool eraseExpr(size_t index);
+	Mapping<size_t> appendExpr(ConstOperationSet expr);
 
 	void clear();
 	void tidy();

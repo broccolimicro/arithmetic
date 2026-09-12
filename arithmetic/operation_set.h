@@ -7,16 +7,17 @@
 
 namespace arithmetic {
 
+_CONST_INTERFACE_ARG(ConstOperationSet,
+	(vector<Operand>, exprIndex, () const, ()),
+	(const Operation *, getExpr, (size_t index) const, (index)));
+
 _INTERFACE_ARG(OperationSet,
 	(vector<Operand>, exprIndex, () const, ()),
 	(const Operation *, getExpr, (size_t index) const, (index)),
 	(bool, setExpr, (Operation o), (o)),
 	(Operand, pushExpr, (Operation o), (o)),
-	(bool, eraseExpr, (size_t index), (index)));
-
-_CONST_INTERFACE_ARG(ConstOperationSet,
-	(vector<Operand>, exprIndex, () const, ()),
-	(const Operation *, getExpr, (size_t index) const, (index)));
+	(bool, eraseExpr, (size_t index), (index)),
+	(Mapping<size_t>, appendExpr, (ConstOperationSet expr), (expr)));
 
 struct SimpleOperationSet {
 	SimpleOperationSet();
@@ -30,7 +31,7 @@ struct SimpleOperationSet {
 	Operand pushExpr(Operation o);
 	bool eraseExpr(size_t index);
 
-	Mapping<size_t> append(ConstOperationSet arg, vector<Operand> top);
+	Mapping<size_t> appendExpr(ConstOperationSet expr);
 
 	void clear();
 	size_t size() const;

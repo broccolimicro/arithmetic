@@ -32,7 +32,7 @@ RuleSet::RuleSet(std::initializer_list<Expression> lst) {
 			continue;
 		}
 
-		Operation rule = *sub.getExpr(sub.append(e->sub, {e->top}).map(e->top.index));
+		Operation rule = *sub.getExpr(sub.appendExpr(e->sub).map(e->top.index));
 		if (rule.func == Operation::EQUAL) {
 			rules.push_back(Rule(rule.operands[0], rule.operands[1], false));
 		} else if (rule.func == Operation::GREATER) {
@@ -73,7 +73,7 @@ vector<Operand> RuleSet::top() const {
 }
 
 RuleSet &RuleSet::operator+=(const RuleSet &r1) {
-	Mapping<size_t> m = sub.append(r1.sub, r1.top());
+	Mapping<size_t> m = sub.appendExpr(r1.sub);
 	for (int i = 0; i < (int)r1.rules.size(); i++) {
 		Rule r = r1.rules[i];
 		r.left.applyExprs(m);

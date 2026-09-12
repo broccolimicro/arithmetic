@@ -41,10 +41,14 @@ bool SimpleOperationSet::eraseExpr(size_t index) {
 	return elems.erase(index);
 }
 
-Mapping<size_t> SimpleOperationSet::append(ConstOperationSet arg, vector<Operand> top) {
+Mapping<size_t> SimpleOperationSet::appendExpr(ConstOperationSet expr) {
 	Mapping<size_t> m(std::numeric_limits<size_t>::max(), false);
-	for (ConstUpIterator i(arg, top); not i.done(); ++i) {
-		m.set(i->op().index, pushExpr(Operation(*i).applyExprs(m)).index);
+	for (auto i : expr.exprIndex()) {
+		m.set(i.index, pushExpr(*expr.getExpr(i.index)).index);
+	}
+
+	for (const auto &[key, value] : m.fwd) {
+		elems[value].applyExprs(m);
 	}
 	return m;
 }

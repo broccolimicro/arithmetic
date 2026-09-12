@@ -174,6 +174,10 @@ bool Expression::eraseExpr(size_t index) {
 	return sub.eraseExpr(index);
 }
 
+Mapping<size_t> Expression::appendExpr(ConstOperationSet expr) {
+	return sub.appendExpr(expr);
+}
+
 void Expression::clear() {
 	sub.clear();
 	top = Operand::undef();
@@ -184,7 +188,7 @@ size_t Expression::size() const {
 }
 
 Operand Expression::append(Expression arg) {
-	return arg.top.applyExprs(sub.append(arg.sub, {arg.top}));
+	return arg.top.applyExprs(sub.appendExpr(arg.sub));
 }
 
 vector<Operand> Expression::append(vector<Expression> arg) {

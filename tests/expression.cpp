@@ -549,3 +549,18 @@ TEST(Expression, ConstantFolding) {
 	EXPECT_TRUE(areSame(b, False)) << b << " != " << False << endl;
 }
 
+TEST(Expression, Substitute) {
+	Expression a = Expression::varOf(0);
+	Expression b = Expression::varOf(1);
+	Expression c = Expression::varOf(2);
+	Expression d = Expression::varOf(3);
+	Expression e = Expression::varOf(4);
+	Expression f = Expression::varOf(5);
+
+	Expression reality = a+b+c;
+	substitute(reality, {b.top.index, c.top.index}, {d-e, f});
+	Expression expected = a + (d-e) + f;
+	EXPECT_TRUE(areSame(reality, expected));
+	cout << reality << "... vs ..." << endl << expected << endl;
+}
+

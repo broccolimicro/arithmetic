@@ -655,6 +655,49 @@ Expression popMember(OperationSet e0, Operand top) {
 	return Expression();
 }
 
+// used to replace variables with their encodings during synthesis
+void substitute(OperationSet expr, std::vector<size_t> from, std::vector<Expression> to) {
+	Mapping<Operand> map(Operand::undef(), false);
+	for (auto operand : expr.exprIndex()) {
+		Operation operation = *expr.getExpr(operand.index);
+		bool modified = false;
+
+		for (auto &arg : operation.operands) {
+			if (not arg.isVar()) {
+				continue;
+			}
+
+			Operand op = map.map(arg);
+			if (not op.isUndef()) {
+				arg = op;
+				modified = true;
+				continue;
+			}
+
+			auto pos = find(from.begin(), from.end(), arg.index);
+			if (pos == from.end()) {
+				continue;
+			}
+
+			size_t index = pos - from.begin();
+			if (not to[index].top.isExpr()) {
+				arg = to[index].top;
+				modified = true;
+				continue;
+			}
+
+			Mapping<size_t> result = expr.appendExpr(to[index]);
+			arg = Operand::exprOf(result.map(to[index].top.index));
+			modified = true;
+		}
+
+
+		if (modified) {
+			expr.setExpr(operation);
+		}
+	}
+}
+
 // tidy() does a few things:
 // 1. propagate constants
 // 2. remove reflexive operations

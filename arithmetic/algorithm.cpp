@@ -714,7 +714,7 @@ void substituteConst(OperationSet expr, Expression to) {
 		bool modified = false;
 
 		for (auto &arg : operation.operands) {
-			if (not arg.isConst()) {
+			if (not arg.isConst() or arg.cnst.type == Value::LABEL) {
 				continue;
 			}
 

@@ -219,7 +219,7 @@ RuleSet rewriteSimple() {
 		isTrue(a||b) > (isTrue(a)|isTrue(b)),
 		isTrue(a&b) > (a&b),
 		isTrue(a|b) > (a|b),
-	
+
 		// Simplify boolean expressions
 		(!(!a)) > (cast("bool", a)),
 		(cast("bool", !a)) > (!a),

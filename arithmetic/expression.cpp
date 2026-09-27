@@ -400,6 +400,42 @@ Expression Expression::operator()(Expression from, Operand to) const {
 	return e.push(Operation::INDEX, {e.top, e.append(from), to});
 }
 
+Expression &Expression::substitute(std::vector<size_t> from, std::vector<Expression> to) {
+	arithmetic::substitute(*this, from, to);
+	if (not top.isVar()) {
+		return *this;
+	}
+
+	auto pos = find(from.begin(), from.end(), top.index);
+	if (pos == from.end()) {
+		return *this;
+	}
+
+	size_t index = pos - from.begin();
+	if (not to[index].top.isExpr()) {
+		top = to[index].top;
+		return *this;
+	}
+
+	Mapping<size_t> result = appendExpr(to[index]);
+	top = Operand::exprOf(result.map(to[index].top.index));
+	return *this;
+}
+
+Expression &Expression::substituteConst(Expression to) {
+	arithmetic::substituteConst(*this, to);
+	if (top.isConst()) {
+		Expression toCopy = replaceUnknown(to, top);
+		if (not toCopy.top.isExpr()) {
+			top = toCopy.top;
+		} else {
+			Mapping<size_t> result = appendExpr(toCopy);
+			top = Operand::exprOf(result.map(toCopy.top.index));
+		}
+	}
+	return *this;
+}
+
 bool areSame(Expression e0, Expression e1) {
 	if ((not e0.top.isExpr() or not e1.top.isExpr()) and e0.top != e1.top) {
 		return false;
@@ -549,6 +585,10 @@ Expression construct(string funcName, vector<Expression> args) {
 
 	Expression result;
 	return result.push(Operation::STRUCT, result.append(args));
+}
+
+Expression member(Expression e0, string memberName) {
+	return e0.push(Operation::MEMBER, {e0.top, Operand::labelOf(memberName)});
 }
 
 int passesGuard(const State &encoding, const State &global, const Expression &guard, State *total) {

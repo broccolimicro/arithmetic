@@ -840,7 +840,7 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 		if (args.size() != 2u) {
 			printf("internal:%s:%d: '.' operator expects 2 arguments, found %zu\n", __FILE__, __LINE__, args.size());
 			return Value::X();
-		} else if (args[1].val.type != Value::STRING) {
+		} else if (args[1].val.type != Value::LABEL) {
 			printf("internal:%s:%d: '.' operator expected string name, found %s\n", __FILE__, __LINE__, ::to_string(args[1].val).c_str());
 			return Value::X();
 		}
@@ -1092,7 +1092,7 @@ Value Operation::evaluateConstExpr(int func, vector<Value> args, TypeSet types, 
 		if (args.size() != 2u) {
 			printf("internal:%s:%d: '.' operator expects 2 arguments, found %zu\n", __FILE__, __LINE__, args.size());
 			return Value::X();
-		} else if (args[1].type != Value::STRING) {
+		} else if (args[1].type != Value::LABEL) {
 			printf("internal:%s:%d: '.' operator expected string name, found %s\n", __FILE__, __LINE__, ::to_string(args[1]).c_str());
 			return Value::X();
 		}
@@ -1239,6 +1239,14 @@ void Operation::tidy() {
 				return a.type < b.type or (a.type == b.type
 					and a.isVar() and a.index < b.index);
 			});
+	}
+
+	if (func == Operation::TERNARY
+		or func == Operation::CALL
+		or func == Operation::MEMBER_CALL
+		or func == Operation::ARRAY
+		or func == Operation::STRUCT) {
+		return;
 	}
 
 	// merge adjacent constants from left to right as a result of operator precedence

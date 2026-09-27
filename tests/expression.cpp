@@ -558,8 +558,20 @@ TEST(Expression, Substitute) {
 	Expression f = Expression::varOf(5);
 
 	Expression reality = a+b+c;
-	substitute(reality, {b.top.index, c.top.index}, {d-e, f});
+	reality.substitute({b.top.index, c.top.index}, {d-e, f});
 	Expression expected = a + (d-e) + f;
+	EXPECT_TRUE(areSame(reality, expected));
+	cout << reality << "... vs ..." << endl << expected << endl;
+
+	reality = a;
+	reality.substitute({a.top.index}, {d});
+	expected = d;
+	EXPECT_TRUE(areSame(reality, expected));
+	cout << reality << "... vs ..." << endl << expected << endl;
+
+	reality = (a + 32)/b;
+	reality.substituteConst(d/Expression::U());
+	expected = (a + d/32)/b;
 	EXPECT_TRUE(areSame(reality, expected));
 	cout << reality << "... vs ..." << endl << expected << endl;
 }

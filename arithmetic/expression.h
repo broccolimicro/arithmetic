@@ -79,6 +79,9 @@ struct Expression {
 	Expression operator()(Operand from, Operand to) const;
 	Expression operator()(Operand from, Expression to) const;
 	Expression operator()(Expression from, Operand to) const;
+
+	Expression &substitute(std::vector<size_t> from, std::vector<Expression> to);
+	Expression &substituteConst(Expression to);
 };
 
 bool areSame(Expression e0, Expression e1);
@@ -178,6 +181,7 @@ Expression memberCall(string funcName, vector<Expression> args);
 Expression call(string funcName, vector<Expression> args);
 Expression cast(string typeName, Expression e0);
 Expression construct(string typeName, vector<Expression> args);
+Expression member(Expression e0, string memberName);
 
 int passesGuard(const State &encoding, const State &global, const Expression &guard, State *total);
 Expression weakestGuard(const Expression &guard, const Expression &exclude);

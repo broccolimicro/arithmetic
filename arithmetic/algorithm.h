@@ -156,6 +156,8 @@ Expression subExpr(ConstOperationSet e0, Operand top);
 bool isMember(ConstOperationSet e0, Operand top);
 Expression popMember(OperationSet e0, Operand top);
 void substitute(OperationSet expr, std::vector<size_t> from, std::vector<Expression> to);
+Expression replaceUnknown(Expression from, Operand value);
+void substituteConst(OperationSet expr, Expression to);
 
 Mapping<Operand> tidy(OperationSet expr, vector<Operand> top, bool rules=false);
 

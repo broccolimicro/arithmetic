@@ -657,20 +657,12 @@ Expression popMember(OperationSet e0, Operand top) {
 
 // used to replace variables with their encodings during synthesis
 void substitute(OperationSet expr, std::vector<size_t> from, std::vector<Expression> to) {
-	Mapping<Operand> map(Operand::undef(), false);
 	for (auto operand : expr.exprIndex()) {
 		Operation operation = *expr.getExpr(operand.index);
 		bool modified = false;
 
 		for (auto &arg : operation.operands) {
 			if (not arg.isVar()) {
-				continue;
-			}
-
-			Operand op = map.map(arg);
-			if (not op.isUndef()) {
-				arg = op;
-				modified = true;
 				continue;
 			}
 
@@ -697,6 +689,53 @@ void substitute(OperationSet expr, std::vector<size_t> from, std::vector<Express
 		}
 	}
 }
+
+// Find all "U" constants and replace them with the replaced constant
+Expression replaceUnknown(Expression from, Operand value) {
+	for (const auto &idx : from.exprIndex()) {
+		Operation op = *from.getExpr(idx.index);
+		for (auto &operand : op.operands) {
+			if (operand.isConst() and operand.cnst.isUnknown()) {
+				operand = value;
+			}
+		}
+		from.setExpr(op);
+	}
+	if (from.top.isConst() and from.top.cnst.isUnknown()) {
+		from.top = value;
+	}
+	return from;
+}
+
+// used to replace variables with their encodings during synthesis
+void substituteConst(OperationSet expr, Expression to) {
+	for (auto operand : expr.exprIndex()) {
+		Operation operation = *expr.getExpr(operand.index);
+		bool modified = false;
+
+		for (auto &arg : operation.operands) {
+			if (not arg.isConst()) {
+				continue;
+			}
+
+			Expression toCopy = replaceUnknown(to, arg);
+			if (not toCopy.top.isExpr()) {
+				arg = toCopy.top;
+				modified = true;
+				continue;
+			}
+
+			Mapping<size_t> result = expr.appendExpr(toCopy);
+			arg = Operand::exprOf(result.map(toCopy.top.index));
+			modified = true;
+		}
+
+		if (modified) {
+			expr.setExpr(operation);
+		}
+	}
+}
+
 
 // tidy() does a few things:
 // 1. propagate constants

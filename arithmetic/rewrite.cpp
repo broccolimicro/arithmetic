@@ -193,6 +193,10 @@ RuleSet rewriteSimple() {
 		(isValid(a*b)) > (a & b),
 		(~(a*b)) > (~a | ~b),
 
+		(a & isNegative(b)) > (a & isValid(b)),
+		(a | isNegative(b)) > (a | isValid(b)),
+		(isValid(isNegative(a))) > (isValid(a)),
+
 		// Simplify arithmetic expressions	
 		(a+a) > (2*a),
 		(a+(-a)) > (0),

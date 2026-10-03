@@ -162,8 +162,9 @@ void substituteConst(OperationSet expr, Expression to);
 Mapping<Operand> tidy(OperationSet expr, vector<Operand> top, bool rules=false);
 
 vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const RuleSet &rules, size_t count=0, bool fwd=true, bool bwd=true);
-void replace(OperationSet expr, const RuleSet &rules, Match token);
-Mapping<Operand> minimize(OperationSet expr, vector<Operand> top, RuleSet rules=RuleSet());
+void replace(OperationSet expr, const RuleSet &rules, Match token); 
+
+Mapping<Operand> minimize(OperationSet expr, vector<Operand> top, RuleSet rules=RuleSet(), Minimizer minimizer = nullptr);
 
 //Expression espresso(Expression expr, vector<Type> vars=vector<Type>(), Expression directed=Expression(), Expression undirected=Expression());
 

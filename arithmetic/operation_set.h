@@ -19,6 +19,8 @@ _INTERFACE_ARG(OperationSet,
 	(bool, eraseExpr, (size_t index), (index)),
 	(Mapping<size_t>, appendExpr, (ConstOperationSet expr), (expr)));
 
+using Minimizer = std::function<Mapping<Operand>(OperationSet,vector<Operand>)>;
+
 struct SimpleOperationSet {
 	SimpleOperationSet();
 	~SimpleOperationSet();

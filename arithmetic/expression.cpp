@@ -671,14 +671,14 @@ vector<int> passesConstraint(const Region &r0, const Expression &mutex) {
 	return result;
 }
 
-Expression &Expression::minimize(RuleSet rules) {
-	this->top = arithmetic::minimize(*this, {this->top}, rules).map(this->top);
+Expression &Expression::minimize(RuleSet rules, Minimizer minimizer) {
+	this->top = arithmetic::minimize(*this, {this->top}, rules, minimizer).map(this->top);
 	return *this;
 }
 
-Expression Expression::minimized(RuleSet rules) const {
+Expression Expression::minimized(RuleSet rules, Minimizer minimizer) const {
 	Expression duplicate(*this);
-	return duplicate.minimize(rules);
+	return duplicate.minimize(rules, minimizer);
 }
 
 void Expression::tidy() {

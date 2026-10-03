@@ -1260,7 +1260,7 @@ void replace(OperationSet expr, const RuleSet &rules, Match match) {
 	// cout << "after erase: " << *this << endl;
 }
 
-Mapping<Operand> minimize(OperationSet expr, vector<Operand> top, RuleSet rules) {
+Mapping<Operand> minimize(OperationSet expr, vector<Operand> top, RuleSet rules, Minimizer minimizer) {
 	static const RuleSet defaultRules = rewriteCanonical() + rewriteSimple();
 	if (rules.empty()) {
 		rules = defaultRules;
@@ -1269,17 +1269,36 @@ Mapping<Operand> minimize(OperationSet expr, vector<Operand> top, RuleSet rules)
 	//cout << "Rules: " << rules << endl;
 
 	Mapping<Operand> result(Operand::undef(), true);
-	result *= tidy(expr, top);
-	top = result.map(top);
+
+	{
+		result *= tidy(expr, top);
+		top = result.map(top);
+	}
+
+	if (minimizer) {
+		Mapping<Operand> sub2 = minimizer(expr, top);
+		top = sub2.map(top);
+		result *= sub2;
+	}
+
 	vector<Match> tokens = search(expr, top, rules, 1u);
 	while (not tokens.empty()) {
 		//cout << "Expr: " << ::to_string(top) << " " << expr.cast<Expression>().to_string(true) << endl;
 		//cout << "Match: " << ::to_string(tokens) << endl;
 		replace(expr, rules, tokens.back());
 		//cout << "Replace: " << expr.cast<Expression>().to_string(true) << endl;
-		Mapping<Operand> sub = tidy(expr, top);
-		top = sub.map(top);
-		result *= sub;
+		{
+			Mapping<Operand> sub = tidy(expr, top);
+			top = sub.map(top);
+			result *= sub;
+		}
+
+		if (minimizer) {
+			Mapping<Operand> sub2 = minimizer(expr, top);
+			top = sub2.map(top);
+			result *= sub2;
+		}
+		
 		//cout << "Canon: " << ::to_string(top) << " " << expr.cast<Expression>().to_string(true) << endl << endl;
 		tokens = search(expr, top, rules, 1u);
 	}

@@ -72,4 +72,29 @@ TEST(Rewrite, Commutative) {
 	//EXPECT_TRUE(areSame(dut, exp)) << dut << " != " << exp << endl;
 }
 
+TEST(Rewrite, Unbundle) {
+	Expression a = Expression::varOf(0);
+	Expression b = Expression::varOf(1);
+	Expression c = Expression::varOf(2);
+	Expression d = Expression::varOf(3);
+
+	auto rules = RuleSet({
+		member(construct("Bundle", {a, b}), "valid") > a,
+		member(construct("Bundle", {a, b}), "data") > b,
+	});
+
+	Expression dut = member(construct("Bundle", {a, b}), "valid");
+	cout << dut << endl;
+	dut.minimize(rules);
+	cout << dut << endl;
+	EXPECT_TRUE(areSame(dut, a)) << dut << " != " << a << endl;
+
+	dut = member(construct("Bundle", {a, b}), "data");
+	cout << dut << endl;
+	dut.minimize(rules);
+	cout << dut << endl;
+	EXPECT_TRUE(areSame(dut, b)) << dut << " != " << b << endl;
+}
+
+
 

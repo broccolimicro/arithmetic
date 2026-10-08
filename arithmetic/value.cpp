@@ -535,13 +535,13 @@ ostream &operator<<(ostream &os, ValRef lval) {
 
 bool areSame(Value v0, Value v1) {
 	if ((v0.type == Value::LABEL and v1.type == Value::LABEL and v0.sval == v1.sval)
-		or (v0.state == v1.state and (not v0.isValid()
+		or (v0.type != Value::LABEL and (v0.state == v1.state and (not v0.isValid()
 		or (v0.type == Value::WIRE and v1.type == Value::WIRE)
 		or (v0.type == Value::BOOL and v1.type == Value::BOOL and v0.bval == v1.bval)
 		or (v0.type == Value::INT and v1.type == Value::INT and v0.ival == v1.ival)
 		or (v0.type == Value::REAL and v1.type == Value::REAL and v0.rval == v1.rval)
 		or (v0.type == Value::STRING and v1.type == Value::STRING and v0.sval == v1.sval)
-		))) {
+		)))) {
 		return true;
 	}
 

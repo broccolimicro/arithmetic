@@ -1027,6 +1027,7 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const RuleSet &
 			}
 
 			bool commute = tOp->isCommutative();
+			bool structured = tOp->isStructured();
 			if (commute and tOp->operands.size() == 1u) {
 				//cout << "Elastic Commutative" << endl;
 				Matcher next = curr;
@@ -1061,7 +1062,7 @@ vector<Match> search(ConstOperationSet ops, vector<Operand> pin, const RuleSet &
 					}
 				}
 
-				for (PartitionIterator part(fOp->operands.size(), lo, hi, not curr.match.top.empty()); not part.done(); part.nextPart()) {
+				for (PartitionIterator part(fOp->operands.size(), lo, hi, not curr.match.top.empty() or structured); not part.done(); part.nextPart()) {
 					Matcher next = curr;
 					const auto &it = part.get();
 
@@ -1273,12 +1274,14 @@ Mapping<Operand> minimize(OperationSet expr, vector<Operand> top, RuleSet rules,
 	{
 		result *= tidy(expr, top);
 		top = result.map(top);
+		//cout << "Canon: " << ::to_string(top) << " " << expr.cast<Expression>().to_string(true) << endl << endl;
 	}
 
 	if (minimizer) {
 		Mapping<Operand> sub2 = minimizer(expr, top);
 		top = sub2.map(top);
 		result *= sub2;
+		//cout << "Custom: " << ::to_string(top) << " " << expr.cast<Expression>().to_string(true) << endl << endl;
 	}
 
 	vector<Match> tokens = search(expr, top, rules, 1u);
@@ -1292,14 +1295,15 @@ Mapping<Operand> minimize(OperationSet expr, vector<Operand> top, RuleSet rules,
 			top = sub.map(top);
 			result *= sub;
 		}
+		//cout << "Canon: " << ::to_string(top) << " " << expr.cast<Expression>().to_string(true) << endl << endl;
 
 		if (minimizer) {
 			Mapping<Operand> sub2 = minimizer(expr, top);
 			top = sub2.map(top);
 			result *= sub2;
+			//cout << "Custom: " << ::to_string(top) << " " << expr.cast<Expression>().to_string(true) << endl << endl;
 		}
 		
-		//cout << "Canon: " << ::to_string(top) << " " << expr.cast<Expression>().to_string(true) << endl << endl;
 		tokens = search(expr, top, rules, 1u);
 	}
 

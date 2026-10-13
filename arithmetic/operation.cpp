@@ -287,6 +287,7 @@ Operator::Operator(string prefix, string trigger, string infix, string postfix, 
 	this->postfix = postfix;
 	this->commutative = (flags & COMMUTATIVE) != 0;
 	this->reflexive = (flags & REFLEXIVE) != 0;
+	this->structured = (flags & STRUCTURED) != 0;
 }
 
 Operator::~Operator() {
@@ -379,7 +380,7 @@ void Operation::loadOperators() {
 		set(OpType::LESS_EQUAL, Operator("", "", "<=", ""));
 		set(OpType::GREATER_EQUAL, Operator("", "", ">=", ""));
 		set(OpType::NEGATIVE, Operator("ltz(", "", "", ")"));
-		set(OpType::TERNARY, Operator("", "?", ":", ""));
+		set(OpType::TERNARY, Operator("", "?", ":", "", Operator::STRUCTURED));
 
 		set(OpType::IDENTITY, Operator("+", "", "", "", Operator::REFLEXIVE));
 		set(OpType::NEGATION, Operator("-", "", "", ""));
@@ -393,14 +394,14 @@ void Operation::loadOperators() {
 		set(OpType::INTDIV, Operator("", "", "/", ""));
 		set(OpType::INTMOD, Operator("", "", "%", ""));
 
-		set(OpType::MEMBER_CALL, Operator("", "(", ",", ")"));
-		set(OpType::CALL, Operator("", "(", ",", ")"));
+		set(OpType::MEMBER_CALL, Operator("", "(", ",", ")", Operator::STRUCTURED));
+		set(OpType::CALL, Operator("", "(", ",", ")", Operator::STRUCTURED));
 		set(OpType::CAST, Operator("(", ")", "", ""));
 
-		set(OpType::ARRAY, Operator("[", "", ",", "]"));
-		set(OpType::INDEX, Operator("", "[", ":", "]"));
+		set(OpType::ARRAY, Operator("[", "", ",", "]", Operator::STRUCTURED));
+		set(OpType::INDEX, Operator("", "[", ":", "]", Operator::STRUCTURED));
 
-		set(OpType::STRUCT, Operator("", "{", ",", "}"));
+		set(OpType::STRUCT, Operator("", "{", ",", "}", Operator::STRUCTURED));
 		set(OpType::MEMBER, Operator("", ".", "", ""));
 
 		//printf("loaded %d operators\n", (int)Operation::operators.size());
@@ -603,6 +604,13 @@ bool Operation::isReflexive() const {
 		return Operation::operators[func].reflexive;
 	}
 	return true;
+}
+
+bool Operation::isStructured() const {
+	if (func >= 0 and func < (int)Operation::operators.size()) {
+		return Operation::operators[func].structured;
+	}
+	return false;
 }
 
 bool Operation::isUndef() const {
@@ -826,6 +834,8 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 		return index(args[0], args[1].val);
 	} else if (func == Operation::INDEX and args.size() == 3) { // slice
 		return index(args[0], args[1].val, args[1].val);
+	} else if (func == Operation::INDEX) { // slice
+		printf("found slice with %d arguments\n", (int)args.size());
 	} else if (func == Operation::STRUCT) { // concat arrays
 		if (args.empty() or args[0].val.type != Value::LABEL) {
 			printf("internal:%s:%d: struct ({}) operator expected string name, found %s\n", __FILE__, __LINE__, ::to_string(args[0].val).c_str());
@@ -847,7 +857,7 @@ ValRef Operation::evaluate(int func, vector<ValRef> args, TypeSet types, Caller 
 
 		return member(args[0], args[1].val, types);
 	}
-	printf("internal:%s:%d: function %d not implemented\n", __FILE__, __LINE__, func);
+	printf("internal:%s:%d: function %d with %d args not implemented\n", __FILE__, __LINE__, func, (int)args.size());
 	return Value::X();
 }
 
@@ -1241,11 +1251,7 @@ void Operation::tidy() {
 			});
 	}
 
-	if (func == Operation::TERNARY
-		or func == Operation::CALL
-		or func == Operation::MEMBER_CALL
-		or func == Operation::ARRAY
-		or func == Operation::STRUCT) {
+	if (isStructured()) {
 		return;
 	}
 

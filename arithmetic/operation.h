@@ -86,6 +86,7 @@ struct Operator {
 	enum Flags {
 		COMMUTATIVE = 1,
 		REFLEXIVE = 2,
+		STRUCTURED = 4,
 	};
 
 	string prefix;
@@ -95,6 +96,7 @@ struct Operator {
 
 	bool commutative;
 	bool reflexive;
+	bool structured;
 
 	bool is(string prefix, string trigger, string infix, string postfix) const;
 
@@ -182,6 +184,7 @@ struct Operation {
 	void set(int func, vector<Operand> args);
 	bool isCommutative() const;
 	bool isReflexive() const;
+	bool isStructured() const;
 	bool isUndef() const;
 
 	static ValRef evaluate(int func, vector<ValRef> args, TypeSet types=TypeSet(), Caller caller=Caller());

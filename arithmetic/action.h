@@ -56,7 +56,7 @@ struct Parallel {
 	bool isPassive() const;
 
 	State evaluate(const State &curr, TypeSet types=TypeSet()) const;
-	Expression guard();
+	Expression guard() const;
 
 	void applyVars(const Mapping<size_t> &m);
 	void applyVars(const Mapping<int> &m);
@@ -94,7 +94,7 @@ struct Choice {
 	bool isPassive() const;
 
 	Region evaluate(const State &curr, TypeSet types=TypeSet()) const;
-	Expression guard();
+	Expression guard() const;
 
 	void applyVars(const Mapping<size_t> &m);
 	void applyVars(const Mapping<int> &m);

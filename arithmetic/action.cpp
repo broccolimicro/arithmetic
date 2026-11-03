@@ -186,7 +186,7 @@ State Parallel::evaluate(const State &curr, TypeSet types) const {
 	return result;
 }
 
-Expression Parallel::guard() {
+Expression Parallel::guard() const {
 	Expression result = Expression::vdd();
 	for (auto a = actions.begin(); a != actions.end(); a++) {
 		if (not a->rvalue.isConstant()) {
@@ -356,7 +356,7 @@ Region Choice::evaluate(const State &curr, TypeSet types) const {
 	return result;
 }
 
-Expression Choice::guard() {
+Expression Choice::guard() const {
 	if (terms.empty()) {
 		return Expression::vdd();
 	}

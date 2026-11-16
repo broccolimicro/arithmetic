@@ -253,6 +253,14 @@ RuleSet rewriteSimple() {
 		(not (a == b)) > (a != b),
 		(not (a != b)) > (a == b),
 
+		(a & (b == c)) > (a & isValid(b) & isValid(c)),
+		(a | (b == c)) > (a | (isValid(b) & isValid(c))),
+		(isValid(a == b)) > (isValid(a) & isValid(b)),
+
+		(a & (b != c)) > (a & isValid(b) & isValid(c)),
+		(a | (b != c)) > (a | (isValid(b) & isValid(c))),
+		(isValid(a != b)) > (isValid(a) & isValid(b)),
+
 		/*(a & (b | c)) > ((a & b) | (a & c)),
 		(a && (b || c)) > ((a && b) || (a && c)),*/
 		((a & b) | a) > (isValid(a)),

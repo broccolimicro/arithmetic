@@ -3,7 +3,6 @@
 #include <common/standard.h>
 #include <common/interface.h>
 #include <common/net.h>
-#include "type.h"
 
 namespace arithmetic
 {
@@ -130,7 +129,7 @@ struct Value {
 
 	operator bool() const;
 
-	Type typeOf() const;
+	//Type typeOf() const;
 
 	void set(Slice slice, Value v, bool define=false);
 	Value get(Slice slice) const;

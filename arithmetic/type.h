@@ -2,65 +2,99 @@
 
 #include <vector>
 #include <array>
+#include <string>
+
+#include "expression.h"
+#include "value.h"
 
 namespace arithmetic {
 
-// represents a fixed-point number
+struct Signature {
+	Signature(std::string name, std::vector<Value> params=std::vector<Value>(), std::vector<int> bounds=std::vector<int>());
+	~Signature();
+
+	std::string name;
+	std::vector<Value> params;
+	std::vector<int> bounds;
+};
+
+struct Instance {
+	Instance(std::string name, Signature type, Value defaultValue=Value::undef());
+	~Instance();
+
+	std::string name;
+	Signature type;
+	Value defaultValue;
+};
+
 struct Type {
-	Type();
-	Type(double coeff, double width, double delay);
+	Type(std::string name, std::vector<Instance> params=std::vector<Instance>(), std::vector<Instance> members=std::vector<Instance>());
 	~Type();
 
-	// DESIGN(edward.bingham) serial vs parallel is an architectural decision,
-	// and incurs cost complexities from bit/digit-level pipelining. So for this
-	// function, we'll assume that variables represent the "digit" in a serial
-	// architecture, or the whole number in a parallel architecture. This means
-	// that the cost metrics being computed are only about bit-parallel
-	// representations. It's up to the higher level synthesis system to
-	// understand the differences between serial and parallel encodings.
-
-	// DESIGN(edward.bingham) we're designing circuits. The design of the
-	// whatever floating point operations there are in the system should not be
-	// built into the language because it is highly dependent upon the system
-	// requirements. However, we can support fixed-point operations readily.
-
-	// DESIGN(edward.bingham) Encodings may not be base-2. They also may not even
-	// be a fixed-base encoding. Therefore, we don't want to presuppose and
-	// particular base. Our goal is just to be able to compute operator
-	// complexity.
-
-	// DESIGN(edward.bingham) Constants are represented by the smallest possible
-	// fixed-point representation. This means that the width is always going to
-	// be 0.0, and the coefficient is always equal to the value of the constant. 
-
-	double coeff;
-	double width;
-	double delay;
-	std::vector<int> bounds;
-
-	// TODO(edward.bingham) I need to think about operations on arrays. Variables
-	// may be multi-dimensional arrays, and Constants can already be
-	// multi-dimensional arrays.
+	std::string name;
+	std::vector<Instance> params;
+	std::vector<Instance> members;
 };
 
-std::array<double, 2> overlap(Type t0, Type t1);
+struct SignatureTemplate {
+	SignatureTemplate(std::string name, std::vector<Expression> params=std::vector<Expression>(), std::vector<Expression> bounds=std::vector<Expression>());
+	SignatureTemplate(Signature sig);
+	~SignatureTemplate();
 
-// Used to represent accumulated cost of an arithmetic expression for
-// optimization, trading off area and energy vs operator latency
-struct Cost {
-	Cost();
-	Cost(double complexity, double critical);
-	~Cost();
+	std::string name;
+	std::vector<Expression> params;
+	std::vector<Expression> bounds;
 
-	// the total time-space complexity of the operation
-	double complexity;
-	// the critical-path delay in gates
-	double critical;
-
-	Cost &operator+=(Cost c0);
+	Signature evaluate(State values, TypeSet types, Caller caller) const;
 };
 
-Cost operator+(Cost c0, Cost c1);
+struct InstanceTemplate {
+	InstanceTemplate(std::string name, SignatureTemplate type, Expression defaultValue=Expression::undef());
+	InstanceTemplate(Instance inst);
+	~InstanceTemplate();
+
+	std::string name;
+	SignatureTemplate type;
+	Expression defaultValue;
+
+	Instance evaluate(State values, TypeSet types, Caller caller) const;
+};
+
+struct TypeTemplate {
+	TypeTemplate(std::string name, std::vector<InstanceTemplate> params=std::vector<InstanceTemplate>(), std::vector<InstanceTemplate> members=std::vector<InstanceTemplate>());
+	TypeTemplate(Type type);
+	~TypeTemplate();
+
+	std::string name;
+	std::vector<InstanceTemplate> params;
+	std::vector<InstanceTemplate> members;
+
+	Type evaluate(State values, TypeSet types, Caller caller) const;
+};
+
+// Bootstrapping
+Signature typeSig();
+SignatureTemplate typeTemplate();
+TypeTemplate typeType();
+
+Signature chanSig(Value type);
+SignatureTemplate chanTemplate(Expression type);
+TypeTemplate chanType();
+
+Signature wireSig();
+SignatureTemplate wireTemplate();
+TypeTemplate wireType();
+
+Signature boolSig();
+SignatureTemplate boolTemplate();
+TypeTemplate boolType();
+
+Signature ufixedSig(uint16_t width, int32_t offset=0, uint8_t radix=2);
+Signature fixedSig(uint16_t width, int32_t offset=0, uint8_t radix=2);
+SignatureTemplate ufixedTemplate(Expression width, Expression offset=Expression::intOf(0), Expression radix=Expression::intOf(2));
+SignatureTemplate fixedTemplate(Expression width, Expression offset=Expression::intOf(0), Expression radix=Expression::intOf(2));
+TypeTemplate ufixedType();
+TypeTemplate fixedType();
 
 }
 

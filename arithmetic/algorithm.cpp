@@ -531,7 +531,7 @@ size_t lvalueBase(ConstOperationSet ops, Operand top, TypeSet types) {
 }
 
 
-Cost cost(ConstOperationSet ops, Operand top, vector<Type> vars) {
+/*Cost cost(ConstOperationSet ops, Operand top, vector<Type> vars) {
 	if (not top.isExpr()) {
 		return Cost();
 	}
@@ -567,7 +567,7 @@ Cost cost(ConstOperationSet ops, Operand top, vector<Type> vars) {
 		delay = expr[top.index].delay;
 	}
 	return Cost(complexity, delay);
-}
+}*/
 
 Operand extract(OperationSet expr, size_t from, vector<size_t> operands) {
 	Operation o0 = *expr.getExpr(from);

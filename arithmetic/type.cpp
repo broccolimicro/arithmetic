@@ -1,54 +1,162 @@
 #include "type.h"
 
-#include <cmath>
-
-using namespace std;
+#include "algorithm.h"
 
 namespace arithmetic {
 
-// default to wire
-Type::Type() {
-	coeff = 0.0;
-	width = 0.0;
-	delay = 0.0;
+Signature::Signature(std::string name, std::vector<Value> params, std::vector<int> bounds) : name(name), params(params), bounds(bounds) {
 }
 
-Type::Type(double coeff, double width, double delay) {
-	this->coeff = coeff;
-	this->width = width;
-	this->delay = delay;
+Signature::~Signature() {
+}
+
+Instance::Instance(std::string name, Signature type, Value defaultValue) : name(name), type(type), defaultValue(defaultValue) {
+}
+
+Instance::~Instance() {
+}
+
+Type::Type(std::string name, std::vector<Instance> params, std::vector<Instance> members) : name(name), params(params), members(members) {
 }
 
 Type::~Type() {
 }
 
-array<double, 2> overlap(Type t0, Type t1) {
-	double off0 = log2(t0.coeff);
-	double off1 = log2(t1.coeff);
-	return {max(0.0, min(t0.width+off0, t1.width+off1)-max(off0, off1)), max(t0.width+off0, t1.width+off1)-min(off0, off1)};
+SignatureTemplate::SignatureTemplate(std::string name, std::vector<Expression> params, std::vector<Expression> bounds) : name(name), params(params), bounds(bounds) {
 }
 
-Cost::Cost() {
-	complexity = 0.0;
-	critical = 0.0;
+SignatureTemplate::SignatureTemplate(Signature sig) {
 }
 
-Cost::Cost(double complexity, double critical) {
-	this->complexity = complexity;
-	this->critical = critical;
+SignatureTemplate::~SignatureTemplate() {
 }
 
-Cost::~Cost() {
+Signature SignatureTemplate::evaluate(State values, TypeSet types, Caller caller) const {
+	Signature result(name);
+	for (const auto &param : this->params) {
+		result.params.push_back(arithmetic::evaluate(param, param.top, values, types, caller).val);
+	}
+	for (const auto &bound : this->bounds) {
+		Value sz = arithmetic::evaluate(bound, bound.top, values, types, caller).val;
+		if (sz.type != Value::INT) {
+			error("", "type expected integer for array bound", __FILE__, __LINE__);
+			result.params.push_back(-1);
+		} else {
+			result.params.push_back(sz.ival);
+		}
+	}
+	return result;
 }
 
-Cost &Cost::operator+=(Cost c0) {
-	this->complexity += c0.complexity;
-	this->critical += c0.critical;
-	return *this;
+InstanceTemplate::InstanceTemplate(std::string name, SignatureTemplate type, Expression defaultValue) : name(name), type(type), defaultValue(defaultValue) {
 }
 
-Cost operator+(Cost c0, Cost c1) {
-	return (c0 += c1);
+InstanceTemplate::~InstanceTemplate() {
+}
+
+Instance InstanceTemplate::evaluate(State values, TypeSet types, Caller caller) const {
+	return Instance(name,
+		type.evaluate(values, types, caller),
+		arithmetic::evaluate(defaultValue, defaultValue.top, values, types, caller).val);
+}
+
+TypeTemplate::TypeTemplate(std::string name, std::vector<InstanceTemplate> params, std::vector<InstanceTemplate> members) : name(name), params(params), members(members) {
+}
+
+TypeTemplate::~TypeTemplate() {
+}
+
+Type TypeTemplate::evaluate(State values, TypeSet types, Caller caller) const {
+	Type result(name);
+	for (const auto &param : this->params) {
+		result.params.push_back(param.evaluate(values, types, caller));
+	}
+	for (const auto &member : this->members) {
+		result.members.push_back(member.evaluate(values, types, caller));
+	}
+	return result;
+}
+
+Signature typeSig() {
+	return Signature("type");
+}
+
+SignatureTemplate typeTemplate() {
+	return SignatureTemplate("type");
+}
+
+TypeTemplate typeType() {
+	return TypeTemplate("type");
+}
+
+Signature chanSig(Value type) {
+	return Signature("chan", {type});
+}
+
+SignatureTemplate chanTemplate(Expression type) {
+	return SignatureTemplate("chan", {type});
+}
+
+TypeTemplate chanType() {
+	TypeTemplate result("chan");
+	result.params.push_back(InstanceTemplate("type", typeSig()));
+	return result;
+}
+
+Signature wireSig() {
+	return Signature("wire");
+}
+
+SignatureTemplate wireTemplate() {
+	return SignatureTemplate("wire");
+}
+
+TypeTemplate wireType() {
+	return TypeTemplate("wire");
+}
+
+Signature boolSig() {
+	return Signature("bool");
+}
+
+SignatureTemplate boolTemplate() {
+	return SignatureTemplate("bool");
+}
+
+TypeTemplate boolType() {
+	return TypeTemplate("bool");
+}
+
+Signature ufixedSig(uint16_t width, int32_t offset, uint8_t radix) {
+	return Signature("ufixed", {Value::intOf(width), Value::intOf(offset), Value::intOf(radix)});
+}
+
+Signature fixedSig(uint16_t width, int32_t offset, uint8_t radix) {
+	return Signature("fixed", {Value::intOf(width), Value::intOf(offset), Value::intOf(radix)});
+}
+
+SignatureTemplate ufixedTemplate(Expression width, Expression offset, Expression radix) {
+	return SignatureTemplate("ufixed", {width, offset, radix});
+}
+
+SignatureTemplate fixedTemplate(Expression width, Expression offset, Expression radix) {
+	return SignatureTemplate("fixed", {width, offset, radix});
+}
+
+TypeTemplate ufixedType() {
+	TypeTemplate result("ufixed");
+	result.params.push_back(InstanceTemplate("width", ufixedSig(16)));
+	result.params.push_back(InstanceTemplate("offset", fixedSig(32), Expression::intOf(0)));
+	result.params.push_back(InstanceTemplate("radix", ufixedSig(8), Expression::intOf(2)));
+	return result;
+}
+
+TypeTemplate fixedType() {
+	TypeTemplate result("fixed");
+	result.params.push_back(InstanceTemplate("width", ufixedSig(16)));
+	result.params.push_back(InstanceTemplate("offset", fixedSig(32), Expression::intOf(0)));
+	result.params.push_back(InstanceTemplate("radix", ufixedSig(8), Expression::intOf(2)));
+	return result;
 }
 
 }

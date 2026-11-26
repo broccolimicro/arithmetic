@@ -3,7 +3,6 @@
 #include <common/standard.h>
 
 #include "state.h"
-#include "type.h"
 
 #include "operation_set.h"
 #include "rewrite.h"

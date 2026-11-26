@@ -618,7 +618,7 @@ Value::operator bool() const {
 	return isTrue();
 }
 
-Type Value::typeOf() const {
+/*Type Value::typeOf() const {
 	if (type == Value::WIRE
 		or type == Value::STRING) {
 		return Type(0.0, 0.0, 0.0);
@@ -632,7 +632,7 @@ Type Value::typeOf() const {
 	// TODO(edward.bingham) figure out how to handle arrays and structures
 	printf("error: not yet implemented\n");
 	return Type();
-}
+}*/
 
 Value isTrue(Value v) {
 	v = boolOf(v);

@@ -408,7 +408,7 @@ void Operation::loadOperators() {
 	}
 }
 
-pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
+/*pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
 	// If I have two fixed-point inputs, then the offset determines the
 	// complexity of the operator because it can affect the overlap of the two
 	// inputs. Again, because encodings may not be base-2, the offset may not be
@@ -585,7 +585,7 @@ pair<Type, double> Operation::funcCost(int func, vector<Type> args) {
 		return {result, cost};
 	}
 	return {result, cost};
-}
+}*/
 
 void Operation::set(int func, vector<Operand> args) {
 	this->func = (OpType)func;

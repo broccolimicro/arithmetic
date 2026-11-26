@@ -6,7 +6,6 @@
 #include <common/net.h>
 
 #include "state.h"
-#include "type.h"
 
 namespace arithmetic {
 
@@ -179,7 +178,7 @@ struct Operation {
 	// The expression index to map this operation to
 	size_t exprIndex;
 
-	static pair<Type, double> funcCost(int func, vector<Type> args);
+	//static pair<Type, double> funcCost(int func, vector<Type> args);
 
 	void set(int func, vector<Operand> args);
 	bool isCommutative() const;
